@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<!-- saved from url=(0068)file:///C:/Users/gfreire.AGESE/Downloads/atrium-casa-supabase_2.html -->
+<html lang="pt-BR"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atrium · Gestão Doméstica</title>
+<link href="./Atrium · Gestão Doméstica_files/css2" rel="stylesheet">
+<style>
+:root{--bg:#F5F2EE;--surface:#FDFCFA;--card:#FFFFFF;--border:#E8E3DC;--text:#2A2520;--muted:#9C9087;--stone:#B8B0A4;--accent:#8B7355;--a2:#C4A882;--cream:#F0EBE0;--sage:#8A9B8A;--warn:#C4973A;--danger:#B85C5C;--blue:#6B9FBF;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Jost',sans-serif;font-weight:300;min-height:100vh;}
+input,button,select,textarea{font-family:'Jost',sans-serif;}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+input::placeholder,textarea::placeholder{color:var(--stone);}
+.wrap{max-width:960px;margin:0 auto;padding:0 20px 80px;}
+.topbar{position:sticky;top:0;z-index:100;background:rgba(245,242,238,.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;margin:0 -20px;}
+.logo{display:flex;align-items:center;gap:9px;}
+.logo-text{font-family:'Cormorant',serif;font-size:21px;font-weight:400;letter-spacing:.16em;text-transform:uppercase;}
+.tabs{display:flex;gap:6px;padding:18px 0 4px;border-bottom:1px solid var(--border);margin-bottom:28px;overflow-x:auto;}
+.tab{padding:8px 18px;border-radius:20px;border:1px solid transparent;background:transparent;color:var(--muted);font-size:12px;font-weight:400;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.tab.active{background:var(--text);color:var(--surface);}
+.tab:hover:not(.active){border-color:var(--border);color:var(--text);}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 1px 4px rgba(42,37,32,.04);margin-bottom:12px;}
+.cream{background:var(--cream);border:1px solid var(--border);border-radius:12px;padding:14px 16px;}
+.dark{background:var(--text);border-radius:16px;padding:20px;margin-bottom:12px;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.fb{display:flex;align-items:center;justify-content:space-between;}
+.fe{display:flex;justify-content:flex-end;gap:8px;}
+.fi{display:flex;align-items:center;}
+.money{font-family:'Cormorant',serif;}
+.lbl{font-size:9px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-weight:500;margin-bottom:5px;}
+.field input,.field select,.field textarea{width:100%;padding:10px 14px;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;outline:none;font-weight:300;transition:border-color .15s;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);}
+.field textarea{resize:vertical;min-height:60px;}
+.field select,.ssel{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239C9087' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px;}
+.btn{padding:10px 20px;border-radius:9px;border:none;font-size:12px;font-weight:500;cursor:pointer;transition:opacity .15s;}
+.btn:hover{opacity:.85;}
+.btn-dk{background:var(--text);color:var(--surface);}
+.btn-gh{background:transparent;border:1px solid var(--border);color:var(--muted);}
+.btn-dr{background:transparent;border:1px solid rgba(184,92,92,.3);color:var(--danger);}
+.btn-sg{background:var(--sage);color:#fff;}
+.btn-sm{padding:7px 14px;font-size:11px;border-radius:7px;}
+.xi{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;color:var(--muted);}
+.av{border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Cormorant',serif;font-weight:400;}
+.ov{position:fixed;inset:0;background:rgba(42,37,32,.55);z-index:500;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);}
+.ov.ctr{align-items:center;}
+.modal{background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:680px;max-height:92vh;overflow:hidden;display:flex;flex-direction:column;animation:su .22s ease;}
+.modal.cm{border-radius:20px;animation:fi .18s ease;}
+.mh{padding:20px 20px 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+.mb{padding:20px;overflow-y:auto;flex:1;}
+.mt{font-family:'Cormorant',serif;font-size:22px;font-weight:300;}
+@keyframes su{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fi{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
+.hidden{display:none!important;}
+.alert{border-radius:12px;padding:12px 16px;display:flex;gap:10px;margin-bottom:12px;}
+.aw{background:rgba(196,151,58,.08);border:1px solid rgba(196,151,58,.3);}
+.as{background:rgba(138,155,138,.1);border:1px solid rgba(138,155,138,.3);}
+.div{height:1px;background:var(--border);margin:14px 0;}
+.ep{display:flex;align-items:flex-start;justify-content:space-between;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;}
+.mt2{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:4px;}
+.mr{display:grid;grid-template-columns:2fr 2fr 1fr;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;}
+.mr:last-child{border-bottom:none;}
+.mrh{background:var(--cream);font-size:10px;font-weight:500;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;}
+.cg{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:10px;}
+.ch{text-align:center;font-size:9px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;padding:4px 0;font-weight:500;}
+.cd{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:7px;font-size:11px;cursor:pointer;border:1px solid transparent;transition:all .15s;position:relative;flex-direction:column;gap:1px;user-select:none;}
+.cd:hover:not(.ce){background:var(--cream);border-color:var(--border);}
+.ce{cursor:default;color:var(--stone);}
+.cwd{background:rgba(139,115,85,.07);border-color:rgba(139,115,85,.2);}
+.cav{background:rgba(107,159,191,.1);border-color:rgba(107,159,191,.35);color:var(--blue);font-weight:500;}
+.chol{box-shadow:inset 0 0 0 1.5px rgba(196,151,58,.7);}
+.ctod{box-shadow:0 0 0 2px var(--accent);}
+.cwrn{border-color:var(--warn)!important;background:rgba(196,151,58,.08)!important;}
+.db{width:38px;height:38px;border-radius:8px;border:1px solid var(--border);background:transparent;font-size:11px;cursor:pointer;transition:all .15s;color:var(--muted);}
+.db.on{background:var(--text);border-color:var(--text);color:var(--surface);}
+.tip{font-size:11px;color:var(--muted);line-height:1.55;font-weight:300;}
+.empty{text-align:center;padding:48px 20px;}
+.ei{font-size:32px;margin-bottom:12px;opacity:.4;}
+.et{font-size:14px;color:var(--muted);font-weight:300;}
+.banner{background:linear-gradient(135deg,#2A2520,#3d3028);border-radius:16px;padding:20px;color:var(--surface);margin-bottom:20px;}
+@media(max-width:600px){.g4{grid-template-columns:1fr 1fr;}}
+
+</style>
+</head>
+<body>
+<div id="sync-banner" style="display: none; position: fixed; top: 0px; left: 0px; right: 0px; z-index: 9999; padding: 8px 16px; text-align: center; font-size: 12px; font-weight: 500; color: rgb(255, 255, 255); letter-spacing: 0.04em; transition: background 0.3s; background: rgba(138, 155, 138, 0.9);">✅ Online — dados sincronizados</div>
+<div class="topbar">
+  <div class="logo">
+    <svg width="26" height="26" viewBox="0 0 72 72" fill="none">
+      <rect x="4" y="4" width="64" height="64" rx="6" stroke="#2A2520" stroke-width="1.8" fill="none"></rect>
+      <rect x="22" y="22" width="28" height="28" rx="2" stroke="#8B7355" stroke-width="1.8" fill="none"></rect>
+      <line x1="4" y1="4" x2="22" y2="22" stroke="#2A2520" stroke-width="1" opacity=".35"></line>
+      <line x1="68" y1="4" x2="50" y2="22" stroke="#2A2520" stroke-width="1" opacity=".35"></line>
+      <line x1="4" y1="68" x2="22" y2="50" stroke="#2A2520" stroke-width="1" opacity=".35"></line>
+      <line x1="68" y1="68" x2="50" y2="50" stroke="#2A2520" stroke-width="1" opacity=".35"></line>
+      <circle cx="36" cy="36" r="2.5" fill="#8B7355"></circle>
+    </svg>
+    <span class="logo-text">Atrium</span>
+  </div>
+  <div class="fi" style="gap:8px;">
+    <select id="msel" onchange="onMC()" class="ssel" style="padding:7px 28px 7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--cream);color:var(--text);font-size:12px;cursor:pointer;"><option value="2025-3">Abril 2025</option><option value="2025-4">Maio 2025</option><option value="2025-5">Junho 2025</option><option value="2025-6">Julho 2025</option><option value="2025-7">Agosto 2025</option><option value="2025-8">Setembro 2025</option><option value="2025-9">Outubro 2025</option><option value="2025-10">Novembro 2025</option><option value="2025-11">Dezembro 2025</option><option value="2026-0">Janeiro 2026</option><option value="2026-1">Fevereiro 2026</option><option value="2026-2">Março 2026</option><option value="2026-3">Abril 2026</option><option value="2026-4">Maio 2026</option><option value="2026-5">Junho 2026</option><option value="2026-6">Julho 2026</option><option value="2026-7">Agosto 2026</option><option value="2026-8">Setembro 2026</option></select>
+    <button class="btn btn-dk btn-sm" onclick="expCSV()">↓ CSV</button>
+    <button class="btn btn-gh btn-sm" onclick="pushAllToSupabase()" title="Forçar sincronização com o banco">⇅ Sync</button>
+  </div>
+</div>
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab active" onclick="swTab(&#39;dash&#39;,this)">Visão Geral</button>
+    <button class="tab" onclick="swTab(&#39;fech&#39;,this)">Fechamento</button>
+    <button class="tab" onclick="swTab(&#39;emps&#39;,this)">Funcionários</button>
+    <button class="tab" onclick="swTab(&#39;hist&#39;,this)">Histórico</button>
+    <button class="tab" onclick="swTab(&#39;rel&#39;,this)">📄 Relatórios</button>
+  </div>
+  <div id="tab-dash" class=""><div class="banner"><p style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:6px;">Período de pagamento ativo</p><p style="font-family:&#39;Cormorant&#39;,serif;font-size:26px;font-weight:300;color:#fff;">Pagamentos de <em style="color:var(--a2);">Maio 2026</em></p><p style="font-size:12px;color:rgba(255,255,255,.6);margin-top:6px;">Prazo legal: até 8/06/2026 (5º dia útil)</p></div><div class="g4" style="margin-bottom:20px;"><div class="card"><div class="lbl" style="margin-bottom:8px;">Funcionários</div><div class="money" style="font-size:22px;color:var(--accent);">1</div><div style="font-size:11px;color:var(--muted);margin-top:4px;">cadastrados</div></div><div class="card"><div class="lbl" style="margin-bottom:8px;">Total salários</div><div class="money" style="font-size:22px;color:var(--sage);">R$ 1.800,00</div><div style="font-size:11px;color:var(--muted);margin-top:4px;">Maio 2026</div></div><div class="card"><div class="lbl" style="margin-bottom:8px;">Total VT</div><div class="money" style="font-size:22px;color:var(--blue);">R$ 0,00</div><div style="font-size:11px;color:var(--muted);margin-top:4px;">Junho</div></div><div class="card"><div class="lbl" style="margin-bottom:8px;">Envelope total</div><div class="money" style="font-size:22px;color:var(--accent);">R$ 1.800,00</div><div style="font-size:11px;color:var(--muted);margin-top:4px;">sal. + VT</div></div></div><p style="font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;font-weight:500;margin-bottom:14px;">Pagamentos — competência Maio 2026</p><div class="card" style="border:1px solid var(--border);"><div class="fb" style="margin-bottom:14px;"><div class="fi" style="gap:12px;"><div class="av" style="width:44px;height:44px;background:#8A9B8A18;border:1px solid #8A9B8A44;color:#8A9B8A;font-size:14.08px;">RC</div><div><div style="font-size:15px;font-weight:400;">Raimunda Correa</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Empregada Doméstica</div></div></div><div style="text-align:right;"><div class="money" style="font-size:24px;color:var(--accent);">R$ 1.800,00</div><div style="font-size:10px;color:var(--muted);">sal. R$ 1.800,00 + VT R$ 0,00</div></div></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;"><div style="background:var(--cream);border-radius:9px;padding:10px;text-align:center;"><div class="lbl" style="margin-bottom:4px;">Base</div><div class="money" style="font-size:14px;color:var(--text);">R$ 1.800,00</div></div><div style="background:var(--cream);border-radius:9px;padding:10px;text-align:center;"><div class="lbl" style="margin-bottom:4px;">Diárias</div><div class="money" style="font-size:14px;color:var(--sage);">R$ 0,00</div></div><div style="background:var(--cream);border-radius:9px;padding:10px;text-align:center;"><div class="lbl" style="margin-bottom:4px;">Descontos</div><div class="money" style="font-size:14px;color:var(--danger);">R$ 0,00</div></div><div style="background:var(--cream);border-radius:9px;padding:10px;text-align:center;"><div class="lbl" style="margin-bottom:4px;">Jun VT</div><div class="money" style="font-size:14px;color:var(--blue);">R$ 0,00</div></div></div><div class="fi" style="gap:8px;flex-wrap:wrap;"><button class="btn btn-gh btn-sm" onclick="goFech(2)">Ver memória</button><button class="btn btn-sg btn-sm" style="margin-left:auto;" onclick="openPayM(2,2026,4)">Confirmar pagamento</button></div></div><div class="card" style="margin-top:8px;"><p class="lbl" style="margin-bottom:14px;">Consolidado — Maio 2026</p><div class="mt2"><div class="mr mrh"><span>Funcionário</span><span>Salário líquido</span><span style="text-align:right;">VT (Jun) · Envelope</span></div><div class="mr"><span>Raimunda Correa</span><span class="money">R$ 1.800,00</span><span class="money" style="text-align:right;">R$ 0,00 · <strong>R$ 1.800,00</strong></span></div><div class="mr" style="background:var(--cream);font-weight:500;"><span>TOTAL</span><span class="money">R$ 1.800,00</span><span class="money" style="text-align:right;">R$ 0,00 · <strong>R$ 1.800,00</strong></span></div></div></div></div>
+  <div id="tab-fech" class="hidden"><div class="fb" style="margin-bottom:20px;flex-wrap:wrap;gap:12px;"><div><div style="font-family:&#39;Cormorant&#39;,serif;font-size:26px;font-weight:300;margin-bottom:4px;">Fechamento</div><div class="tip">Maio 2026 · pago em Junho 2026</div></div><select id="fechsel" onchange="renderFech()" class="ssel" style="padding:8px 28px 8px 12px;border-radius:9px;border:1px solid var(--border);background:var(--cream);font-size:13px;cursor:pointer;"><option value="2">Raimunda Correa</option></select></div><div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:4px;"><span style="font-size:13px;font-weight:400;">Maio 2026</span><div class="fi" style="gap:8px;"><button class="btn btn-gh btn-sm" onclick="openReg()">🗓 Feriados regionais</button><button class="btn btn-gh btn-sm" onclick="openEvM(2,&#39;2026-06-01&#39;)">+ Diária avulsa</button></div></div><div class="cg"><div class="ch">Seg</div><div class="ch">Ter</div><div class="ch">Qua</div><div class="ch">Qui</div><div class="ch">Sex</div><div class="ch">Sáb</div><div class="ch">Dom</div><div class="cd ce"></div><div class="cd ce"></div><div class="cd ce"></div><div class="cd ce"></div><div class="cd cwd chol" onclick="openEvM(2,&#39;2026-05-01&#39;)" title="2026-05-01 — Dia do Trabalho"><span>1</span><span style="font-size:7px;color:var(--warn);">🎉</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-02&#39;)" title="2026-05-02"><span>2</span></div><div class="cd" onclick="openEvM(2,&#39;2026-05-03&#39;)" title="2026-05-03"><span>3</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-04&#39;)" title="2026-05-04"><span>4</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-05&#39;)" title="2026-05-05"><span>5</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-06&#39;)" title="2026-05-06"><span>6</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-07&#39;)" title="2026-05-07"><span>7</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-08&#39;)" title="2026-05-08"><span>8</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-09&#39;)" title="2026-05-09"><span>9</span></div><div class="cd" onclick="openEvM(2,&#39;2026-05-10&#39;)" title="2026-05-10"><span>10</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-11&#39;)" title="2026-05-11"><span>11</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-12&#39;)" title="2026-05-12"><span>12</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-13&#39;)" title="2026-05-13"><span>13</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-14&#39;)" title="2026-05-14"><span>14</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-15&#39;)" title="2026-05-15"><span>15</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-16&#39;)" title="2026-05-16"><span>16</span></div><div class="cd" onclick="openEvM(2,&#39;2026-05-17&#39;)" title="2026-05-17"><span>17</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-18&#39;)" title="2026-05-18"><span>18</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-19&#39;)" title="2026-05-19"><span>19</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-20&#39;)" title="2026-05-20"><span>20</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-21&#39;)" title="2026-05-21"><span>21</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-22&#39;)" title="2026-05-22"><span>22</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-23&#39;)" title="2026-05-23"><span>23</span></div><div class="cd" onclick="openEvM(2,&#39;2026-05-24&#39;)" title="2026-05-24"><span>24</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-25&#39;)" title="2026-05-25"><span>25</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-26&#39;)" title="2026-05-26"><span>26</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-27&#39;)" title="2026-05-27"><span>27</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-28&#39;)" title="2026-05-28"><span>28</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-29&#39;)" title="2026-05-29"><span>29</span></div><div class="cd cwd" onclick="openEvM(2,&#39;2026-05-30&#39;)" title="2026-05-30"><span>30</span></div><div class="cd" onclick="openEvM(2,&#39;2026-05-31&#39;)" title="2026-05-31"><span>31</span></div></div><div class="fi" style="gap:14px;margin-top:10px;flex-wrap:wrap;"><span style="font-size:10px;color:var(--muted);">■ <span style="color:var(--accent);">recorrente</span></span><span style="font-size:10px;color:var(--muted);">■ <span style="color:var(--blue);">avulsa</span></span><span style="font-size:10px;color:var(--muted);">🎉 feriado (laranja = sem diária)</span><span class="tip">· clique no dia para lançar diária avulsa</span></div></div><div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:10px;"><span style="font-size:13px;font-weight:400;">Diárias Avulsas</span><button class="btn btn-gh btn-sm" onclick="openEvM(2,&#39;2026-06-01&#39;)">+ Adicionar</button></div><p class="tip">Nenhuma diária avulsa lançada.</p></div><div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:10px;"><span style="font-size:13px;font-weight:400;">Ajustes &amp; Descontos</span><button class="btn btn-gh btn-sm" onclick="openAM(2,2026,4)">+ Adicionar</button></div><p class="tip">Nenhum ajuste lançado.</p></div><div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:16px;"><p style="font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;font-weight:500;margin-bottom:4px;">Competência — mês trabalhado</p><p style="font-family:&#39;Cormorant&#39;,serif;font-size:22px;font-weight:300;">Maio 2026</p><p class="tip" style="margin-top:4px;">Prazo legal: até 5º dia útil — <strong>8/06/2026</strong> &nbsp;·&nbsp; 1º dia útil: 01/06/2026</p></div><div class="card" style="margin-bottom:12px;"><p class="lbl" style="margin-bottom:12px;">① Salário Base — Maio 2026</p><div class="fb"><span style="font-size:13px;">Salário contratual</span><span class="money" style="font-size:20px;">R$ 1.800,00</span></div></div><div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:10px;"><p class="lbl">⑥ Vale-Transporte — Junho 2026</p><div class="fi" style="gap:6px;"><span class="badge" style="background:rgba(196,151,58,.15);color:var(--warn);">ajustado</span><span class="badge" style="background:rgba(107,159,191,.1);color:var(--blue);">mês seguinte</span></div></div><div class="mt2"><div class="mr mrh"><span>Item</span><span>Memória de cálculo</span><span style="text-align:right;">Valor</span></div><div class="mr"><span>Dias em Junho 2026</span><span style="color:var(--muted);">Sugerido: 25 → Ajustado: 17 dias úteis</span><span class="money" style="text-align:right;">17 <span style="color:var(--warn);font-size:9px;">✎</span></span></div><div class="mr"><span>VT bruto</span><span style="color:var(--muted);">17 × R$ 0,00</span><span class="money" style="text-align:right;">R$ 0,00</span></div><div class="mr"><span>Desconto</span><span style="color:var(--muted);">Sem desconto — empregador arca com o valor integral</span><span class="money" style="text-align:right;color:var(--sage);">R$ 0,00 — integral</span></div></div><div class="fi" style="gap:8px;padding-top:12px;flex-wrap:wrap;"><span style="font-size:11px;color:var(--muted);">Ajustar dias VT:</span><input type="number" min="0" max="31" value="17" onchange="setVTDays(&#39;vt_2_2026-05&#39;,this.value)" style="width:60px;padding:5px 8px;border-radius:7px;border:1px solid var(--border);font-size:12px;text-align:center;"><button onclick="resetVTDays(&#39;vt_2_2026-05&#39;)" class="btn btn-gh btn-sm" style="padding:5px 10px;font-size:10px;">↺ Usar sugerido (25)</button><span class="money" style="font-size:18px;color:var(--blue);margin-left:auto;">R$ 0,00</span></div></div><div class="dark" style="border-radius:16px;"><p style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.12em;text-transform:uppercase;font-weight:500;margin-bottom:16px;">Resumo — Maio 2026</p><div class="fb" style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,.07);"><span style="font-size:12px;color:rgba(255,255,255,.5);">Maio 2026 — Salário base</span><span class="money" style="font-size:16px;color:rgba(255,255,255,.8);">R$ 1.800,00</span></div><div class="fb" style="padding:14px 0 8px;border-top:1px solid rgba(255,255,255,.15);margin-top:6px;"><span style="font-size:14px;font-weight:500;color:#fff;">🏦 Salário líquido</span><span class="money" style="font-size:28px;color:var(--a2);">R$ 1.800,00</span></div><div class="fb" style="padding:8px 0;border-top:1px solid rgba(255,255,255,.08);"><span style="font-size:12px;color:rgba(255,255,255,.5);">+ VT Junho 2026</span><span class="money" style="font-size:18px;color:var(--blue);">R$ 0,00</span></div><div class="fb" style="padding:12px 0 0;border-top:2px solid rgba(255,255,255,.18);margin-top:4px;"><span style="font-size:15px;font-weight:500;color:#fff;">💳 Total do envelope</span><span class="money" style="font-size:28px;color:#fff;font-weight:300;">R$ 1.800,00</span></div></div><div class="fe" style="margin-top:16px;"><button class="btn btn-gh" onclick="openAM(2,2026,4)">+ Ajuste</button><button class="btn btn-sg" onclick="openPayM(2,2026,4)">Ver memória completa &amp; confirmar</button></div></div>
+  <div id="tab-emps" class="hidden"><div class="fb" style="margin-bottom:20px;"><div><div style="font-family:&#39;Cormorant&#39;,serif;font-size:26px;font-weight:300;margin-bottom:4px;">Funcionários</div><div class="tip">1 cadastrado(s)</div></div><button class="btn btn-dk" onclick="openEM()">+ Novo funcionário</button></div><div class="card"><div class="fb" style="margin-bottom:14px;"><div class="fi" style="gap:12px;"><div class="av" style="width:48px;height:48px;background:#8A9B8A18;border:1px solid #8A9B8A44;color:#8A9B8A;font-size:15.36px;">RC</div><div><div style="font-size:16px;font-weight:400;">Raimunda Correa</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">Empregada Doméstica · mensalista</div></div></div><div class="fi" style="gap:8px;"><button class="btn btn-gh btn-sm" onclick="openEM(2)">Editar</button><button class="btn btn-dr btn-sm" onclick="delE(2)">Excluir</button></div></div><div class="g2" style="gap:10px;margin-bottom:12px;"><div class="cream"><div class="lbl">Salário base</div><div class="money" style="font-size:20px;margin-top:4px;">R$ 1.800,00</div></div><div class="cream"><div class="lbl">VT diário (ida+volta)</div><div class="money" style="font-size:20px;margin-top:4px;">R$ 0,00</div><div style="font-size:10px;color:var(--muted);margin-top:3px;">Sem desconto — integral</div></div></div><div style="margin-bottom:12px;"><div class="lbl" style="margin-bottom:8px;">Dias de trabalho fixos</div><div class="fi" style="gap:6px;flex-wrap:wrap;"><span style="padding:4px 10px;border-radius:6px;font-size:11px;background:var(--text);color:var(--surface);">Seg</span><span style="padding:4px 10px;border-radius:6px;font-size:11px;background:var(--text);color:var(--surface);">Ter</span><span style="padding:4px 10px;border-radius:6px;font-size:11px;background:var(--text);color:var(--surface);">Qua</span><span style="padding:4px 10px;border-radius:6px;font-size:11px;background:var(--text);color:var(--surface);">Qui</span><span style="padding:4px 10px;border-radius:6px;font-size:11px;background:var(--text);color:var(--surface);">Sex</span><span style="padding:4px 10px;border-radius:6px;font-size:11px;background:var(--text);color:var(--surface);">Sáb</span><span style="padding:4px 10px;border-radius:6px;font-size:11px;background:var(--cream);color:var(--muted);">Dom</span></div></div><div><div class="lbl" style="margin-bottom:8px;">Tipos de diária avulsa</div><div class="fi" style="gap:8px;flex-wrap:wrap;"><span style="padding:4px 10px;border-radius:6px;font-size:11px;background:var(--cream);color:var(--muted);">Diária 12h · R$ 200,00</span><span style="padding:4px 10px;border-radius:6px;font-size:11px;background:var(--cream);color:var(--muted);">Diária 24h · R$ 350,00</span></div></div></div></div>
+  <div id="tab-hist" class="hidden"></div>
+  <div id="tab-rel" class="hidden"></div>
+</div>
+
+<!-- Modal Employee -->
+<div id="mod-emp" class="ov hidden" onclick="cbd(event,&#39;mod-emp&#39;)">
+  <div class="modal" style="max-width:680px;">
+    <div class="mh"><div class="mt" id="emp-ttl">Novo Funcionário</div><button class="xi" onclick="cm(&#39;mod-emp&#39;)">×</button></div>
+    <div class="mb">
+      <input type="hidden" id="eid">
+      <div class="g2">
+        <div class="field"><label>Nome completo</label><input id="ename" placeholder="Ana Silva"></div>
+        <div class="field"><label>Função</label><select id="erole"><option>Empregada Doméstica</option><option>Babá</option><option>Babá Folguista</option><option>Diarista</option><option>Passadeira</option><option>Cozinheira</option><option>Jardineiro</option><option>Motorista</option><option>Outro</option></select></div>
+      </div>
+      <div class="g2">
+        <div class="field"><label>Salário base (R$)</label><input id="esal" type="number" step=".01" placeholder="0,00"></div>
+        <div class="field"><label>Tipo de contrato</label><select id="ecnt"><option value="mensalista">Mensalista (CLT)</option><option value="diarista">Diarista</option></select></div>
+      </div>
+      <div class="g2">
+        <div class="field"><label>VT diário R$ (ida+volta)</label><input id="evt" type="number" step=".01" placeholder="0,00" value="0"></div>
+        <div class="field"><label>Desconto INSS</label><select id="einss"><option value="yes">Sim — descontar automaticamente</option><option value="no">Não</option></select></div>
+      </div>
+      <div class="field">
+        <label>Desconto do Vale-Transporte</label>
+        <select id="evtdesc">
+          <option value="legal">6% do salário base — limite legal CLT</option>
+          <option value="none">Sem desconto — empregador paga integral</option>
+        </select>
+        <p style="font-size:11px;color:var(--muted);margin-top:5px;font-weight:300;">A CLT permite descontar até 6% do salário base. Se o empregador arca com todo o VT, selecione “sem desconto”.</p>
+      </div>
+      <div class="field">
+        <label>Dias fixos de trabalho</label>
+        <div class="fi" style="gap:6px;flex-wrap:wrap;margin-top:8px;" id="edays">
+          <button type="button" class="db" data-d="0">Seg</button>
+          <button type="button" class="db" data-d="1">Ter</button>
+          <button type="button" class="db" data-d="2">Qua</button>
+          <button type="button" class="db" data-d="3">Qui</button>
+          <button type="button" class="db" data-d="4">Sex</button>
+          <button type="button" class="db" data-d="5">Sáb</button>
+          <button type="button" class="db" data-d="6">Dom</button>
+        </div>
+      </div>
+      <div class="div"></div>
+      <p style="font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Diárias Recorrentes</p>
+      <p class="tip" style="margin-bottom:10px;">Dias da semana com diária extra de valor fixo. 🎉 = contar o valor mesmo em feriado (sem precisar lançar avulsa).</p>
+      <div id="rl"></div>
+      <button class="btn btn-gh btn-sm" onclick="addR()">+ Adicionar recorrência</button>
+      <div class="div"></div>
+      <p style="font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Tipos de Diária Avulsa</p>
+      <p class="tip" style="margin-bottom:10px;">Modelos rápidos para lançar diárias avulsas e feriados.</p>
+      <div id="etl"></div>
+      <button class="btn btn-gh btn-sm" onclick="addET()">+ Adicionar tipo</button>
+      <div class="field" style="margin-top:14px;"><label>Observações</label><textarea id="enotes" placeholder="Combinados, particularidades..."></textarea></div>
+      <div class="div"></div>
+      <div class="fe"><button class="btn btn-gh" onclick="cm(&#39;mod-emp&#39;)">Cancelar</button><button class="btn btn-dk" onclick="saveE()">Salvar</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Event -->
+<div id="mod-ev" class="ov ctr hidden" onclick="cbd(event,&#39;mod-ev&#39;)">
+  <div class="modal cm" style="max-width:440px;">
+    <div class="mh"><div class="mt">Diária Avulsa</div><button class="xi" onclick="cm(&#39;mod-ev&#39;)">×</button></div>
+    <div class="mb">
+      <input type="hidden" id="eveid"><input type="hidden" id="evdate"><input type="hidden" id="evid">
+      <div id="evinfo" class="cream" style="font-size:13px;font-weight:400;margin-bottom:14px;"></div>
+      <div id="evhb" class="alert aw hidden" style="flex-direction:column;"></div>
+      <div class="field"><label>Tipo de diária</label><select id="evtype" onchange="onET()"></select></div>
+      <div class="g2">
+        <div class="field"><label>Valor (R$)</label><input id="evval" type="number" step=".01" placeholder="0,00"></div>
+        <div class="field"><label>Duração</label><input id="evdur" placeholder="ex: 12h, 24h"></div>
+      </div>
+      <div class="field"><label>Observação</label><input id="evnotes" placeholder="Opcional"></div>
+      <div class="div"></div>
+      <div class="fe"><button class="btn btn-gh" onclick="cm(&#39;mod-ev&#39;)">Cancelar</button><button class="btn btn-dk" onclick="saveEv()">Salvar</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Adjustment -->
+<div id="mod-adj" class="ov ctr hidden" onclick="cbd(event,&#39;mod-adj&#39;)">
+  <div class="modal cm" style="max-width:440px;">
+    <div class="mh"><div class="mt">Ajuste / Desconto</div><button class="xi" onclick="cm(&#39;mod-adj&#39;)">×</button></div>
+    <div class="mb">
+      <input type="hidden" id="aeid"><input type="hidden" id="amk"><input type="hidden" id="aid">
+      <div class="field"><label>Tipo</label><select id="atype"><option value="advance">Adiantamento</option><option value="discount">Desconto / Falta</option><option value="bonus">Bônus / Gratificação</option><option value="loan">Empréstimo (parcela)</option><option value="other">Outro desconto</option></select></div>
+      <div class="g2">
+        <div class="field"><label>Valor (R$)</label><input id="aval" type="number" step=".01" placeholder="0,00"></div>
+        <div class="field"><label>Data</label><input id="adate" type="date"></div>
+      </div>
+      <div class="field"><label>Descrição</label><input id="adesc" placeholder="ex: Adiantamento 03/06..."></div>
+      <div class="div"></div>
+      <div class="fe"><button class="btn btn-gh" onclick="cm(&#39;mod-adj&#39;)">Cancelar</button><button class="btn btn-dk" onclick="saveA()">Salvar</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Confirm Payment -->
+<div id="mod-pay" class="ov ctr hidden" onclick="cbd(event,&#39;mod-pay&#39;)">
+  <div class="modal cm" style="max-width:600px;">
+    <div class="mh"><div class="mt">Confirmar Pagamento</div><button class="xi" onclick="cm(&#39;mod-pay&#39;)">×</button></div>
+    <div class="mb" id="paybody"></div>
+  </div>
+</div>
+
+<!-- Modal Regional Holidays -->
+<div id="mod-reg" class="ov ctr hidden" onclick="cbd(event,&#39;mod-reg&#39;)">
+  <div class="modal cm" style="max-width:500px;">
+    <div class="mh"><div class="mt">Feriados Regionais</div><button class="xi" onclick="cm(&#39;mod-reg&#39;)">×</button></div>
+    <div class="mb">
+      <p class="tip" style="margin-bottom:14px;">Adicione feriados municipais/estaduais. Aparecem no calendário e ativam alertas de diária avulsa.</p>
+      <div id="regl"></div>
+      <div class="fi" style="gap:8px;margin-top:12px;">
+        <input type="date" id="rdate" style="flex:1;padding:9px 12px;border-radius:8px;border:1px solid var(--border);font-size:13px;outline:none;">
+        <input id="rname" placeholder="Nome do feriado" style="flex:2;padding:9px 12px;border-radius:8px;border:1px solid var(--border);font-size:13px;outline:none;">
+        <button class="btn btn-dk btn-sm" onclick="addReg()">+</button>
+      </div>
+      <div class="div"></div>
+      <div class="fe"><button class="btn btn-dk" onclick="cm(&#39;mod-reg&#39;)">Fechar</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+
+// ===== SUPABASE CONFIG =====
+var SUPA_URL = 'https://nrlzctnwtzlcarfchmca.supabase.co';
+var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ybHpjdG53dHpsY2FyZmNobWNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMjg3MTAsImV4cCI6MjA5NTkwNDcxMH0.Jjh3-Zzy_e_ZrCw1mXa5Tzlq8NuC8oQMOLKAmRrfx6s';
+var SUPA_HDR = {'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation'};
+
+// Online/offline state
+var isOnline = navigator.onLine;
+window.addEventListener('online',  function(){ isOnline=true;  syncAll(); showSyncBanner('online'); });
+window.addEventListener('offline', function(){ isOnline=false; showSyncBanner('offline'); });
+
+// Pending queue for writes that happened offline
+var pendingQueue = JSON.parse(localStorage.getItem('atrium_pending')||'[]');
+function savePending(){ localStorage.setItem('atrium_pending', JSON.stringify(pendingQueue)); }
+
+function showSyncBanner(state){
+  var b = document.getElementById('sync-banner');
+  if(!b) return;
+  if(state==='online')  { b.textContent='\u2705 Online \u2014 dados sincronizados'; b.style.background='rgba(138,155,138,.9)'; }
+  if(state==='offline') { b.textContent='\u26a0\ufe0f Offline \u2014 salvando localmente'; b.style.background='rgba(196,151,58,.9)'; }
+  if(state==='syncing') { b.textContent='\u2191 Sincronizando\u2026'; b.style.background='rgba(107,159,191,.9)'; }
+  if(state==='error')   { b.textContent='\u274c Erro ao sincronizar \u2014 verifique a conex\u00e3o'; b.style.background='rgba(184,92,92,.9)'; }
+  b.style.display='block';
+  if(state==='online') setTimeout(function(){ b.style.display='none'; }, 3000);
+}
+
+// ===== SUPABASE CRUD =====
+async function sbGet(table, params){
+  params = params||'';
+  var r = await fetch(SUPA_URL+'/rest/v1/'+table+'?'+params, {headers: SUPA_HDR});
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function sbPost(table, body){
+  var r = await fetch(SUPA_URL+'/rest/v1/'+table, {method:'POST', headers: SUPA_HDR, body: JSON.stringify(body)});
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function sbPatch(table, id, body){
+  var r = await fetch(SUPA_URL+'/rest/v1/'+table+'?id=eq.'+id, {method:'PATCH', headers: SUPA_HDR, body: JSON.stringify(body)});
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function sbDelete(table, id){
+  var r = await fetch(SUPA_URL+'/rest/v1/'+table+'?id=eq.'+id, {method:'DELETE', headers: SUPA_HDR});
+  if(!r.ok) throw new Error(await r.text());
+}
+async function sbUpsert(table, body, onConflict){
+  var h = Object.assign({}, SUPA_HDR, {'Prefer':'resolution=merge-duplicates,return=representation'});
+  var url = SUPA_URL+'/rest/v1/'+table+(onConflict?'?on_conflict='+onConflict:'');
+  var r = await fetch(url, {method:'POST', headers:h, body:JSON.stringify(body)});
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+// ===== LOAD FROM SUPABASE =====
+async function loadFromSupabase(){
+  showSyncBanner('syncing');
+  try {
+    // employees
+    var emps = await sbGet('employees','select=id,data&order=id');
+    db.employees = emps.map(function(r){ var d=r.data; d._sbid=r.id; return d; });
+
+    // events — group by empId/monthKey
+    var evs = await sbGet('events','select=id,emp_id,month_key,data&order=id');
+    db.events = {};
+    evs.forEach(function(r){
+      var eid=r.emp_id, mk=r.month_key;
+      if(!db.events[eid]) db.events[eid]={};
+      if(!db.events[eid][mk]) db.events[eid][mk]=[];
+      var d=r.data; d._sbid=r.id;
+      db.events[eid][mk].push(d);
+    });
+
+    // adjustments
+    var adjs = await sbGet('adjustments','select=id,emp_id,month_key,data&order=id');
+    db.adjustments = {};
+    adjs.forEach(function(r){
+      var eid=r.emp_id, mk=r.month_key;
+      if(!db.adjustments[eid]) db.adjustments[eid]={};
+      if(!db.adjustments[eid][mk]) db.adjustments[eid][mk]=[];
+      var d=r.data; d._sbid=r.id;
+      db.adjustments[eid][mk].push(d);
+    });
+
+    // payments
+    var pays = await sbGet('payments','select=id,emp_id,month_key,data&order=id');
+    db.payments = pays.map(function(r){ var d=r.data; d._sbid=r.id; return d; });
+
+    // settings (regional holidays, nextId)
+    var sets = await sbGet('settings','select=key,value');
+    sets.forEach(function(r){
+      if(r.key==='regional') db.regional = r.value;
+      if(r.key==='nextId')   db.nextId   = r.value;
+    });
+
+    saveDB(); // mirror to localStorage
+    showSyncBanner('online');
+    renderAll();
+  } catch(e) {
+    console.error('Supabase load error:', e);
+    showSyncBanner('error');
+    // Fall back to localStorage data already in db
+    renderAll();
+  }
+}
+
+// ===== SYNC ALL (after coming back online) =====
+async function syncAll(){
+  if(!isOnline || !pendingQueue.length) { showSyncBanner('online'); return; }
+  showSyncBanner('syncing');
+  var failed = [];
+  for(var i=0; i<pendingQueue.length; i++){
+    var op = pendingQueue[i];
+    try {
+      if(op.type==='saveEmployee')    await _sbSaveEmployee(op.data);
+      if(op.type==='deleteEmployee')  await _sbDeleteEmployee(op.empId);
+      if(op.type==='saveEvent')       await _sbSaveEvent(op.empId, op.mk, op.data);
+      if(op.type==='deleteEvent')     await _sbDeleteEvent(op.sbid);
+      if(op.type==='saveAdj')         await _sbSaveAdj(op.empId, op.mk, op.data);
+      if(op.type==='deleteAdj')       await _sbDeleteAdj(op.sbid);
+      if(op.type==='savePayment')     await _sbSavePayment(op.data);
+      if(op.type==='saveSettings')    await _sbSaveSettings();
+    } catch(e) { failed.push(op); }
+  }
+  pendingQueue = failed;
+  savePending();
+  if(!failed.length) showSyncBanner('online'); else showSyncBanner('error');
+}
+
+function enqueue(op){
+  pendingQueue.push(op);
+  savePending();
+}
+
+// ===== SUPABASE WRITE HELPERS =====
+async function _sbSaveEmployee(emp){
+  // Try to find existing row by app-level id stored inside the data jsonb
+  var payload = {data: emp};
+  if(emp._sbid){
+    // We know the Supabase row id — patch it
+    await sbPatch('employees', emp._sbid, payload);
+  } else {
+    // Search for existing row with this app id inside data
+    var existing = await sbGet('employees', 'select=id,data&data->>id=eq.'+emp.id+'&limit=1');
+    if(existing && existing.length>0){
+      emp._sbid = existing[0].id;
+      await sbPatch('employees', emp._sbid, payload);
+    } else {
+      var rows = await sbPost('employees', payload);
+      emp._sbid = rows[0].id;
+    }
+  }
+  await _sbSaveSettings();
+}
+
+async function _sbDeleteEmployee(sbid){
+  if(sbid) await sbDelete('employees', sbid);
+}
+
+async function _sbSaveEvent(empId, mk, ev){
+  var payload = {emp_id: empId, month_key: mk, data: ev};
+  if(ev._sbid){
+    await sbPatch('events', ev._sbid, payload);
+  } else {
+    var rows = await sbPost('events', payload);
+    ev._sbid = rows[0].id;
+  }
+}
+
+async function _sbDeleteEvent(sbid){
+  if(sbid) await sbDelete('events', sbid);
+}
+
+async function _sbSaveAdj(empId, mk, adj){
+  var payload = {emp_id: empId, month_key: mk, data: adj};
+  if(adj._sbid){
+    await sbPatch('adjustments', adj._sbid, payload);
+  } else {
+    var rows = await sbPost('adjustments', payload);
+    adj._sbid = rows[0].id;
+  }
+}
+
+async function _sbDeleteAdj(sbid){
+  if(sbid) await sbDelete('adjustments', sbid);
+}
+
+async function _sbSavePayment(pay){
+  var payload = {emp_id: pay.empId, month_key: pay.monthKey, data: pay};
+  if(pay._sbid){
+    await sbPatch('payments', pay._sbid, payload);
+  } else {
+    var rows = await sbPost('payments', payload);
+    pay._sbid = rows[0].id;
+  }
+}
+
+async function _sbSaveSettings(){
+  await sbUpsert('settings', [
+    {key:'regional', value: db.regional||[]},
+    {key:'nextId',   value: db.nextId||1}
+  ], 'key');
+}
+
+// ===== OVERRIDE saveDB TO ALSO SYNC =====
+var _origSaveDB = saveDB;
+// We'll hook into individual operations instead of saveDB
+
+// ===== SUPABASE-AWARE WRAPPERS =====
+// These wrap the existing save/delete functions to also push to Supabase
+
+var _lastSavedEmpId = null;
+var _origSaveE = saveE;
+function saveE(){
+  var idVal = document.getElementById('eid').value;
+  _origSaveE();
+  // After save, find the employee that was just created/updated
+  _lastSavedEmpId = idVal ? +idVal : db.employees[db.employees.length-1].id;
+  _syncAfterSaveE(_lastSavedEmpId);
+}
+async function _syncAfterSaveE(empId){
+  if(!isOnline){ enqueue({type:'saveEmployee', data: db.employees.find(function(e){return e.id===empId;})}); return; }
+  try {
+    var emp = db.employees.find(function(e){return e.id===empId;});
+    if(emp) await _sbSaveEmployee(emp);
+    saveDB();
+  } catch(e){ console.error(e); showSyncBanner('error'); }
+}
+
+var _origDelE = delE;
+// delE is already defined; we'll intercept via the delete operation
+// Instead, let's override at the call site by redefining delE
+var _delE_orig = window.delE;
+
+function delE(id){
+  var emp = db.employees.find(function(e){return e.id===id;});
+  var sbid = emp && emp._sbid;
+  if(!confirm('Excluir funcion\u00e1rio?'))return;
+  db.employees = db.employees.filter(function(e){return e.id!==id;});
+  saveDB(); renderAll();
+  if(isOnline){ _sbDeleteEmployee(sbid).catch(function(e){console.error(e);}) }
+  else enqueue({type:'deleteEmployee', empId:id, sbid:sbid});
+}
+
+// Override saveEv to sync
+var _origSaveEv = saveEv;
+function saveEv(){
+  _origSaveEv();
+  _syncAfterSaveEv();
+}
+async function _syncAfterSaveEv(){
+  if(!isOnline) return; // will sync on reconnect via pendingQueue
+  try{
+    var ry=SM===0?SY-1:SY, rm=SM===0?11:SM-1;
+    var eid = +document.getElementById('eveid').value||0;
+    // already closed modal, use current db state
+    for(var eid2 in db.events){
+      for(var mk in db.events[eid2]){
+        var evList = db.events[eid2][mk];
+        for(var i=0;i<evList.length;i++){
+          var ev=evList[i];
+          if(!ev._sbid) await _sbSaveEvent(+eid2, mk, ev);
+        }
+      }
+    }
+    saveDB();
+  } catch(e){ console.error(e); }
+}
+
+function delEv(eid,y,m,evId){
+  var k=MK(y,m);
+  var ev = db.events[eid]&&db.events[eid][k]&&db.events[eid][k].find(function(e){return e.id===evId;});
+  var sbid = ev&&ev._sbid;
+  if(db.events[eid]&&db.events[eid][k])
+    db.events[eid][k]=db.events[eid][k].filter(function(e){return e.id!==evId;});
+  saveDB(); render('fech');
+  if(isOnline){ if(sbid) _sbDeleteEvent(sbid).catch(function(e){console.error(e);}); }
+  else if(sbid) enqueue({type:'deleteEvent', sbid:sbid});
+}
+
+var _origSaveA = saveA;
+function saveA(){
+  _origSaveA();
+  _syncAfterSaveA();
+}
+async function _syncAfterSaveA(){
+  if(!isOnline) return;
+  try{
+    for(var eid in db.adjustments){
+      for(var mk in db.adjustments[eid]){
+        var aList=db.adjustments[eid][mk];
+        for(var i=0;i<aList.length;i++){
+          var a=aList[i];
+          if(!a._sbid) await _sbSaveAdj(+eid, mk, a);
+        }
+      }
+    }
+    saveDB();
+  } catch(e){ console.error(e); }
+}
+
+function delA(eid,y,m,adjId){
+  var k=MK(y,m);
+  var adj=db.adjustments[eid]&&db.adjustments[eid][k]&&db.adjustments[eid][k].find(function(a){return a.id===adjId;});
+  var sbid=adj&&adj._sbid;
+  if(db.adjustments[eid]&&db.adjustments[eid][k])
+    db.adjustments[eid][k]=db.adjustments[eid][k].filter(function(a){return a.id!==adjId;});
+  saveDB(); render('fech');
+  if(isOnline){ if(sbid) _sbDeleteAdj(sbid).catch(function(e){console.error(e);}); }
+  else if(sbid) enqueue({type:'deleteAdj', sbid:sbid});
+}
+
+var _origConfirmPay = confirmPay;
+function confirmPay(){
+  _origConfirmPay();
+  _syncAfterConfirmPay();
+}
+async function _syncAfterConfirmPay(){
+  if(!isOnline) return;
+  try{
+    for(var i=0;i<db.payments.length;i++){
+      var p=db.payments[i];
+      if(!p._sbid) await _sbSavePayment(p);
+    }
+    saveDB();
+  } catch(e){ console.error(e); showSyncBanner('error'); }
+}
+
+var _origAddReg = addReg;
+function addReg(){
+  _origAddReg();
+  if(isOnline) _sbSaveSettings().catch(function(e){console.error(e);});
+  else enqueue({type:'saveSettings'});
+}
+var _origRmReg = rmReg;
+function rmReg(date){
+  _origRmReg(date);
+  if(isOnline) _sbSaveSettings().catch(function(e){console.error(e);});
+  else enqueue({type:'saveSettings'});
+}
+
+
+// ===== FERIADOS NACIONAIS 2024-2028 =====
+var NH={
+"2024-01-01":"Confraterniza\u00e7\u00e3o Universal","2024-02-12":"Carnaval (2\u00aa)","2024-02-13":"Carnaval (3\u00aa)","2024-03-29":"Sexta-feira Santa","2024-03-31":"P\u00e1scoa","2024-04-21":"Tiradentes","2024-05-01":"Dia do Trabalho","2024-05-30":"Corpus Christi","2024-09-07":"Independ\u00eancia","2024-10-12":"N.Sra. Aparecida","2024-11-02":"Finados","2024-11-15":"Proclama\u00e7\u00e3o da Rep\u00fablica","2024-11-20":"Consci\u00eancia Negra","2024-12-25":"Natal",
+"2025-01-01":"Confraterniza\u00e7\u00e3o Universal","2025-03-03":"Carnaval (2\u00aa)","2025-03-04":"Carnaval (3\u00aa)","2025-04-18":"Sexta-feira Santa","2025-04-20":"P\u00e1scoa","2025-04-21":"Tiradentes","2025-05-01":"Dia do Trabalho","2025-06-19":"Corpus Christi","2025-09-07":"Independ\u00eancia","2025-10-12":"N.Sra. Aparecida","2025-11-02":"Finados","2025-11-15":"Proclama\u00e7\u00e3o da Rep\u00fablica","2025-11-20":"Consci\u00eancia Negra","2025-12-25":"Natal",
+"2026-01-01":"Confraterniza\u00e7\u00e3o Universal","2026-02-16":"Carnaval (2\u00aa)","2026-02-17":"Carnaval (3\u00aa)","2026-04-03":"Sexta-feira Santa","2026-04-05":"P\u00e1scoa","2026-04-21":"Tiradentes","2026-05-01":"Dia do Trabalho","2026-06-04":"Corpus Christi","2026-09-07":"Independ\u00eancia","2026-10-12":"N.Sra. Aparecida","2026-11-02":"Finados","2026-11-15":"Proclama\u00e7\u00e3o da Rep\u00fablica","2026-11-20":"Consci\u00eancia Negra","2026-12-25":"Natal",
+"2027-01-01":"Confraterniza\u00e7\u00e3o Universal","2027-02-08":"Carnaval (2\u00aa)","2027-02-09":"Carnaval (3\u00aa)","2027-03-26":"Sexta-feira Santa","2027-03-28":"P\u00e1scoa","2027-04-21":"Tiradentes","2027-05-01":"Dia do Trabalho","2027-05-27":"Corpus Christi","2027-09-07":"Independ\u00eancia","2027-10-12":"N.Sra. Aparecida","2027-11-02":"Finados","2027-11-15":"Proclama\u00e7\u00e3o da Rep\u00fablica","2027-11-20":"Consci\u00eancia Negra","2027-12-25":"Natal",
+"2028-01-01":"Confraterniza\u00e7\u00e3o Universal","2028-02-28":"Carnaval (2\u00aa)","2028-02-29":"Carnaval (3\u00aa)","2028-04-14":"Sexta-feira Santa","2028-04-16":"P\u00e1scoa","2028-04-21":"Tiradentes","2028-05-01":"Dia do Trabalho","2028-06-15":"Corpus Christi","2028-09-07":"Independ\u00eancia","2028-10-12":"N.Sra. Aparecida","2028-11-02":"Finados","2028-11-15":"Proclama\u00e7\u00e3o da Rep\u00fablica","2028-11-20":"Consci\u00eancia Negra","2028-12-25":"Natal"
+};
+
+// ===== DB =====
+var DBK='atrium_v3';
+function loadDB(){try{return JSON.parse(localStorage.getItem(DBK))||defDB();}catch(e){return defDB();}}
+function saveDB(){localStorage.setItem(DBK,JSON.stringify(db));}
+function defDB(){return{employees:[],events:{},adjustments:{},payments:[],regional:[],nextId:1};}
+var db=loadDB();
+function uid(){return db.nextId++;}
+function MK(y,m){return y+'-'+String(m+1).padStart(2,'0');}
+var SY=new Date().getFullYear(),SM=new Date().getMonth();
+
+// ===== HELPERS =====
+var MP=['Janeiro','Fevereiro','Mar\u00e7o','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+var DP=['Seg','Ter','Qua','Qui','Sex','S\u00e1b','Dom'];
+var DF=['Segunda-feira','Ter\u00e7a-feira','Quarta-feira','Quinta-feira','Sexta-feira','S\u00e1bado','Domingo'];
+function jd(d){return d===0?6:d-1;}
+function fm(v){return Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fd(iso){if(!iso)return'';var p=iso.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
+function tod(){return new Date().toISOString().slice(0,10);}
+function dim(y,m){return new Date(y,m+1,0).getDate();}
+function mdays(y,m){
+  var n=dim(y,m),r=[];
+  for(var d=1;d<=n;d++){var dt=new Date(y,m,d),dow=jd(dt.getDay());r.push({d:d,dow:dow,iso:y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0')});}
+  return r;
+}
+function allH(){var o=Object.assign({},NH);(db.regional||[]).forEach(function(h){o[h.date]=h.name;});return o;}
+function holName(iso){return allH()[iso]||null;}
+function bday5(y,m){
+  var h=allH(),c=0;
+  for(var d=1;d<=dim(y,m);d++){
+    var dow=jd(new Date(y,m,d).getDay());
+    var iso=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    if(dow<5&&!h[iso]){c++;if(c===5)return{d:d,iso:iso};}
+  }
+  return null;
+}
+function bday1(y,m){
+  var h=allH();
+  for(var d=1;d<=dim(y,m);d++){
+    var dow=jd(new Date(y,m,d).getDay());
+    var iso=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    if(dow<5&&!h[iso])return{d:d,iso:iso};
+  }
+  return null;
+}
+function inssCalc(v){
+  var t=[[1412,.075],[2666.68,.09],[4000.03,.12],[7786.02,.14]],r=0,p=0;
+  for(var i=0;i<t.length;i++){if(v<=t[i][0]){r+=(v-p)*t[i][1];break;}r+=(t[i][0]-p)*t[i][1];p=t[i][0];}
+  return Math.min(r,1092.05);
+}
+var AVC=['#8B7355','#8A9B8A','#6B9FBF','#C9A99A','#7B7FAF','#C4973A'];
+function avc(n){var h=0;for(var i=0;i<(n||'').length;i++)h=(h*31+(n||'').charCodeAt(i))&0xffff;return AVC[h%AVC.length];}
+function avi(n){return(n||'?').split(' ').map(function(x){return x[0];}).join('').slice(0,2).toUpperCase();}
+function avt(n,sz){sz=sz||40;var c=avc(n);return'<div class="av" style="width:'+sz+'px;height:'+sz+'px;background:'+c+'18;border:1px solid '+c+'44;color:'+c+';font-size:'+(sz*.32)+'px;">'+avi(n)+'</div>';}
+
+// ===== MONTH SELECTOR =====
+function buildMS(){
+  var s=document.getElementById('msel');s.innerHTML='';
+  var n=new Date();
+  for(var i=-14;i<=3;i++){
+    var dt=new Date(n.getFullYear(),n.getMonth()+i,1),y=dt.getFullYear(),m=dt.getMonth();
+    var o=document.createElement('option');o.value=y+'-'+m;o.text=MP[m]+' '+y;
+    if(y===SY&&m===SM)o.selected=true;s.appendChild(o);
+  }
+}
+function onMC(){var v=document.getElementById('msel').value.split('-');SY=+v[0];SM=+v[1];renderAll();}
+
+// ===== TABS =====
+var CT='dash';
+function swTab(tab,btn){
+  CT=tab;
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('[id^="tab-"]').forEach(function(d){d.classList.add('hidden');});
+  if(btn)btn.classList.add('active');
+  document.getElementById('tab-'+tab).classList.remove('hidden');
+  render(tab);
+}
+
+// ===== EMPLOYEE MODAL =====
+function openEM(id){
+  id=id||null;
+  var e=id?db.employees.find(function(x){return x.id===id;}):null;
+  document.getElementById('emp-ttl').textContent=e?'Editar Funcion\u00e1rio':'Novo Funcion\u00e1rio';
+  document.getElementById('eid').value=e?e.id:'';
+  document.getElementById('ename').value=e?e.name:'';
+  document.getElementById('erole').value=e?e.role:'Empregada Dom\u00e9stica';
+  document.getElementById('esal').value=e?e.salary:'';
+  document.getElementById('ecnt').value=e?e.contract:'mensalista';
+  document.getElementById('evt').value=e?e.vtDaily:'0';
+  document.getElementById('evtdesc').value=e?e.vtDiscount||'legal':'legal';
+  document.getElementById('einss').value=e?e.inss:'yes';
+  document.getElementById('enotes').value=e?e.notes:'';
+  document.querySelectorAll('#edays .db').forEach(function(b){
+    b.classList.toggle('on',!!(e&&e.workDays&&e.workDays.indexOf(+b.dataset.d)>=0));
+    b.onclick=function(){this.classList.toggle('on');};
+  });
+  document.getElementById('rl').innerHTML='';
+  (e&&e.recurring||[]).forEach(function(r){addR(r);});
+  document.getElementById('etl').innerHTML='';
+  var deft=[{name:'Di\u00e1ria 12h',value:200},{name:'Di\u00e1ria 24h',value:350}];
+  (e&&e.extraTypes||deft).forEach(function(t){addET(t);});
+  document.getElementById('mod-emp').classList.remove('hidden');
+}
+function addR(d){
+  d=d||null;
+  var id='r'+Date.now()+Math.random().toString(36).slice(2,5);
+  var el=document.createElement('div');
+  el.id=id;el.style.cssText='display:flex;gap:8px;margin-bottom:8px;align-items:center;';
+  var opts=DP.map(function(x,i){return'<option value="'+i+'"'+(d&&d.dow==i?' selected':'')+'>'+x+'</option>';}).join('');
+  var holCk=(d&&d.countHolidays)?'checked':'';
+  el.innerHTML='<select class="rd" style="flex:0 0 68px;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:12px;background:var(--card);">'+opts+'</select>'
+    +'<input class="rn" placeholder="Descri\u00e7\u00e3o" value="'+(d?d.desc||'':'')+'" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:12px;">'
+    +'<input class="rv" type="number" step=".01" placeholder="R$" value="'+(d?d.value||'':'')+'" style="width:72px;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:12px;">'
+    +'<label title="Contar mesmo em feriado?" style="display:flex;align-items:center;gap:4px;cursor:pointer;flex-shrink:0;font-size:10px;color:var(--muted);padding:0 2px;white-space:nowrap;">'
+    +'<input type="checkbox" class="rh" '+holCk+' style="width:14px;height:14px;accent-color:var(--warn);cursor:pointer;"> &#127881;</label>'
+    +'<button onclick="document.getElementById(\''+id+'\').remove()" style="width:28px;height:32px;border-radius:7px;border:1px solid var(--border);background:transparent;cursor:pointer;color:var(--muted);flex-shrink:0;">\xd7</button>';
+  document.getElementById('rl').appendChild(el);
+}
+function addET(d){
+  d=d||null;
+  var id='e'+Date.now()+Math.random().toString(36).slice(2,5);
+  var el=document.createElement('div');
+  el.id=id;el.style.cssText='display:flex;gap:8px;margin-bottom:8px;align-items:center;';
+  el.innerHTML='<input class="en" placeholder="Nome (ex: Di\u00e1ria 12h)" value="'+(d?d.name||'':'')+'" style="flex:2;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:12px;"><input class="ev" type="number" step=".01" placeholder="R$ padr\u00e3o" value="'+(d?d.value||'':'')+'" style="width:88px;padding:8px;border-radius:8px;border:1px solid var(--border);font-size:12px;"><button onclick="document.getElementById(\''+id+'\').remove()" style="width:28px;height:32px;border-radius:7px;border:1px solid var(--border);background:transparent;cursor:pointer;color:var(--muted);flex-shrink:0;">\xd7</button>';
+  document.getElementById('etl').appendChild(el);
+}
+function saveE(){
+  var id=document.getElementById('eid').value;
+  var name=document.getElementById('ename').value.trim();
+  if(!name){alert('Informe o nome.');return;}
+  var workDays=[];
+  document.querySelectorAll('#edays .db.on').forEach(function(b){workDays.push(+b.dataset.d);});
+  var recurring=[];
+  document.querySelectorAll('#rl>div').forEach(function(r){
+    var val=+r.querySelector('.rv').value||0;
+    if(val>0)recurring.push({dow:+r.querySelector('.rd').value,desc:r.querySelector('.rn').value.trim(),value:val,countHolidays:r.querySelector('.rh').checked});
+  });
+  var extraTypes=[];
+  document.querySelectorAll('#etl>div').forEach(function(r){
+    var nm=r.querySelector('.en').value.trim();
+    if(nm)extraTypes.push({name:nm,value:+r.querySelector('.ev').value||0});
+  });
+  var data={id:id?+id:uid(),name:name,role:document.getElementById('erole').value,
+    salary:+document.getElementById('esal').value||0,contract:document.getElementById('ecnt').value,
+    vtDaily:+document.getElementById('evt').value||0,vtDiscount:document.getElementById('evtdesc').value,
+    inss:document.getElementById('einss').value,workDays:workDays,recurring:recurring,extraTypes:extraTypes,
+    notes:document.getElementById('enotes').value.trim(),createdAt:id?undefined:tod()};
+  if(id){var i=db.employees.findIndex(function(e){return e.id===+id;});if(i>=0){data.createdAt=db.employees[i].createdAt;data._sbid=db.employees[i]._sbid;db.employees[i]=data;}}
+  else db.employees.push(data);
+  saveDB();cm('mod-emp');renderAll();
+}
+function delE(id){if(!confirm('Excluir funcion\u00e1rio?'))return;db.employees=db.employees.filter(function(e){return e.id!==id;});saveDB();renderAll();}
+
+// ===== EVENTS =====
+function getEvs(eid,y,m){return(db.events[eid]&&db.events[eid][MK(y,m)])||[];}
+function getAdjs(eid,y,m){return(db.adjustments[eid]&&db.adjustments[eid][MK(y,m)])||[];}
+function openEvM(eid,dateStr,evId){
+  evId=evId||null;
+  var emp=db.employees.find(function(e){return e.id===eid;});
+  var ry=SM===0?SY-1:SY,rm=SM===0?11:SM-1;
+  var target=evId?getEvs(eid,ry,rm).find(function(e){return e.id===evId;}):null;
+  document.getElementById('eveid').value=eid;document.getElementById('evdate').value=dateStr;document.getElementById('evid').value=evId||'';
+  var parts=dateStr.split('-');var dt=new Date(+parts[0],+parts[1]-1,+parts[2]);var hn=holName(dateStr);
+  document.getElementById('evinfo').innerHTML='<strong>'+DF[jd(dt.getDay())]+', '+parts[2]+'/'+parts[1]+'/'+parts[0]+'</strong> \u2014 '+emp.name+(hn?' &nbsp;<span class="badge" style="background:rgba(196,151,58,.15);color:var(--warn);">&#127881; '+hn+'</span>':'');
+  var banner=document.getElementById('evhb');
+  if(hn){banner.innerHTML='&#127881; <strong>'+hn+'</strong> \u2014 Se trabalhou neste feriado, registre a di\u00e1ria avulsa.';banner.classList.remove('hidden');}
+  else banner.classList.add('hidden');
+  var sel=document.getElementById('evtype');sel.innerHTML='';
+  (emp.extraTypes||[]).forEach(function(t){var o=document.createElement('option');o.value=JSON.stringify(t);o.text=t.name+' (R$ '+fm(t.value)+')';sel.appendChild(o);});
+  var co=document.createElement('option');co.value='custom';co.text='Personalizado\u2026';sel.appendChild(co);
+  if(target){sel.value='custom';document.getElementById('evval').value=target.value;document.getElementById('evdur').value=target.duration||'';document.getElementById('evnotes').value=target.notes||'';}
+  else if(emp.extraTypes&&emp.extraTypes.length){var t0=emp.extraTypes[0];document.getElementById('evval').value=t0.value;document.getElementById('evdur').value=t0.name;document.getElementById('evnotes').value='';}
+  else{document.getElementById('evval').value='';document.getElementById('evdur').value='';document.getElementById('evnotes').value='';}
+  document.getElementById('mod-ev').classList.remove('hidden');
+}
+function onET(){var v=document.getElementById('evtype').value;if(v==='custom')return;var t=JSON.parse(v);document.getElementById('evval').value=t.value;document.getElementById('evdur').value=t.name;}
+function saveEv(){
+  var eid=+document.getElementById('eveid').value,dateStr=document.getElementById('evdate').value,evId=document.getElementById('evid').value;
+  var parts=dateStr.split('-'),key=parts[0]+'-'+parts[1];
+  var ev={id:evId?+evId:uid(),date:dateStr,value:+document.getElementById('evval').value||0,duration:document.getElementById('evdur').value.trim(),holiday:!!holName(dateStr),notes:document.getElementById('evnotes').value.trim()};
+  if(!db.events[eid])db.events[eid]={};if(!db.events[eid][key])db.events[eid][key]=[];
+  if(evId){var i=db.events[eid][key].findIndex(function(e){return e.id===+evId;});if(i>=0)db.events[eid][key][i]=ev;else db.events[eid][key].push(ev);}
+  else db.events[eid][key].push(ev);
+  saveDB();cm('mod-ev');render('fech');
+}
+function delEv(eid,y,m,evId){
+  var k=MK(y,m);
+  if(db.events[eid]&&db.events[eid][k])db.events[eid][k]=db.events[eid][k].filter(function(e){return e.id!==evId;});
+  saveDB();render('fech');
+}
+
+// ===== ADJUSTMENTS =====
+function openAM(eid,y,m,adjId){
+  adjId=adjId||null;
+  var adj=adjId?getAdjs(eid,y,m).find(function(a){return a.id===adjId;}):null;
+  document.getElementById('aeid').value=eid;document.getElementById('amk').value=MK(y,m);document.getElementById('aid').value=adjId||'';
+  document.getElementById('atype').value=adj?adj.type:'advance';document.getElementById('aval').value=adj?adj.value:'';
+  document.getElementById('adate').value=adj?adj.date:tod();document.getElementById('adesc').value=adj?adj.desc:'';
+  document.getElementById('mod-adj').classList.remove('hidden');
+}
+function saveA(){
+  var eid=+document.getElementById('aeid').value,key=document.getElementById('amk').value,adjId=document.getElementById('aid').value;
+  var adj={id:adjId?+adjId:uid(),type:document.getElementById('atype').value,value:+document.getElementById('aval').value||0,date:document.getElementById('adate').value,desc:document.getElementById('adesc').value.trim()};
+  if(!db.adjustments[eid])db.adjustments[eid]={};if(!db.adjustments[eid][key])db.adjustments[eid][key]=[];
+  if(adjId){var i=db.adjustments[eid][key].findIndex(function(a){return a.id===+adjId;});if(i>=0)db.adjustments[eid][key][i]=adj;else db.adjustments[eid][key].push(adj);}
+  else db.adjustments[eid][key].push(adj);
+  saveDB();cm('mod-adj');render('fech');
+}
+function delA(eid,y,m,adjId){
+  var k=MK(y,m);
+  if(db.adjustments[eid]&&db.adjustments[eid][k])db.adjustments[eid][k]=db.adjustments[eid][k].filter(function(a){return a.id!==adjId;});
+  saveDB();render('fech');
+}
+
+// ===== REGIONAL HOLIDAYS =====
+function openReg(){renderRL();document.getElementById('mod-reg').classList.remove('hidden');}
+function renderRL(){
+  var l=document.getElementById('regl');
+  if(!db.regional||!db.regional.length){l.innerHTML='<p class="tip">Nenhum feriado regional cadastrado.</p>';return;}
+  l.innerHTML=db.regional.map(function(h){return'<div class="fi" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);"><span style="font-size:13px;">'+fd(h.date)+' \u2014 '+h.name+'</span><button onclick="rmReg(\''+h.date+'\')" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:14px;">\xd7</button></div>';}).join('');
+}
+function addReg(){
+  var date=document.getElementById('rdate').value,name=document.getElementById('rname').value.trim();
+  if(!date||!name)return;
+  if(!db.regional)db.regional=[];
+  db.regional=db.regional.filter(function(h){return h.date!==date;});
+  db.regional.push({date:date,name:name});db.regional.sort(function(a,b){return a.date.localeCompare(b.date);});
+  document.getElementById('rdate').value='';document.getElementById('rname').value='';
+  saveDB();renderRL();renderAll();
+}
+function rmReg(date){db.regional=db.regional.filter(function(h){return h.date!==date;});saveDB();renderRL();renderAll();}
+
+// ===== VT MANUAL OVERRIDE =====
+function setVTDays(key,val){var n=parseInt(val,10);if(isNaN(n)||n<0)return;localStorage.setItem(key,String(n));renderAll();}
+function resetVTDays(key){localStorage.removeItem(key);renderAll();}
+
+// ===== CALCULATION ENGINE =====
+// ry/rm = WORKED month. Payment in following month. VT = month after worked.
+function calc(eid,ry,rm){
+  var emp=db.employees.find(function(e){return e.id===eid;});if(!emp)return null;
+  var h=allH(),days=mdays(ry,rm),events=getEvs(eid,ry,rm),adjs=getAdjs(eid,ry,rm);
+  var key=MK(ry,rm),payment=db.payments.find(function(p){return p.empId===eid&&p.monthKey===key;});
+  var salBase=emp.salary||0;
+
+  // Recurring with countHolidays support
+  var recs=[],holWarns=[];
+  (emp.recurring||[]).forEach(function(rec){
+    days.filter(function(d){return d.dow===rec.dow;}).forEach(function(d){
+      var hn=h[d.iso]||null,hasEv=events.some(function(e){return e.date===d.iso;});
+      if(hn&&!hasEv){
+        if(rec.countHolidays) recs.push({iso:d.iso,desc:rec.desc||DP[rec.dow],value:rec.value,hn:hn,autoHol:true});
+        else holWarns.push({iso:d.iso,hn:hn,desc:rec.desc,val:rec.value});
+      } else {
+        recs.push({iso:d.iso,desc:rec.desc||DP[rec.dow],value:rec.value,hn:hn,autoHol:false});
+      }
+    });
+  });
+  var recTot=recs.reduce(function(a,r){return a+r.value;},0);
+  var avs=events.map(function(e){return Object.assign({},e,{hn:h[e.date]||null});});
+  var avTot=avs.reduce(function(a,e){return a+e.value;},0);
+  var gross=salBase+recTot+avTot;
+  var deds=0,bons=0;
+  adjs.forEach(function(a){if(['advance','discount','loan','other'].indexOf(a.type)>=0)deds+=a.value;else if(a.type==='bonus')bons+=a.value;});
+  var inssAmt=emp.inss==='yes'?inssCalc(gross):0;
+  var netSal=gross+bons-deds-inssAmt;
+
+  // VT - month after worked, with manual override
+  var vtY=rm===11?ry+1:ry,vtM=rm===11?0:rm+1;
+  var vtDays=mdays(vtY,vtM),vtH=allH(),vtSet={};
+  vtDays.forEach(function(d){if((emp.workDays||[]).indexOf(d.dow)>=0&&!vtH[d.iso])vtSet[d.iso]=1;});
+  (emp.recurring||[]).forEach(function(rec){vtDays.filter(function(d){return d.dow===rec.dow&&!vtH[d.iso];}).forEach(function(d){vtSet[d.iso]=1;});});
+  var vtWdAuto=Object.keys(vtSet).length;
+  var vtOK='vt_'+eid+'_'+key;
+  var vtMR=localStorage.getItem(vtOK);
+  var vtManualDays=(vtMR!==null&&vtMR!=='')?+vtMR:null;
+  var vtWd=(vtManualDays!==null)?vtManualDays:vtWdAuto;
+  var vtGross=vtWd*(emp.vtDaily||0);
+  var vtDisc=(emp.vtDiscount==='none')?0:Math.min(salBase*0.06,vtGross);
+  var vtNet=Math.max(0,vtGross-vtDisc);
+  var pyY=rm===11?ry+1:ry,pyM=rm===11?0:rm+1;
+  return{emp:emp,ry:ry,rm:rm,key:key,payment:payment,
+    salBase:salBase,recs:recs,recTot:recTot,avs:avs,avTot:avTot,holWarns:holWarns,
+    gross:gross,adjs:adjs,deds:deds,bons:bons,inssAmt:inssAmt,netSal:netSal,
+    vtY:vtY,vtM:vtM,vtWd:vtWd,vtWdAuto:vtWdAuto,vtManualDays:vtManualDays,vtOK:vtOK,
+    vtGross:vtGross,vtDisc:vtDisc,vtNet:vtNet,
+    pay1:bday1(pyY,pyM),pay5:bday5(pyY,pyM),pyY:pyY,pyM:pyM,total:netSal+vtNet};
+}
+
+// ===== MEMO =====
+var AL={advance:'Adiantamento',discount:'Desconto/Falta',bonus:'B\u00f4nus',loan:'Parcela empr\u00e9stimo',other:'Outro desconto'};
+function memoHTML(c){
+  var rl=MP[c.rm]+' '+c.ry,vl=MP[c.vtM]+' '+c.vtY,h='';
+  // Header
+  h+='<div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:16px;">'
+    +'<p style="font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;font-weight:500;margin-bottom:4px;">Compet\u00eancia \u2014 m\u00eas trabalhado</p>'
+    +'<p style="font-family:\'Cormorant\',serif;font-size:22px;font-weight:300;">'+rl+'</p>'
+    +'<p class="tip" style="margin-top:4px;">Prazo legal: at\u00e9 5\u00ba dia \u00fatil \u2014 <strong>'+(c.pay5?c.pay5.d+'/'+String(c.pyM+1).padStart(2,'0')+'/'+c.pyY:'-')+'</strong> &nbsp;\u00b7&nbsp; 1\u00ba dia \u00fatil: '+(c.pay1?fd(c.pay1.iso):'-')+'</p></div>';
+  // Holiday warnings
+  if(c.holWarns.length){
+    h+='<div class="alert aw" style="flex-direction:column;gap:6px;margin-bottom:14px;"><p style="font-size:12px;font-weight:500;color:var(--warn);">&#9888;&#65039; '+c.holWarns.length+' dia(s) recorrente(s) em feriado sem di\u00e1ria lan\u00e7ada</p>';
+    c.holWarns.forEach(function(w){h+='<div style="font-size:11px;color:var(--warn);padding-left:4px;">&#8226; '+fd(w.iso)+' \u2014 '+w.hn+' ('+w.desc+') &nbsp;<button onclick="openEvM('+c.emp.id+',\''+w.iso+'\')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;text-decoration:underline;padding:0;">Lan\u00e7ar di\u00e1ria &#8594;</button></div>';});
+    h+='</div>';
+  }
+  // Block 1 Salary
+  h+='<div class="card" style="margin-bottom:12px;"><p class="lbl" style="margin-bottom:12px;">&#9312; Sal\u00e1rio Base \u2014 '+rl+'</p><div class="fb"><span style="font-size:13px;">Sal\u00e1rio contratual</span><span class="money" style="font-size:20px;">R$ '+fm(c.salBase)+'</span></div></div>';
+  // Block 2 Recurring
+  if(c.recs.length){
+    var grp={};
+    c.recs.forEach(function(r){var k=r.desc+'|'+r.value;if(!grp[k])grp[k]={desc:r.desc,value:r.value,items:[]};grp[k].items.push({day:r.iso.slice(8),autoHol:r.autoHol});});
+    h+='<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:12px;"><p class="lbl">&#9313; Di\u00e1rias Recorrentes</p><span class="money" style="font-size:18px;color:var(--sage);">+ R$ '+fm(c.recTot)+'</span></div><div class="mt2"><div class="mr mrh"><span>Tipo/Dia</span><span>Datas no m\u00eas</span><span style="text-align:right;">Subtotal</span></div>';
+    Object.values(grp).forEach(function(g){
+      var dl=g.items.map(function(it){return it.day+(it.autoHol?' &#127881;':'');}).join(', ');
+      h+='<div class="mr"><span>'+g.desc+'</span><span style="color:var(--muted);font-size:11px;">'+g.items.length+'\u00d7 ('+dl+')</span><span class="money" style="text-align:right;">'+g.items.length+' \u00d7 R$ '+fm(g.value)+' = <strong>R$ '+fm(g.value*g.items.length)+'</strong></span></div>';
+    });
+    h+='</div></div>';
+  }
+  // Block 3 Avulsa
+  if(c.avs.length){
+    h+='<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:12px;"><p class="lbl">&#9314; Di\u00e1rias Avulsas</p><span class="money" style="font-size:18px;color:var(--blue);">+ R$ '+fm(c.avTot)+'</span></div><div class="mt2"><div class="mr mrh"><span>Data</span><span>Tipo</span><span style="text-align:right;">Valor</span></div>';
+    c.avs.forEach(function(e){h+='<div class="mr"><span>'+fd(e.date)+(e.hn?' <span class="badge" style="background:rgba(196,151,58,.15);color:var(--warn);">&#127881;</span>':'')+'</span><span style="color:var(--muted);">'+(e.duration||'\u2014')+(e.notes?' \u00b7 '+e.notes:'')+'</span><span class="money" style="text-align:right;">R$ '+fm(e.value)+'</span></div>';});
+    h+='</div></div>';
+  }
+  // Block 4 Adjustments
+  if(c.adjs.length){
+    var na=c.bons-c.deds;
+    h+='<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:12px;"><p class="lbl">&#9315; Ajustes</p><span class="money" style="font-size:18px;color:'+(na>=0?'var(--sage)':'var(--danger)')+';">'+(na>=0?'+':'\u2212')+'R$ '+fm(Math.abs(na))+'</span></div><div class="mt2"><div class="mr mrh"><span>Tipo</span><span>Descri\u00e7\u00e3o</span><span style="text-align:right;">Valor</span></div>';
+    c.adjs.forEach(function(a){var isD=['advance','discount','loan','other'].indexOf(a.type)>=0;h+='<div class="mr"><span>'+(AL[a.type]||a.type)+'</span><span style="color:var(--muted);">'+(a.desc||'\u2014')+' \u00b7 '+fd(a.date)+'</span><span class="money" style="text-align:right;color:'+(isD?'var(--danger)':'var(--sage)')+';">'+(isD?'\u2212':'+')+'R$ '+fm(a.value)+'</span></div>';});
+    h+='</div></div>';
+  }
+  // Block 5 INSS
+  if(c.inssAmt>0){
+    h+='<div class="card" style="margin-bottom:12px;"><p class="lbl" style="margin-bottom:10px;">&#9316; INSS \u2014 Desconto do Empregado</p><div class="mt2"><div class="mr mrh"><span>Item</span><span>Refer\u00eancia</span><span style="text-align:right;">Valor</span></div><div class="mr"><span>Base de c\u00e1lculo</span><span style="color:var(--muted);">Sal\u00e1rio bruto</span><span class="money" style="text-align:right;">R$ '+fm(c.gross)+'</span></div><div class="mr"><span>Al\u00edquota efetiva</span><span style="color:var(--muted);">Tabela progressiva 2024</span><span class="money" style="text-align:right;">'+((c.inssAmt/c.gross)*100).toFixed(2)+'%</span></div><div class="mr"><span>Desconto INSS</span><span style="color:var(--muted);">Deduzido do sal\u00e1rio</span><span class="money" style="text-align:right;color:var(--danger);">\u2212 R$ '+fm(c.inssAmt)+'</span></div></div></div>';
+  }
+  // Block 6 VT with manual override
+  var isMan=(c.vtManualDays!==null);
+  var vtDL=(c.emp.vtDiscount==='none')?'Sem desconto \u2014 empregador arca com o valor integral':'Desconto legal (6% sal. base) \u2014 m\u00e1x R$ '+fm(c.vtGross);
+  h+='<div class="card" style="margin-bottom:12px;">'
+    +'<div class="fb" style="margin-bottom:10px;"><p class="lbl">&#9317; Vale-Transporte \u2014 '+vl+'</p>'
+    +'<div class="fi" style="gap:6px;">'+(isMan?'<span class="badge" style="background:rgba(196,151,58,.15);color:var(--warn);">ajustado</span>':'<span class="badge" style="background:rgba(107,159,191,.15);color:var(--blue);">autom\u00e1tico</span>')
+    +'<span class="badge" style="background:rgba(107,159,191,.1);color:var(--blue);">m\u00eas seguinte</span></div></div>'
+    +'<div class="mt2"><div class="mr mrh"><span>Item</span><span>Mem\u00f3ria de c\u00e1lculo</span><span style="text-align:right;">Valor</span></div>'
+    +'<div class="mr"><span>Dias em '+vl+'</span><span style="color:var(--muted);">Sugerido: '+c.vtWdAuto+(isMan?' \u2192 Ajustado: '+c.vtWd:'')+' dias \u00fateis</span><span class="money" style="text-align:right;">'+c.vtWd+(isMan?' <span style="color:var(--warn);font-size:9px;">&#9998;</span>':'')+'</span></div>'
+    +'<div class="mr"><span>VT bruto</span><span style="color:var(--muted);">'+c.vtWd+' \u00d7 R$ '+fm(c.emp.vtDaily||0)+'</span><span class="money" style="text-align:right;">R$ '+fm(c.vtGross)+'</span></div>'
+    +'<div class="mr"><span>'+(c.emp.vtDiscount==='none'?'Desconto':'Desconto legal 6%')+'</span><span style="color:var(--muted);">'+vtDL+'</span><span class="money" style="text-align:right;color:'+(c.vtDisc>0?'var(--danger)':'var(--sage)')+';">'+(c.vtDisc>0?'\u2212 R$ '+fm(c.vtDisc):'R$ 0,00 \u2014 integral')+'</span></div>'
+    +'</div>'
+    +(c.payment
+      ?'<div class="fb" style="padding-top:10px;"><span style="font-size:13px;">VT pago</span><span class="money" style="font-size:18px;color:var(--blue);">R$ '+fm(c.vtNet)+'</span></div>'
+      :'<div class="fi" style="gap:8px;padding-top:12px;flex-wrap:wrap;">'
+       +'<span style="font-size:11px;color:var(--muted);">Ajustar dias VT:</span>'
+       +'<input type="number" min="0" max="31" value="'+c.vtWd+'" onchange="setVTDays(\''+c.vtOK+'\',this.value)" style="width:60px;padding:5px 8px;border-radius:7px;border:1px solid var(--border);font-size:12px;text-align:center;">'
+       +(isMan?'<button onclick="resetVTDays(\''+c.vtOK+'\')" class="btn btn-gh btn-sm" style="padding:5px 10px;font-size:10px;">&#8634; Usar sugerido ('+c.vtWdAuto+')</button>':'')
+       +'<span class="money" style="font-size:18px;color:var(--blue);margin-left:auto;">R$ '+fm(c.vtNet)+'</span></div>')
+    +'</div>';
+  // Dark summary
+  h+='<div class="dark" style="border-radius:16px;">'
+    +'<p style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.12em;text-transform:uppercase;font-weight:500;margin-bottom:16px;">Resumo \u2014 '+rl+'</p>';
+  [[rl+' \u2014 Sal\u00e1rio base',c.salBase,false,false],['+ Di\u00e1rias recorrentes',c.recTot,false,c.recTot===0],['+ Di\u00e1rias avulsas',c.avTot,false,c.avTot===0],['+ B\u00f4nus',c.bons,false,c.bons===0],['\u2212 Descontos',c.deds,true,c.deds===0],['\u2212 INSS',c.inssAmt,true,c.inssAmt===0]].filter(function(r){return!r[3];}).forEach(function(r){
+    h+='<div class="fb" style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,.07);"><span style="font-size:12px;color:rgba(255,255,255,.5);">'+r[0]+'</span><span class="money" style="font-size:16px;color:'+(r[2]?'#e99':'rgba(255,255,255,.8)')+';">'+(r[2]?'\u2212':'')+'R$ '+fm(r[1])+'</span></div>';
+  });
+  h+='<div class="fb" style="padding:14px 0 8px;border-top:1px solid rgba(255,255,255,.15);margin-top:6px;"><span style="font-size:14px;font-weight:500;color:#fff;">&#127974; Sal\u00e1rio l\u00edquido</span><span class="money" style="font-size:28px;color:var(--a2);">R$ '+fm(c.netSal)+'</span></div>'
+    +'<div class="fb" style="padding:8px 0;border-top:1px solid rgba(255,255,255,.08);"><span style="font-size:12px;color:rgba(255,255,255,.5);">+ VT '+vl+'</span><span class="money" style="font-size:18px;color:var(--blue);">R$ '+fm(c.vtNet)+'</span></div>'
+    +'<div class="fb" style="padding:12px 0 0;border-top:2px solid rgba(255,255,255,.18);margin-top:4px;"><span style="font-size:15px;font-weight:500;color:#fff;">&#128179; Total do envelope</span><span class="money" style="font-size:28px;color:#fff;font-weight:300;">R$ '+fm(c.total)+'</span></div></div>';
+  return h;
+}
+
+// ===== CONFIRM PAYMENT =====
+function openPayM(eid,ry,rm){
+  var c=calc(eid,ry,rm),md=document.getElementById('mod-pay');
+  md.dataset.eid=eid;md.dataset.ry=ry;md.dataset.rm=rm;
+  document.getElementById('paybody').innerHTML=
+    '<div class="fi" style="gap:12px;margin-bottom:16px;">'+avt(c.emp.name,44)+'<div><div style="font-size:16px;font-weight:400;">'+c.emp.name+'</div><div class="tip">'+c.emp.role+' \u00b7 compet\u00eancia '+MP[rm]+' '+ry+'</div></div></div>'
+    +memoHTML(c)+'<div class="div"></div>'
+    +'<div class="g2" style="gap:12px;margin-bottom:14px;"><div class="field"><label>Data do pagamento</label><input id="pdate" type="date" value="'+tod()+'"></div><div class="field"><label>Forma</label><select id="pmeth"><option>PIX</option><option>Transfer\u00eancia</option><option>Dinheiro</option><option>Dep\u00f3sito</option></select></div></div>'
+    +'<div class="field"><label>Observa\u00e7\u00f5es</label><input id="pnotes" placeholder="Opcional"></div>'
+    +'<div style="border:1.5px dashed var(--border);border-radius:12px;padding:14px;margin-bottom:12px;text-align:center;opacity:.5;">'
+    +'<p style="font-size:12px;color:var(--muted);">&#128206; Comprovante de pagamento \u2014 em breve</p>'
+    +'<p style="font-size:11px;color:var(--stone);">Cole ou arraste o arquivo aqui</p></div>'
+    +'<div class="div"></div><div class="fe"><button class="btn btn-gh" onclick="cm(\'mod-pay\')">Cancelar</button><button class="btn btn-sg" onclick="confirmPay()">&#10003; Registrar pagamento</button></div>';
+  md.classList.remove('hidden');
+}
+function confirmPay(){
+  var md=document.getElementById('mod-pay'),eid=+md.dataset.eid,ry=+md.dataset.ry,rm=+md.dataset.rm;
+  var c=calc(eid,ry,rm);
+  var rec={id:uid(),empId:eid,empName:c.emp.name,empRole:c.emp.role,monthKey:c.key,ry:ry,rm:rm,
+    salBase:c.salBase,recTot:c.recTot,avTot:c.avTot,bons:c.bons,deds:c.deds,inssAmt:c.inssAmt,
+    netSal:c.netSal,vtNet:c.vtNet,vtGross:c.vtGross,vtDisc:c.vtDisc,vtWd:c.vtWd,vtWdAuto:c.vtWdAuto,
+    vtY:c.vtY,vtM:c.vtM,total:c.total,
+    paidDate:document.getElementById('pdate').value,method:document.getElementById('pmeth').value,
+    notes:document.getElementById('pnotes').value.trim(),
+    events:c.avs,adjs:c.adjs,recs:c.recs,paidAt:new Date().toISOString()};
+  db.payments=db.payments.filter(function(p){return!(p.empId===eid&&p.monthKey===c.key);});
+  db.payments.push(rec);saveDB();cm('mod-pay');swTab('hist',document.querySelectorAll('.tab')[3]);
+}
+
+// ===== RENDER DASHBOARD =====
+function renderDash(){
+  var wy=SM===0?SY-1:SY,wm=SM===0?11:SM-1,wl=MP[wm]+' '+wy;
+  var calcs=db.employees.map(function(e){return calc(e.id,wy,wm);});
+  var totSal=calcs.reduce(function(a,c){return a+c.netSal;},0);
+  var totVT=calcs.reduce(function(a,c){return a+c.vtNet;},0);
+  var totAll=calcs.reduce(function(a,c){return a+c.total;},0);
+  var p5=bday5(SY,SM),h='';
+  var tp=tod().split('-').map(Number);
+  if(tp[0]===SY&&tp[1]-1===SM&&p5&&tp[2]<=p5.d)
+    h+='<div class="banner"><p style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:6px;">Per\u00edodo de pagamento ativo</p><p style="font-family:\'Cormorant\',serif;font-size:26px;font-weight:300;color:#fff;">Pagamentos de <em style="color:var(--a2);">'+wl+'</em></p><p style="font-size:12px;color:rgba(255,255,255,.6);margin-top:6px;">Prazo legal: at\u00e9 '+p5.d+'/'+String(SM+1).padStart(2,'0')+'/'+SY+' (5\u00ba dia \u00fatil)</p></div>';
+  h+='<div class="g4" style="margin-bottom:20px;">';
+  [{l:'Funcion\u00e1rios',v:''+db.employees.length,s:'cadastrados',c:'var(--accent)'},{l:'Total sal\u00e1rios',v:'R$ '+fm(totSal),s:wl,c:'var(--sage)'},{l:'Total VT',v:'R$ '+fm(totVT),s:calcs.length?MP[calcs[0].vtM]:'-',c:'var(--blue)'},{l:'Envelope total',v:'R$ '+fm(totAll),s:'sal. + VT',c:'var(--accent)'}].forEach(function(k){h+='<div class="card"><div class="lbl" style="margin-bottom:8px;">'+k.l+'</div><div class="money" style="font-size:22px;color:'+k.c+';">'+k.v+'</div><div style="font-size:11px;color:var(--muted);margin-top:4px;">'+k.s+'</div></div>';});
+  h+='</div>';
+  if(!db.employees.length){h+='<div class="empty"><div class="ei">&#127968;</div><div class="et">Nenhum funcion\u00e1rio cadastrado.<br>Clique em <strong>Funcion\u00e1rios</strong>.</div></div>';document.getElementById('tab-dash').innerHTML=h;return;}
+  h+='<p style="font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;font-weight:500;margin-bottom:14px;">Pagamentos \u2014 compet\u00eancia '+wl+'</p>';
+  calcs.forEach(function(c){
+    var isPaid=!!c.payment,hw=c.holWarns.length>0;
+    h+='<div class="card" style="border:1px solid '+(isPaid?'rgba(138,155,138,.4)':hw?'rgba(196,151,58,.4)':'var(--border)')+';">';
+    h+='<div class="fb" style="margin-bottom:14px;"><div class="fi" style="gap:12px;">'+avt(c.emp.name,44)+'<div><div style="font-size:15px;font-weight:400;">'+c.emp.name+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">'+c.emp.role+'</div></div></div>';
+    h+='<div style="text-align:right;"><div class="money" style="font-size:24px;color:var(--accent);">R$ '+fm(c.total)+'</div><div style="font-size:10px;color:var(--muted);">sal. R$ '+fm(c.netSal)+' + VT R$ '+fm(c.vtNet)+'</div></div></div>';
+    if(hw)h+='<div class="alert aw" style="margin-bottom:12px;"><span style="font-size:11px;color:var(--warn);">&#9888;&#65039; '+c.holWarns.length+' feriado(s) com di\u00e1ria n\u00e3o lan\u00e7ada &nbsp;<button onclick="goFech('+c.emp.id+')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;text-decoration:underline;padding:0;">ver detalhes</button></span></div>';
+    h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">';
+    [['Base','R$ '+fm(c.salBase),'var(--text)'],['Di\u00e1rias','R$ '+fm(c.recTot+c.avTot),'var(--sage)'],['Descontos','R$ '+fm(c.deds+c.inssAmt),'var(--danger)'],[MP[c.vtM].slice(0,3)+' VT','R$ '+fm(c.vtNet),'var(--blue)']].forEach(function(k){h+='<div style="background:var(--cream);border-radius:9px;padding:10px;text-align:center;"><div class="lbl" style="margin-bottom:4px;">'+k[0]+'</div><div class="money" style="font-size:14px;color:'+k[2]+';">'+k[1]+'</div></div>';});
+    h+='</div><div class="fi" style="gap:8px;flex-wrap:wrap;"><button class="btn btn-gh btn-sm" onclick="goFech('+c.emp.id+')">Ver mem\u00f3ria</button>';
+    if(isPaid)h+='<span style="margin-left:auto;font-size:11px;color:var(--sage);padding-top:8px;">&#10003; Pago em '+fd(c.payment.paidDate)+' via '+c.payment.method+'</span>';
+    else h+='<button class="btn btn-sg btn-sm" style="margin-left:auto;" onclick="openPayM('+c.emp.id+','+wy+','+wm+')">Confirmar pagamento</button>';
+    h+='</div></div>';
+  });
+  h+='<div class="card" style="margin-top:8px;"><p class="lbl" style="margin-bottom:14px;">Consolidado \u2014 '+wl+'</p><div class="mt2"><div class="mr mrh"><span>Funcion\u00e1rio</span><span>Sal\u00e1rio l\u00edquido</span><span style="text-align:right;">VT ('+MP[calcs.length?calcs[0].vtM:SM].slice(0,3)+') \u00b7 Envelope</span></div>';
+  calcs.forEach(function(c){h+='<div class="mr"><span>'+c.emp.name+'</span><span class="money">R$ '+fm(c.netSal)+'</span><span class="money" style="text-align:right;">R$ '+fm(c.vtNet)+' \u00b7 <strong>R$ '+fm(c.total)+'</strong></span></div>';});
+  h+='<div class="mr" style="background:var(--cream);font-weight:500;"><span>TOTAL</span><span class="money">R$ '+fm(totSal)+'</span><span class="money" style="text-align:right;">R$ '+fm(totVT)+' \u00b7 <strong>R$ '+fm(totAll)+'</strong></span></div></div></div>';
+  document.getElementById('tab-dash').innerHTML=h;
+}
+function goFech(eid){swTab('fech',document.querySelectorAll('.tab')[1]);setTimeout(function(){var s=document.getElementById('fechsel');if(s){s.value=eid;renderFech();}},50);}
+
+// ===== RENDER FECHAMENTO =====
+function renderFech(){
+  var wy=SM===0?SY-1:SY,wm=SM===0?11:SM-1,wl=MP[wm]+' '+wy,pl=MP[SM]+' '+SY;
+  var selOpts=db.employees.length?db.employees.map(function(e){return'<option value="'+e.id+'">'+e.name+'</option>';}).join(''):'<option>Nenhum</option>';
+  var selH='<div class="fb" style="margin-bottom:20px;flex-wrap:wrap;gap:12px;">'
+    +'<div><div style="font-family:\'Cormorant\',serif;font-size:26px;font-weight:300;margin-bottom:4px;">Fechamento</div>'
+    +'<div class="tip">'+wl+' \u00b7 pago em '+pl+'</div></div>'
+    +'<select id="fechsel" onchange="renderFech()" class="ssel" style="padding:8px 28px 8px 12px;border-radius:9px;border:1px solid var(--border);background:var(--cream);font-size:13px;cursor:pointer;">'+selOpts+'</select></div>';
+  if(!db.employees.length){document.getElementById('tab-fech').innerHTML=selH+'<div class="empty"><div class="ei">&#128203;</div><div class="et">Cadastre um funcion\u00e1rio primeiro.</div></div>';return;}
+  var curSel=document.getElementById('fechsel');
+  var eid=curSel?+curSel.value:(db.employees[0]&&db.employees[0].id);
+  var c=calc(eid,wy,wm),emp=c.emp,days=mdays(wy,wm),h=allH(),td=tod(),isPaid=!!c.payment;
+  var fdow=jd(new Date(wy,wm,1).getDay());
+  var evByD={};c.avs.forEach(function(e){evByD[e.date]=e;});
+  var recByD={};c.recs.forEach(function(r){if(!recByD[r.iso])recByD[r.iso]=[];recByD[r.iso].push(r);});
+  var warnD={};c.holWarns.forEach(function(w){warnD[w.iso]=1;});
+  var cal='<div class="card" style="margin-bottom:12px;">'
+    +'<div class="fb" style="margin-bottom:4px;"><span style="font-size:13px;font-weight:400;">'+wl+'</span>'
+    +'<div class="fi" style="gap:8px;"><button class="btn btn-gh btn-sm" onclick="openReg()">&#128467; Feriados regionais</button>'
+    +(isPaid?'':"<button class='btn btn-gh btn-sm' onclick=\"openEvM("+emp.id+",'"+td+"')\">+ Di\u00e1ria avulsa</button>")
+    +'</div></div><div class="cg">';
+  DP.forEach(function(d){cal+='<div class="ch">'+d+'</div>';});
+  for(var z=0;z<fdow;z++)cal+='<div class="cd ce"></div>';
+  days.forEach(function(d){
+    var hn=h[d.iso]||null,isW=(emp.workDays||[]).indexOf(d.dow)>=0;
+    var hasEv=!!evByD[d.iso],hasRec=!!recByD[d.iso],isWrn=!!warnD[d.iso],isTod=d.iso===td;
+    var cls='cd';
+    if(isWrn)cls+=' cwrn';else if(hasEv)cls+=' cav';else if(hasRec||isW)cls+=' cwd';
+    if(hn)cls+=' chol';if(isTod)cls+=' ctod';
+    var clickFn=isPaid?'':('openEvM('+emp.id+',\''+d.iso+'\')');
+    cal+='<div class="'+cls+'" onclick="'+clickFn+'" title="'+d.iso+(hn?' \u2014 '+hn:'')+(isWrn?' \u26a0':'')+'"><span>'+d.d+'</span>'+(hn?'<span style="font-size:7px;color:var(--warn);">&#127881;</span>':'')+'</div>';
+  });
+  cal+='</div><div class="fi" style="gap:14px;margin-top:10px;flex-wrap:wrap;">'
+    +'<span style="font-size:10px;color:var(--muted);">&#9632; <span style="color:var(--accent);">recorrente</span></span>'
+    +'<span style="font-size:10px;color:var(--muted);">&#9632; <span style="color:var(--blue);">avulsa</span></span>'
+    +'<span style="font-size:10px;color:var(--muted);">&#127881; feriado (laranja = sem di\u00e1ria)</span>'
+    +(isPaid?'':'<span class="tip">\u00b7 clique no dia para lan\u00e7ar di\u00e1ria avulsa</span>')
+    +'</div></div>';
+  var avL='<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:10px;"><span style="font-size:13px;font-weight:400;">Di\u00e1rias Avulsas</span>'
+    +(isPaid?'':"<button class='btn btn-gh btn-sm' onclick=\"openEvM("+emp.id+",'"+td+"')\">+ Adicionar</button>")+'</div>';
+  if(!c.avs.length)avL+='<p class="tip">Nenhuma di\u00e1ria avulsa lan\u00e7ada.</p>';
+  else c.avs.forEach(function(e){
+    avL+='<div class="ep"><div><div style="font-size:13px;">'+fd(e.date)+(e.duration?' \u00b7 '+e.duration:'')+(e.hn?' <span class="badge" style="background:rgba(196,151,58,.15);color:var(--warn);">&#127881; '+e.hn+'</span>':'')+'</div>'+(e.notes?'<div class="tip">'+e.notes+'</div>':'')+'</div>'
+      +'<div class="fi" style="gap:8px;flex-shrink:0;"><span class="money" style="font-size:16px;color:var(--blue);">R$ '+fm(e.value)+'</span>'
+      +(isPaid?'':'<button onclick="openEvM('+emp.id+',\''+e.date+'\','+e.id+')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;">&#9998;</button><button onclick="delEv('+emp.id+','+wy+','+wm+','+e.id+')" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:15px;">\xd7</button>')
+      +'</div></div>';
+  });
+  avL+='</div>';
+  var adjL='<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:10px;"><span style="font-size:13px;font-weight:400;">Ajustes &amp; Descontos</span>'
+    +(isPaid?'':'<button class="btn btn-gh btn-sm" onclick="openAM('+emp.id+','+wy+','+wm+')">+ Adicionar</button>')+'</div>';
+  if(!c.adjs.length)adjL+='<p class="tip">Nenhum ajuste lan\u00e7ado.</p>';
+  else c.adjs.forEach(function(a){
+    var isD=['advance','discount','loan','other'].indexOf(a.type)>=0;
+    adjL+='<div class="ep"><div><div style="font-size:13px;">'+(AL[a.type]||a.type)+(a.desc?' \u00b7 '+a.desc:'')+'</div><div class="tip">'+fd(a.date)+'</div></div>'
+      +'<div class="fi" style="gap:8px;flex-shrink:0;"><span class="money" style="font-size:16px;color:'+(isD?'var(--danger)':'var(--sage)')+';">'+(isD?'\u2212':'+')+'R$ '+fm(a.value)+'</span>'
+      +(isPaid?'':'<button onclick="delA('+emp.id+','+wy+','+wm+','+a.id+')" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:15px;">\xd7</button>')
+      +'</div></div>';
+  });
+  adjL+='</div>';
+  var paidB=isPaid?'<div class="alert as" style="margin-bottom:16px;"><div><div style="font-size:13px;font-weight:500;color:var(--sage);">&#10003; Pago em '+fd(c.payment.paidDate)+' via '+c.payment.method+'</div><div class="tip" style="margin-top:4px;">R$ '+fm(c.payment.netSal)+' sal\u00e1rio + R$ '+fm(c.payment.vtNet)+' VT = R$ '+fm(c.payment.total)+'</div></div></div>':'';
+  var cta=isPaid?'':'<div class="fe" style="margin-top:16px;"><button class="btn btn-gh" onclick="openAM('+emp.id+','+wy+','+wm+')">+ Ajuste</button><button class="btn btn-sg" onclick="openPayM('+emp.id+','+wy+','+wm+')">Ver mem\u00f3ria completa &amp; confirmar</button></div>';
+  document.getElementById('tab-fech').innerHTML=selH+paidB+cal+avL+adjL+memoHTML(c)+cta;
+}
+
+// ===== RENDER EMPLOYEES =====
+function renderEmps(){
+  var h='<div class="fb" style="margin-bottom:20px;"><div><div style="font-family:\'Cormorant\',serif;font-size:26px;font-weight:300;margin-bottom:4px;">Funcion\u00e1rios</div><div class="tip">'+db.employees.length+' cadastrado(s)</div></div><button class="btn btn-dk" onclick="openEM()">+ Novo funcion\u00e1rio</button></div>';
+  if(!db.employees.length){h+='<div class="empty"><div class="ei">&#128100;</div><div class="et">Nenhum funcion\u00e1rio cadastrado.</div></div>';document.getElementById('tab-emps').innerHTML=h;return;}
+  db.employees.forEach(function(emp){
+    h+='<div class="card">'
+      +'<div class="fb" style="margin-bottom:14px;"><div class="fi" style="gap:12px;">'+avt(emp.name,48)+'<div><div style="font-size:16px;font-weight:400;">'+emp.name+'</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">'+emp.role+' \u00b7 '+emp.contract+'</div></div></div>'
+      +'<div class="fi" style="gap:8px;"><button class="btn btn-gh btn-sm" onclick="openEM('+emp.id+')">Editar</button><button class="btn btn-dr btn-sm" onclick="delE('+emp.id+')">Excluir</button></div></div>'
+      +'<div class="g2" style="gap:10px;margin-bottom:12px;"><div class="cream"><div class="lbl">Sal\u00e1rio base</div><div class="money" style="font-size:20px;margin-top:4px;">R$ '+fm(emp.salary)+'</div></div>'
+      +'<div class="cream"><div class="lbl">VT di\u00e1rio (ida+volta)</div><div class="money" style="font-size:20px;margin-top:4px;">R$ '+fm(emp.vtDaily)+'</div>'
+      +'<div style="font-size:10px;color:var(--muted);margin-top:3px;">'+(emp.vtDiscount==='none'?'Sem desconto \u2014 integral':'Desconto 6% sal. base')+'</div></div></div>'
+      +'<div style="margin-bottom:12px;"><div class="lbl" style="margin-bottom:8px;">Dias de trabalho fixos</div><div class="fi" style="gap:6px;flex-wrap:wrap;">';
+    DP.forEach(function(d,i){h+='<span style="padding:4px 10px;border-radius:6px;font-size:11px;'+((emp.workDays||[]).indexOf(i)>=0?'background:var(--text);color:var(--surface);':'background:var(--cream);color:var(--muted);')+'">'+d+'</span>';});
+    h+='</div></div>';
+    if(emp.recurring&&emp.recurring.length){
+      h+='<div style="margin-bottom:12px;"><div class="lbl" style="margin-bottom:8px;">Di\u00e1rias recorrentes</div>';
+      emp.recurring.forEach(function(r){
+        h+='<div class="fb" style="padding:5px 0;border-bottom:1px solid var(--border);">'
+          +'<span style="font-size:12px;">'+DP[r.dow]+' \u2014 '+(r.desc||'')+(r.countHolidays?' <span class="badge" style="background:rgba(196,151,58,.12);color:var(--warn);">&#127881; conta feriados</span>':'')+'</span>'
+          +'<span class="money" style="font-size:14px;color:var(--sage);">R$ '+fm(r.value)+'</span></div>';
+      });
+      h+='</div>';
+    }
+    if(emp.extraTypes&&emp.extraTypes.length){h+='<div><div class="lbl" style="margin-bottom:8px;">Tipos de di\u00e1ria avulsa</div><div class="fi" style="gap:8px;flex-wrap:wrap;">';emp.extraTypes.forEach(function(t){h+='<span style="padding:4px 10px;border-radius:6px;font-size:11px;background:var(--cream);color:var(--muted);">'+t.name+' \u00b7 R$ '+fm(t.value)+'</span>';});h+='</div></div>';}
+    if(emp.notes)h+='<div style="margin-top:12px;padding:10px;background:var(--cream);border-radius:8px;font-size:12px;color:var(--muted);">'+emp.notes+'</div>';
+    h+='</div>';
+  });
+  document.getElementById('tab-emps').innerHTML=h;
+}
+
+// ===== RENDER HISTORY =====
+function renderHist(){
+  var ef=document.getElementById('histsel')?document.getElementById('histsel').value:'';
+  var ps=db.payments.slice().sort(function(a,b){return b.ry-a.ry||b.rm-a.rm;});
+  if(ef)ps=ps.filter(function(p){return p.empId===+ef;});
+  var h='<div class="fb" style="margin-bottom:20px;flex-wrap:wrap;gap:12px;"><div><div style="font-family:\'Cormorant\',serif;font-size:26px;font-weight:300;margin-bottom:4px;">Hist\u00f3rico</div><div class="tip">Pagamentos confirmados</div></div>'
+    +'<select id="histsel" onchange="renderHist()" class="ssel" style="padding:8px 28px 8px 12px;border-radius:9px;border:1px solid var(--border);background:var(--cream);font-size:13px;cursor:pointer;">'
+    +'<option value="">Todos</option>'+db.employees.map(function(e){return'<option value="'+e.id+'"'+(ef==e.id?' selected':'')+'>'+e.name+'</option>';}).join('')+'</select></div>';
+  if(!ps.length){h+='<div class="empty"><div class="ei">&#128209;</div><div class="et">Nenhum pagamento registrado.</div></div>';document.getElementById('tab-hist').innerHTML=h;return;}
+  var byM={};ps.forEach(function(p){var k=p.ry+'-'+String(p.rm+1).padStart(2,'0');if(!byM[k])byM[k]=[];byM[k].push(p);});
+  Object.keys(byM).sort(function(a,b){return b.localeCompare(a);}).forEach(function(k){
+    var parts=k.split('-'),ry=+parts[0],rm=+parts[1]-1;
+    var gt=byM[k].reduce(function(a,p){return a+p.total;},0);
+    h+='<div style="margin-bottom:28px;"><div class="fb" style="margin-bottom:12px;"><div style="font-family:\'Cormorant\',serif;font-size:20px;font-weight:300;">'+MP[rm]+' '+ry+'</div><div class="money" style="font-size:20px;color:var(--accent);">R$ '+fm(gt)+'</div></div>';
+    byM[k].forEach(function(p){
+      h+='<div class="card" style="margin-bottom:8px;">'
+        +'<div class="fb" style="margin-bottom:10px;"><div class="fi" style="gap:12px;">'+avt(p.empName,40)+'<div><div style="font-size:14px;font-weight:400;">'+p.empName+'</div><div style="font-size:11px;color:var(--muted);">'+p.empRole+'</div></div></div>'
+        +'<div style="text-align:right;"><div class="money" style="font-size:22px;color:var(--accent);">R$ '+fm(p.total)+'</div><div style="font-size:10px;color:var(--muted);">sal R$ '+fm(p.netSal)+' + VT R$ '+fm(p.vtNet)+'</div></div></div>'
+        +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;">';
+      [['Base','R$ '+fm(p.salBase),'var(--text)'],['Di\u00e1rias','R$ '+fm(p.recTot+p.avTot),'var(--sage)'],['Descontos','R$ '+fm(p.deds+p.inssAmt),'var(--danger)'],['VT','R$ '+fm(p.vtNet),'var(--blue)']].forEach(function(k2){h+='<div style="background:var(--cream);border-radius:8px;padding:8px;text-align:center;"><div class="lbl">'+k2[0]+'</div><div class="money" style="font-size:13px;margin-top:3px;color:'+k2[2]+';">'+k2[1]+'</div></div>';});
+      h+='</div><div class="fb"><span class="tip">Pago em '+fd(p.paidDate)+' \u00b7 '+p.method+(p.notes?' \u00b7 '+p.notes:'')+'</span><button class="btn btn-gh btn-sm" onclick="printSlip('+p.id+')">&#128216; Recibo</button></div></div>';
+    });
+    h+='</div>';
+  });
+  document.getElementById('tab-hist').innerHTML=h;
+}
+
+// ===== PAYSLIP =====
+function printSlip(payId){
+  var p=db.payments.find(function(x){return x.id===payId;});if(!p)return;
+  var vtL=MP[p.vtM]+' '+p.vtY;
+  var vtD=(db.employees.find(function(e){return e.id===p.empId;})||{vtDaily:0}).vtDaily||0;
+  var w=window.open('','_blank','width=640,height=800');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Cormorant:wght@300;400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet"><title>Recibo</title><style>body{font-family:\'Jost\',sans-serif;font-weight:300;color:#2A2520;max-width:540px;margin:40px auto;padding:0 24px;}h1{font-family:\'Cormorant\',serif;font-weight:300;font-size:30px;margin-bottom:4px;}.sub{font-size:12px;color:#9C9087;margin-bottom:24px;}table{width:100%;border-collapse:collapse;margin-bottom:16px;}td{padding:8px 0;border-bottom:1px solid #E8E3DC;font-size:13px;}td:last-child{text-align:right;font-family:\'Cormorant\',serif;font-size:16px;}.tot td{font-size:18px;font-weight:500;border-bottom:none;padding-top:14px;}.neg{color:#B85C5C;}.pos{color:#8A9B8A;}.blue{color:#6B9FBF;}.box{background:#F0EBE0;border-radius:8px;padding:12px 16px;margin:10px 0;font-size:12px;color:#9C9087;}.sig{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:56px;}.sig div{border-top:1px solid #2A2520;padding-top:8px;font-size:11px;text-align:center;}@media print{button{display:none!important;}}</style></head><body>'
+    +'<h1>Recibo de Pagamento</h1><div class="sub">'+p.empName+' \u00b7 '+p.empRole+' \u00b7 Compet\u00eancia: '+MP[p.rm]+' '+p.ry+'</div>'
+    +'<table>'
+    +'<tr><td>Sal\u00e1rio base</td><td>R$ '+fm(p.salBase)+'</td></tr>'
+    +'<tr><td>Di\u00e1rias recorrentes</td><td class="pos">+ R$ '+fm(p.recTot)+'</td></tr>'
+    +'<tr><td>Di\u00e1rias avulsas</td><td class="pos">+ R$ '+fm(p.avTot)+'</td></tr>'
+    +(p.bons>0?'<tr><td>B\u00f4nus</td><td class="pos">+ R$ '+fm(p.bons)+'</td></tr>':'')
+    +(p.deds>0?'<tr><td>Descontos/adiantamentos</td><td class="neg">\u2212 R$ '+fm(p.deds)+'</td></tr>':'')
+    +(p.inssAmt>0?'<tr><td>INSS (desconto)</td><td class="neg">\u2212 R$ '+fm(p.inssAmt)+'</td></tr>':'')
+    +'<tr class="tot"><td><strong>Sal\u00e1rio l\u00edquido</strong></td><td><strong>R$ '+fm(p.netSal)+'</strong></td></tr></table>'
+    +'<div class="box">Vale-Transporte <strong>'+vtL+'</strong>: '+p.vtWd+' dias'+(p.vtWd!==p.vtWdAuto?' (ajustado de '+p.vtWdAuto+' dias autom\u00e1ticos)':'')+' &times; R$ '+fm(vtD)+' = R$ '+fm(p.vtGross)+(p.vtDisc>0?' &minus; 6% (R$ '+fm(p.vtDisc)+')':', sem desconto')+' = <strong class="blue">R$ '+fm(p.vtNet)+'</strong></div>'
+    +'<table><tr class="tot"><td><strong>Total do pagamento</strong></td><td><strong>R$ '+fm(p.total)+'</strong></td></tr></table>'
+    +'<div class="box">Pago em '+fd(p.paidDate)+' via '+p.method+(p.notes?' \u00b7 '+p.notes:'')+'</div>'
+    +'<div style="border-top:1px solid #E8E3DC;padding-top:12px;font-size:11px;color:#B8B0A4;display:flex;justify-content:space-between;margin-top:24px;"><span>Atrium \u00b7 Gest\u00e3o Dom\u00e9stica</span><span>'+new Date().toLocaleDateString('pt-BR')+'</span></div>'
+    +'<div class="sig"><div>Empregador</div><div>'+p.empName+'</div></div>'
+    +'<br><button onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#2A2520;color:#fff;border:none;border-radius:8px;cursor:pointer;">Imprimir / PDF</button></body></html>');
+  w.document.close();
+}
+
+// ===== CSV =====
+function expCSV(){
+  var wy=SM===0?SY-1:SY,wm=SM===0?11:SM-1;
+  var rows=[['Funcion\u00e1rio','Fun\u00e7\u00e3o','Compet\u00eancia','Sal\u00e1rio Base','Di\u00e1rias Rec.','Di\u00e1rias Avulsas','B\u00f4nus','Descontos','INSS','Sal\u00e1rio L\u00edquido','VT Dias','VT Dias Auto','VT','VT M\u00eas','Total Envelope','Pago em','Forma']];
+  db.employees.forEach(function(emp){
+    var c=calc(emp.id,wy,wm);
+    rows.push([emp.name,emp.role,MP[wm]+' '+wy,c.salBase.toFixed(2),c.recTot.toFixed(2),c.avTot.toFixed(2),c.bons.toFixed(2),c.deds.toFixed(2),c.inssAmt.toFixed(2),c.netSal.toFixed(2),c.vtWd,c.vtWdAuto,c.vtNet.toFixed(2),MP[c.vtM]+' '+c.vtY,c.total.toFixed(2),(c.payment&&c.payment.paidDate)||'',(c.payment&&c.payment.method)||'']);
+  });
+  var csv=rows.map(function(r){return r.map(function(v){return'"'+String(v).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\ufeff'+encodeURIComponent(csv);a.download='atrium_'+MP[wm]+'_'+wy+'.csv';a.click();
+}
+
+// ===== MODALS =====
+function cm(id){document.getElementById(id).classList.add('hidden');}
+function cbd(e,id){if(e.target===e.currentTarget)cm(id);}
+
+// ===== DISPATCHER =====
+function render(tab){
+  if(tab==='dash')renderDash();
+  else if(tab==='fech')renderFech();
+  else if(tab==='emps')renderEmps();
+  else if(tab==='hist')renderHist();
+  else if(tab==='rel')renderRel();
+}
+function renderAll(){render(CT);}
+
+// ===== RENDER RELATÓRIOS =====
+function renderRel(){
+  // Build list of all months that have payment data, plus current worked month
+  var wy=SM===0?SY-1:SY, wm=SM===0?11:SM-1;
+
+  // Collect all unique year-month pairs from payments + current
+  var monthSet={};
+  db.payments.forEach(function(p){ monthSet[p.ry+'-'+p.rm]=1; });
+  monthSet[wy+'-'+wm]=1; // always include current worked month
+
+  var months = Object.keys(monthSet).sort(function(a,b){
+    var [ay,am]=a.split('-').map(Number), [by,bm]=b.split('-').map(Number);
+    return by-ay || bm-am;
+  }).map(function(k){ var[y,m]=k.split('-').map(Number); return{y:y,m:m}; });
+
+  var selMonth = document.getElementById('rel-month-sel') ?
+    document.getElementById('rel-month-sel').value : (wy+'-'+wm);
+
+  var selParts = selMonth.split('-').map(Number);
+  var ry=selParts[0], rm=selParts[1];
+  var refLabel = MP[rm]+' '+ry;
+
+  // Payment month (when paid)
+  var pyY=rm===11?ry+1:ry, pyM=rm===11?0:rm+1;
+  var payLabel = MP[pyM]+' '+pyY;
+
+  // Build calcs for all employees for this worked month
+  var calcs = db.employees.map(function(e){ return calc(e.id,ry,rm); });
+  var totSal  = calcs.reduce(function(a,c){return a+c.netSal;},0);
+  var totVT   = calcs.reduce(function(a,c){return a+c.vtNet;},0);
+  var totAll  = calcs.reduce(function(a,c){return a+c.total;},0);
+  var totRec  = calcs.reduce(function(a,c){return a+c.recTot;},0);
+  var totAv   = calcs.reduce(function(a,c){return a+c.avTot;},0);
+  var totInss = calcs.reduce(function(a,c){return a+c.inssAmt;},0);
+  var totDeds = calcs.reduce(function(a,c){return a+c.deds;},0);
+  var paidCount = calcs.filter(function(c){return c.payment;}).length;
+
+  var h = '<div class="fb" style="margin-bottom:20px;flex-wrap:wrap;gap:12px;">';
+  h += '<div><div style="font-family:\'Cormorant\',serif;font-size:26px;font-weight:300;margin-bottom:4px;">Relat&#243;rios</div>'
+    + '<div class="tip">Compet&#234;ncia: '+refLabel+' &nbsp;&middot;&nbsp; Pagamento: '+payLabel+'</div></div>';
+  h += '<div class="fi" style="gap:8px;">';
+  h += '<select id="rel-month-sel" onchange="renderRel()" class="ssel" style="padding:8px 28px 8px 12px;border-radius:9px;border:1px solid var(--border);background:var(--cream);font-size:13px;cursor:pointer;">';
+  months.forEach(function(mo){
+    var v=mo.y+'-'+mo.m;
+    h+='<option value="'+v+'"'+(v===selMonth?' selected':'')+'>'+MP[mo.m]+' '+mo.y+'</option>';
+  });
+  h += '</select>';
+  h += '<button class="btn btn-dk btn-sm" onclick="printReport()">&#128438; Imprimir PDF</button>';
+  h += '<button class="btn btn-gh btn-sm" onclick="exportReportCSV()">&#8595; CSV</button>';
+  h += '</div></div>';
+
+  // Status badge
+  h += '<div class="fi" style="gap:8px;margin-bottom:16px;flex-wrap:wrap;">';
+  h += '<span class="badge" style="background:rgba(139,115,85,.12);color:var(--accent);font-size:11px;padding:5px 12px;">Compet&#234;ncia: '+refLabel+'</span>';
+  h += '<span class="badge" style="background:rgba(107,159,191,.12);color:var(--blue);font-size:11px;padding:5px 12px;">Pagamento: '+payLabel+'</span>';
+  h += '<span class="badge" style="background:'+(paidCount===calcs.length&&calcs.length>0?'rgba(138,155,138,.15)':'rgba(196,151,58,.12)')+';color:'+(paidCount===calcs.length&&calcs.length>0?'var(--sage)':'var(--warn)')+';font-size:11px;padding:5px 12px;">'+paidCount+'/'+calcs.length+' pagos</span>';
+  h += '</div>';
+
+  if(!db.employees.length){
+    h+='<div class="empty"><div class="ei">&#128196;</div><div class="et">Nenhum funcion&#225;rio cadastrado.</div></div>';
+    document.getElementById('tab-rel').innerHTML=h; return;
+  }
+
+  // ── KPI strip ──────────────────────────────────────────
+  h += '<div class="g4" style="margin-bottom:20px;">';
+  [{l:'Total sal&#225;rios',v:'R$ '+fm(totSal),c:'var(--sage)'},
+   {l:'Total VT ('+MP[calcs[0]?calcs[0].vtM:pyM]+')',v:'R$ '+fm(totVT),c:'var(--blue)'},
+   {l:'Envelope total',v:'R$ '+fm(totAll),c:'var(--accent)'},
+   {l:'Total INSS',v:'R$ '+fm(totInss),c:'var(--muted)'}
+  ].forEach(function(k){
+    h+='<div class="card"><div class="lbl" style="margin-bottom:8px;">'+k.l+'</div>'
+      +'<div class="money" style="font-size:20px;color:'+k.c+';">'+k.v+'</div></div>';
+  });
+  h += '</div>';
+
+  // ── Consolidated table ──────────────────────────────────
+  h += '<div class="card" style="margin-bottom:16px;" id="rel-print-area">';
+  h += '<p style="font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;">Resumo Consolidado &#8212; '+refLabel+'</p>';
+  h += '<div class="mt2">';
+  h += '<div class="mr mrh" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr;">'
+     + '<span>Funcion&#225;rio</span><span style="text-align:right;">Base</span>'
+     + '<span style="text-align:right;">Di&#225;rias</span><span style="text-align:right;">Descontos</span>'
+     + '<span style="text-align:right;">Sal. L&#237;q.</span><span style="text-align:right;">VT</span>'
+     + '<span style="text-align:right;">Envelope</span></div>';
+  calcs.forEach(function(c){
+    var isPaid=!!c.payment;
+    h += '<div class="mr" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr;">'
+       + '<span class="fi" style="gap:6px;">'+avt(c.emp.name,24)+'<span>'+c.emp.name
+       + (isPaid?' <span class="badge" style="background:rgba(138,155,138,.15);color:var(--sage);">&#10003; pago</span>':'')
+       + '</span></span>'
+       + '<span class="money" style="text-align:right;">R$ '+fm(c.salBase)+'</span>'
+       + '<span class="money" style="text-align:right;color:var(--sage);">R$ '+fm(c.recTot+c.avTot)+'</span>'
+       + '<span class="money" style="text-align:right;color:var(--danger);">R$ '+fm(c.deds+c.inssAmt)+'</span>'
+       + '<span class="money" style="text-align:right;font-weight:500;">R$ '+fm(c.netSal)+'</span>'
+       + '<span class="money" style="text-align:right;color:var(--blue);">R$ '+fm(c.vtNet)+'</span>'
+       + '<span class="money" style="text-align:right;color:var(--accent);font-weight:500;">R$ '+fm(c.total)+'</span>'
+       + '</div>';
+  });
+  // Totals row
+  h += '<div class="mr" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr;background:var(--cream);font-weight:500;">'
+     + '<span>TOTAL</span>'
+     + '<span class="money" style="text-align:right;">R$ '+fm(calcs.reduce(function(a,c){return a+c.salBase;},0))+'</span>'
+     + '<span class="money" style="text-align:right;color:var(--sage);">R$ '+fm(totRec+totAv)+'</span>'
+     + '<span class="money" style="text-align:right;color:var(--danger);">R$ '+fm(totDeds+totInss)+'</span>'
+     + '<span class="money" style="text-align:right;font-weight:600;">R$ '+fm(totSal)+'</span>'
+     + '<span class="money" style="text-align:right;color:var(--blue);">R$ '+fm(totVT)+'</span>'
+     + '<span class="money" style="text-align:right;color:var(--accent);font-weight:600;font-size:15px;">R$ '+fm(totAll)+'</span>'
+     + '</div>';
+  h += '</div></div>';
+
+  // ── Per-employee detail cards ───────────────────────────
+  h += '<p style="font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;font-weight:500;margin-bottom:14px;">Mem&#243;ria de C&#225;lculo Individual</p>';
+  calcs.forEach(function(c){
+    h += '<div class="card" style="margin-bottom:16px;">';
+    h += '<div class="fi" style="gap:12px;margin-bottom:16px;">'+avt(c.emp.name,44)
+       + '<div><div style="font-size:15px;font-weight:400;">'+c.emp.name+'</div>'
+       + '<div style="font-size:11px;color:var(--muted);">'+c.emp.role+'</div></div>'
+       + '<div style="margin-left:auto;text-align:right;">'
+       + '<div class="money" style="font-size:24px;color:var(--accent);">R$ '+fm(c.total)+'</div>'
+       + (c.payment?'<div style="font-size:11px;color:var(--sage);">&#10003; Pago em '+fd(c.payment.paidDate)+' via '+c.payment.method+'</div>'
+         :'<div style="font-size:11px;color:var(--warn);">&#9679; Pagamento pendente</div>')
+       + '</div></div>';
+    h += memoHTML(c);
+    h += '</div>';
+  });
+
+  document.getElementById('tab-rel').innerHTML = h;
+}
+
+// ===== PRINT REPORT =====
+function printReport(){
+  var selMonth = document.getElementById('rel-month-sel') ?
+    document.getElementById('rel-month-sel').value : '';
+  var parts = selMonth.split('-').map(Number);
+  var ry=parts[0], rm=parts[1];
+  var refLabel = MP[rm]+' '+ry;
+  var pyY=rm===11?ry+1:ry, pyM=rm===11?0:rm+1;
+  var payLabel = MP[pyM]+' '+pyY;
+  var calcs = db.employees.map(function(e){ return calc(e.id,ry,rm); });
+  var totAll = calcs.reduce(function(a,c){return a+c.total;},0);
+
+  var w=window.open('','_blank','width=900,height=800');
+  var body = '<h1 style="font-family:\'Cormorant\',serif;font-weight:300;font-size:32px;margin-bottom:4px;">Relat\u00f3rio de Pagamentos</h1>'
+    + '<p style="font-size:13px;color:#9C9087;margin-bottom:28px;">Compet\u00eancia: <strong>'+refLabel+'</strong> &nbsp;&middot;&nbsp; Pagamento: <strong>'+payLabel+'</strong></p>'
+    + '<table style="width:100%;border-collapse:collapse;margin-bottom:24px;">'
+    + '<tr style="background:#F0EBE0;"><th style="padding:8px 12px;text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#9C9087;">Funcion\u00e1rio</th>'
+    + '<th style="padding:8px 12px;text-align:right;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#9C9087;">Sal. Base</th>'
+    + '<th style="padding:8px 12px;text-align:right;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#9C9087;">Di\u00e1rias</th>'
+    + '<th style="padding:8px 12px;text-align:right;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#9C9087;">Descontos</th>'
+    + '<th style="padding:8px 12px;text-align:right;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#9C9087;">Sal. L\u00edq.</th>'
+    + '<th style="padding:8px 12px;text-align:right;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#9C9087;">VT</th>'
+    + '<th style="padding:8px 12px;text-align:right;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#9C9087;">Total</th>'
+    + '<th style="padding:8px 12px;text-align:center;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#9C9087;">Status</th></tr>';
+
+  calcs.forEach(function(c){
+    body += '<tr style="border-bottom:1px solid #E8E3DC;">'
+      + '<td style="padding:10px 12px;font-size:13px;">'+c.emp.name+'<br><span style="font-size:11px;color:#9C9087;">'+c.emp.role+'</span></td>'
+      + '<td style="padding:10px 12px;text-align:right;font-family:\'Cormorant\',serif;font-size:15px;">R$ '+fm(c.salBase)+'</td>'
+      + '<td style="padding:10px 12px;text-align:right;font-family:\'Cormorant\',serif;font-size:15px;color:#8A9B8A;">R$ '+fm(c.recTot+c.avTot)+'</td>'
+      + '<td style="padding:10px 12px;text-align:right;font-family:\'Cormorant\',serif;font-size:15px;color:#B85C5C;">R$ '+fm(c.deds+c.inssAmt)+'</td>'
+      + '<td style="padding:10px 12px;text-align:right;font-family:\'Cormorant\',serif;font-size:15px;font-weight:500;">R$ '+fm(c.netSal)+'</td>'
+      + '<td style="padding:10px 12px;text-align:right;font-family:\'Cormorant\',serif;font-size:15px;color:#6B9FBF;">R$ '+fm(c.vtNet)+'</td>'
+      + '<td style="padding:10px 12px;text-align:right;font-family:\'Cormorant\',serif;font-size:18px;color:#8B7355;font-weight:500;">R$ '+fm(c.total)+'</td>'
+      + '<td style="padding:10px 12px;text-align:center;font-size:12px;color:'+(c.payment?'#8A9B8A':'#C4973A')+'">'+(c.payment?'\u2713 Pago':'\u23f3 Pendente')+'</td>'
+      + '</tr>';
+  });
+
+  body += '<tr style="background:#F0EBE0;font-weight:600;">'
+    + '<td style="padding:12px;font-size:13px;">TOTAL</td>'
+    + '<td colspan="4" style="padding:12px;"></td>'
+    + '<td style="padding:12px;text-align:right;font-family:\'Cormorant\',serif;font-size:15px;color:#6B9FBF;">R$ '+fm(calcs.reduce(function(a,c){return a+c.vtNet;},0))+'</td>'
+    + '<td style="padding:12px;text-align:right;font-family:\'Cormorant\',serif;font-size:20px;color:#8B7355;">R$ '+fm(totAll)+'</td>'
+    + '<td></td></tr>';
+  body += '</table>';
+
+  // Per-employee memo
+  calcs.forEach(function(c){
+    body += '<div style="page-break-inside:avoid;margin-bottom:32px;padding:20px;border:1px solid #E8E3DC;border-radius:12px;">';
+    body += '<h3 style="font-family:\'Cormorant\',serif;font-weight:400;font-size:20px;margin-bottom:4px;">'+c.emp.name+'</h3>';
+    body += '<p style="font-size:12px;color:#9C9087;margin-bottom:16px;">'+c.emp.role+'</p>';
+    body += '<table style="width:100%;border-collapse:collapse;">';
+    var rows = [
+      ['\u2460 Sal\u00e1rio base',fm(c.salBase),''],
+      ['\u2461 Di\u00e1rias recorrentes ('+c.recs.length+')',fm(c.recTot),'color:#8A9B8A'],
+      ['\u2462 Di\u00e1rias avulsas ('+c.avs.length+')',fm(c.avTot),'color:#8A9B8A'],
+    ];
+    if(c.bons>0)  rows.push(['\u2463 B\u00f4nus',fm(c.bons),'color:#8A9B8A']);
+    if(c.deds>0)  rows.push(['\u2463 Descontos/adiantamentos','\u2212'+fm(c.deds),'color:#B85C5C']);
+    if(c.inssAmt>0) rows.push(['\u2464 INSS','\u2212'+fm(c.inssAmt),'color:#B85C5C']);
+    rows.forEach(function(r){
+      body += '<tr style="border-bottom:1px solid #F0EBE0;"><td style="padding:6px 0;font-size:12px;color:#9C9087;">'+r[0]+'</td>'
+        + '<td style="padding:6px 0;text-align:right;font-family:\'Cormorant\',serif;font-size:15px;'+r[2]+'">R$ '+r[1]+'</td></tr>';
+    });
+    body += '<tr><td style="padding:10px 0 4px;font-size:13px;font-weight:500;">Sal\u00e1rio l\u00edquido</td>'
+      + '<td style="padding:10px 0 4px;text-align:right;font-family:\'Cormorant\',serif;font-size:20px;color:#8B7355;">R$ '+fm(c.netSal)+'</td></tr>';
+    body += '<tr><td style="padding:4px 0;font-size:12px;color:#9C9087;">\u2465 Vale-Transporte ('+MP[c.vtM]+' '+c.vtY+')</td>'
+      + '<td style="padding:4px 0;text-align:right;font-family:\'Cormorant\',serif;font-size:15px;color:#6B9FBF;">R$ '+fm(c.vtNet)+'</td></tr>';
+    body += '<tr style="border-top:2px solid #E8E3DC;"><td style="padding:10px 0 0;font-size:14px;font-weight:600;">Total do envelope</td>'
+      + '<td style="padding:10px 0 0;text-align:right;font-family:\'Cormorant\',serif;font-size:24px;color:#8B7355;">R$ '+fm(c.total)+'</td></tr>';
+    body += '</table>';
+    if(c.payment) body += '<p style="margin-top:12px;font-size:12px;color:#8A9B8A;">\u2713 Pago em '+fd(c.payment.paidDate)+' via '+c.payment.method+'</p>';
+    body += '</div>';
+  });
+
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    +'<link href="https://fonts.googleapis.com/css2?family=Cormorant:wght@300;400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">'
+    +'<title>Relat\u00f3rio '+refLabel+'</title>'
+    +'<style>body{font-family:\'Jost\',sans-serif;font-weight:300;color:#2A2520;max-width:900px;margin:32px auto;padding:0 24px;}'
+    +'@media print{button{display:none!important;}@page{margin:20mm;}}'
+    +'</style></head><body>'+body
+    +'<div style="border-top:1px solid #E8E3DC;padding-top:12px;margin-top:32px;font-size:11px;color:#B8B0A4;display:flex;justify-content:space-between;">'
+    +'<span>Atrium \u00b7 Gest\u00e3o Dom\u00e9stica</span><span>Gerado em '+new Date().toLocaleDateString('pt-BR')+'</span></div>'
+    +'<br><button onclick="window.print()" style="padding:10px 24px;background:#2A2520;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-top:12px;">Imprimir / Salvar PDF</button>'
+    +'</body></html>');
+  w.document.close();
+}
+
+// ===== EXPORT REPORT CSV =====
+function exportReportCSV(){
+  var selMonth = document.getElementById('rel-month-sel') ?
+    document.getElementById('rel-month-sel').value : '';
+  var parts = selMonth.split('-').map(Number);
+  var ry=parts[0], rm=parts[1];
+  var calcs = db.employees.map(function(e){ return calc(e.id,ry,rm); });
+  var rows=[['Funcion\u00e1rio','Fun\u00e7\u00e3o','Sal. Base','Di\u00e1rias Rec.','Di\u00e1rias Avulsas','B\u00f4nus','Descontos','INSS','Sal. L\u00edquido','VT Dias','VT','VT M\u00eas','Total Envelope','Pago em','Forma','Status']];
+  calcs.forEach(function(c){
+    rows.push([c.emp.name,c.emp.role,c.salBase.toFixed(2),c.recTot.toFixed(2),c.avTot.toFixed(2),c.bons.toFixed(2),c.deds.toFixed(2),c.inssAmt.toFixed(2),c.netSal.toFixed(2),c.vtWd,c.vtNet.toFixed(2),MP[c.vtM]+' '+c.vtY,c.total.toFixed(2),(c.payment&&c.payment.paidDate)||'',(c.payment&&c.payment.method)||'',c.payment?'Pago':'Pendente']);
+  });
+  var csv=rows.map(function(r){return r.map(function(v){return'"'+String(v).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\ufeff'+encodeURIComponent(csv);
+  a.download='atrium_relatorio_'+MP[rm]+'_'+ry+'.csv';a.click();
+}
+
+// ===== INIT =====
+// ===== PUSH ALL LOCAL DATA TO SUPABASE =====
+// Useful after first load or when local data is ahead of the cloud
+async function pushAllToSupabase(){
+  showSyncBanner('syncing');
+  try{
+    // employees
+    for(var i=0;i<db.employees.length;i++){
+      await _sbSaveEmployee(db.employees[i]);
+    }
+    // events
+    for(var eid in db.events){
+      for(var mk in db.events[eid]){
+        var evList=db.events[eid][mk];
+        for(var j=0;j<evList.length;j++){
+          if(!evList[j]._sbid) await _sbSaveEvent(+eid,mk,evList[j]);
+        }
+      }
+    }
+    // adjustments
+    for(var eid2 in db.adjustments){
+      for(var mk2 in db.adjustments[eid2]){
+        var aList=db.adjustments[eid2][mk2];
+        for(var k=0;k<aList.length;k++){
+          if(!aList[k]._sbid) await _sbSaveAdj(+eid2,mk2,aList[k]);
+        }
+      }
+    }
+    // payments
+    for(var p=0;p<db.payments.length;p++){
+      if(!db.payments[p]._sbid) await _sbSavePayment(db.payments[p]);
+    }
+    // settings
+    await _sbSaveSettings();
+    saveDB();
+    showSyncBanner('online');
+    renderAll();
+  } catch(e){
+    console.error('pushAll error:',e);
+    showSyncBanner('error');
+  }
+}
+
+buildMS();
+// On startup: load from Supabase if online, else use localStorage
+if(isOnline){
+  loadFromSupabase().then(function(){
+    // After load: if DB is still empty (fresh Supabase), seed demo and push
+    if(!db.employees.length){
+      db.employees.push({id:1,name:'Ana Silva',role:'Bab\u00e1 Folguista',salary:1621,contract:'mensalista',
+        vtDaily:7.60,vtDiscount:'legal',inss:'yes',workDays:[5,6],
+        recurring:[
+          {dow:5,desc:'S\u00e1bado extra',value:200,countHolidays:false},
+          {dow:6,desc:'Domingo extra',value:200,countHolidays:false}
+        ],
+        extraTypes:[{name:'Di\u00e1ria 12h',value:200},{name:'Di\u00e1ria 24h',value:350}],
+        notes:'Bab\u00e1 folguista \u2014 fins de semana + feriados conforme necessidade.',
+        createdAt:tod()});
+      db.nextId=2;saveDB();
+      pushAllToSupabase();
+    }
+  });
+} else {
+  // Offline: use localStorage, seed if empty
+  if(!db.employees.length){
+    db.employees.push({id:1,name:'Ana Silva',role:'Bab\u00e1 Folguista',salary:1621,contract:'mensalista',
+      vtDaily:7.60,vtDiscount:'legal',inss:'yes',workDays:[5,6],
+      recurring:[
+        {dow:5,desc:'S\u00e1bado extra',value:200,countHolidays:false},
+        {dow:6,desc:'Domingo extra',value:200,countHolidays:false}
+      ],
+      extraTypes:[{name:'Di\u00e1ria 12h',value:200},{name:'Di\u00e1ria 24h',value:350}],
+      notes:'Bab\u00e1 folguista \u2014 fins de semana + feriados conforme necessidade.',
+      createdAt:tod()});
+    db.nextId=2;saveDB();
+  }
+  renderAll();
+  showSyncBanner('offline');
+}
+
+</script>
+
+
+</body></html>
