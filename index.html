@@ -414,6 +414,8 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
+
 // ============================================================
 // ATRIUM CASA — JS Unificado com Auth + Multi-tenant + RBAC
 //
@@ -569,7 +571,8 @@ async function doSignup() {
     // onAuthStateChange (SIGNED_IN) já foi disparado — afterLogin será chamado
     // mas a Casa já existe, então afterSignupSetup() não vai duplicar nada.
   } catch (e) {
-    showAuthErr('Conta criada, mas erro ao configurar a Casa: ' + e.message);
+    console.error('create_house RPC error:', e);
+    showAuthErr('Conta criada, mas erro ao configurar a Casa: ' + e.message + ' — Verifique se o SQL de setup foi executado no Supabase.');
   }
   btn.disabled = false; btn.textContent = 'Criar conta';
 }
@@ -581,13 +584,17 @@ async function afterSignupSetup() {
       const casaNome = sessionStorage.getItem('atrium_signup_casa') || 'Minha Casa';
       const { data, error } = await supa.rpc('create_house', { house_name: casaNome });
       if (error) throw error;
+      console.log('Casa criada via afterSignupSetup:', data);
     } else if (mode === 'join') {
       const invite = sessionStorage.getItem('atrium_signup_invite') || '';
       const { error } = await supa.rpc('join_house_by_code', { invite });
       if (error) throw error;
     }
   } catch (e) {
-    console.warn('Casa setup error:', e.message);
+    console.error('afterSignupSetup error:', e.message);
+    // Exibe erro diretamente na tela de seleção de casa
+    const list = document.getElementById('house-list');
+    if (list) list.innerHTML = `<div style="background:rgba(184,92,92,.08);border:1px solid rgba(184,92,92,.25);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--danger);margin-bottom:12px;"><strong>Erro ao criar a Casa:</strong> ${e.message}<br><span style="font-size:11px;opacity:.8;">Verifique se o SQL de setup foi executado no Supabase e tente novamente.</span></div>`;
   } finally {
     sessionStorage.removeItem('atrium_signup_mode');
     sessionStorage.removeItem('atrium_signup_casa');
@@ -614,17 +621,33 @@ async function showResetPass() {
 
 // ── HOUSE SELECTION ───────────────────────────────────────────
 async function loadUserHouses() {
-  const { data, error } = await supa
+  // Query 1: busca os memberships do usuário
+  const { data: memberships, error: err1 } = await supa
     .from('house_members')
-    .select('house_id, role, houses(id, name, invite_code)')
+    .select('house_id, role')
     .eq('user_id', currentUser.id);
-  if (error) { console.error('loadUserHouses:', error); return []; }
-  return (data || []).map(row => ({
-    id:          row.house_id,
-    name:        row.houses?.name || '—',
-    invite_code: row.houses?.invite_code || '',
-    role:        row.role
-  }));
+  if (err1) { console.error('loadUserHouses memberships:', err1); return []; }
+  if (!memberships?.length) return [];
+
+  // Query 2: busca os dados de cada casa diretamente
+  // Evita o join aninhado via PostgREST que pode falhar com RLS
+  const houseIds = memberships.map(m => m.house_id);
+  const { data: houses, error: err2 } = await supa
+    .from('houses')
+    .select('id, name, invite_code')
+    .in('id', houseIds);
+  if (err2) { console.error('loadUserHouses houses:', err2); return []; }
+
+  // Combina os dois resultados
+  return memberships.map(m => {
+    const h = (houses || []).find(x => x.id === m.house_id);
+    return {
+      id:          m.house_id,
+      name:        h?.name        || 'Minha Casa',
+      invite_code: h?.invite_code || '',
+      role:        m.role
+    };
+  });
 }
 async function showHousePicker() {
   document.getElementById('auth-screen').classList.add('hidden');
@@ -633,7 +656,14 @@ async function showHousePicker() {
   const houses = await loadUserHouses();
   const list = document.getElementById('house-list');
   if (!houses.length) {
-    list.innerHTML = '<p class="tip" style="margin-bottom:16px;">Você ainda não pertence a nenhuma Casa.</p>';
+    list.innerHTML = `
+      <p class="tip" style="margin-bottom:12px;">Você ainda não pertence a nenhuma Casa.</p>
+      <div class="auth-field" style="margin-bottom:10px;">
+        <label style="display:block;font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-weight:500;margin-bottom:5px;">Nome da Nova Casa</label>
+        <input id="new-casa-name" placeholder="Ex: Família Silva" style="width:100%;padding:11px 14px;border-radius:9px;border:1px solid var(--border);font-size:13px;outline:none;">
+      </div>
+      <button class="auth-btn" onclick="criarCasaManual()" style="margin-bottom:0;">Criar minha Casa</button>
+      <div id="casa-manual-err" style="display:none;margin-top:10px;font-size:12px;color:var(--danger);"></div>`;
     return;
   }
   list.innerHTML = houses.map(h => `
@@ -647,6 +677,26 @@ async function showHousePicker() {
   // Se só tem uma casa, entra direto
   if (houses.length === 1) selectHouse(houses[0].id, houses[0].name, houses[0].role);
 }
+// Cria uma Casa manualmente a partir da tela do house picker
+// Usado como fallback quando o RPC falhou durante o signup
+async function criarCasaManual() {
+  const input = document.getElementById('new-casa-name');
+  const errEl = document.getElementById('casa-manual-err');
+  const nome  = input?.value.trim();
+  if (!nome) { if (errEl) { errEl.textContent = 'Informe o nome da Casa.'; errEl.style.display='block'; } return; }
+  const btn = document.querySelector('#house-screen .auth-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Criando…'; }
+  const { data, error } = await supa.rpc('create_house', { house_name: nome });
+  if (error) {
+    console.error('criarCasaManual:', error);
+    if (errEl) { errEl.textContent = 'Erro: ' + error.message; errEl.style.display='block'; }
+    if (btn)   { btn.disabled = false; btn.textContent = 'Criar minha Casa'; }
+    return;
+  }
+  // Recarrega a lista de casas — agora deve ter a nova
+  await showHousePicker();
+}
+
 async function selectHouse(houseId, houseName, role) {
   currentHouseId   = houseId;
   currentHouseName = houseName;
@@ -1843,6 +1893,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+
 
 
 
