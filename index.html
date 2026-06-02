@@ -417,6 +417,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // ============================================================
 // ATRIUM CASA — JS Unificado com Auth + Multi-tenant + RBAC
 //
@@ -508,15 +509,22 @@ function onCasaModeChange() {
 }
 async function doLogin() {
   clearAuthErr();
+  // Limpa intenções de signup abandonadas para evitar afterSignupSetup acidental
+  sessionStorage.removeItem('atrium_signup_mode');
+  sessionStorage.removeItem('atrium_signup_casa');
+  sessionStorage.removeItem('atrium_signup_invite');
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('login-pass').value;
   if (!email || !pass) { showAuthErr('Preencha e-mail e senha.'); return; }
   const btn = document.getElementById('btn-login');
   btn.disabled = true; btn.textContent = 'Entrando…';
   const { error } = await supa.auth.signInWithPassword({ email, password: pass });
-  btn.disabled = false; btn.textContent = 'Entrar';
-  if (error) { showAuthErr(error.message); return; }
-  // onAuthStateChange vai capturar e continuar o fluxo
+  if (error) {
+    btn.disabled = false; btn.textContent = 'Entrar'; // reabilita só em erro
+    showAuthErr(error.message); return;
+  }
+  // Sucesso: mantém botão bloqueado até onAuthStateChange trocar a tela
+  btn.textContent = 'Entrando…';
 }
 async function doSignup() {
   clearAuthErr();
@@ -541,7 +549,7 @@ async function doSignup() {
   //    Se estiver ativado, session será null aqui e o usuário precisará
   //    confirmar o e-mail antes de criar a Casa.
   const { data: authData, error: authErr } = await supa.auth.signUp({ email, password: pass });
-  if (authErr) { btn.disabled = false; btn.textContent = 'Criar conta'; showAuthErr(authErr.message); return; }
+  if (authErr) { _signingUp = false; btn.disabled = false; btn.textContent = 'Criar conta'; showAuthErr(authErr.message); return; }
 
   const session = authData?.session;
 
@@ -776,9 +784,9 @@ function loadDBLocal(houseId) {
 function saveDB() {
   if (currentHouseId) localStorage.setItem(DBK + '_' + currentHouseId, JSON.stringify(db));
 }
-function defDB() { return { employees: [], events: {}, adjustments: {}, payments: [], regional: [], nextId: 1 }; }
+function defDB() { return { employees: [], events: {}, adjustments: {}, payments: [], regional: [] }; }
 let db = defDB();
-function uid() { return db.nextId++; }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).substring(2, 7); }
 function MK(y, m) { return y + '-' + String(m + 1).padStart(2, '0'); }
 let SY = new Date().getFullYear(), SM = new Date().getMonth();
 let isOnline = navigator.onLine;
@@ -1001,13 +1009,10 @@ async function _sbSavePayment(pay) {
   else { const { data } = await supa.from('payments').insert(payload).select(); if (data?.[0]) pay._sbid = data[0].id; }
 }
 async function _sbSaveSettings() {
-  const items = [
+  await supa.from('settings').upsert(
     { key: 'regional', value: db.regional || [], house_id: currentHouseId },
-    { key: 'nextId',   value: db.nextId || 1,   house_id: currentHouseId }
-  ];
-  for (const item of items) {
-    await supa.from('settings').upsert(item, { onConflict: 'key,house_id' });
-  }
+    { onConflict: 'key,house_id' }
+  );
 }
 
 // ── LOAD FROM SUPABASE ────────────────────────────────────────
@@ -1039,7 +1044,6 @@ async function loadFromSupabase() {
     db.payments = (paysR.data || []).map(r => { const d = r.data; d._sbid = r.id; return d; });
     for (const r of (setsR.data || [])) {
       if (r.key === 'regional') db.regional = r.value;
-      if (r.key === 'nextId')   db.nextId   = r.value;
     }
     saveDB(); showSyncBanner('online'); renderAll();
   } catch (e) { console.error('Supabase load error:', e); showSyncBanner('error'); renderAll(); }
@@ -1148,9 +1152,9 @@ async function saveE() {
     const nm = r.querySelector('.en').value.trim();
     return nm ? { name:nm, value:+r.querySelector('.ev').value||0 } : null;
   }).filter(Boolean);
-  const data = { id:idVal?+idVal:uid(), name, role:document.getElementById('erole').value, salary:+document.getElementById('esal').value||0, contract:document.getElementById('ecnt').value, admissao:document.getElementById('eadm').value, vtDaily:+document.getElementById('evt').value||0, vtDiscount:document.getElementById('evtdesc').value, inss:document.getElementById('einss').value, workDays, recurring, extraTypes, notes:document.getElementById('enotes').value.trim(), createdAt:idVal?undefined:tod() };
+  const data = { id:idVal||uid(), name, role:document.getElementById('erole').value, salary:+document.getElementById('esal').value||0, contract:document.getElementById('ecnt').value, admissao:document.getElementById('eadm').value, vtDaily:+document.getElementById('evt').value||0, vtDiscount:document.getElementById('evtdesc').value, inss:document.getElementById('einss').value, workDays, recurring, extraTypes, notes:document.getElementById('enotes').value.trim(), createdAt:idVal?undefined:tod() };
   if (idVal) {
-    const i = db.employees.findIndex(e => e.id === +idVal);
+    const i = db.employees.findIndex(e => e.id === idVal);
     if (i >= 0) { data.createdAt = db.employees[i].createdAt; data._sbid = db.employees[i]._sbid; db.employees[i] = data; }
   } else db.employees.push(data);
   saveDB(); cm('mod-emp'); renderAll();
@@ -1160,7 +1164,6 @@ async function saveE() {
 // [A][H] delE unificado com RBAC admin-only
 async function delE(id) {
   if (!canDelete()) return;
-  id = +id;
   const emp = db.employees.find(e => e.id === id); if (!emp) return;
   if (!confirm('Excluir funcionário permanentemente?')) return;
   const sbid = emp._sbid;
@@ -1199,10 +1202,10 @@ async function saveEv() {
   if (!canWrite()) return;
   const eid=+document.getElementById('eveid').value, dateStr=document.getElementById('evdate').value, evId=document.getElementById('evid').value;
   const parts=dateStr.split('-'), key=parts[0]+'-'+parts[1];
-  const ev={ id:evId?+evId:uid(), date:dateStr, value:+document.getElementById('evval').value||0, duration:document.getElementById('evdur').value.trim(), holiday:!!holName(dateStr), notes:document.getElementById('evnotes').value.trim() };
+  const ev={ id:evId||uid(), date:dateStr, value:+document.getElementById('evval').value||0, duration:document.getElementById('evdur').value.trim(), holiday:!!holName(dateStr), notes:document.getElementById('evnotes').value.trim() };
   if (!db.events[eid]) db.events[eid]={};
   if (!db.events[eid][key]) db.events[eid][key]=[];
-  if (evId) { const i=db.events[eid][key].findIndex(e=>e.id===+evId); if(i>=0)db.events[eid][key][i]=ev; else db.events[eid][key].push(ev); } else db.events[eid][key].push(ev);
+  if (evId) { const i=db.events[eid][key].findIndex(e=>e.id===evId); if(i>=0)db.events[eid][key][i]=ev; else db.events[eid][key].push(ev); } else db.events[eid][key].push(ev);
   saveDB(); cm('mod-ev'); render('fech');
   if (isOnline) { try { await _sbSaveEvent(eid,key,ev); saveDB(); } catch(e) { console.error(e); showSyncBanner('error'); } }
   else { enqueue({ type:'saveEvent', empId:eid, mk:key, data:ev }); showSyncBanner('offline'); }
@@ -1229,10 +1232,10 @@ function openAM(eid, y, m, adjId = null) {
 async function saveA() {
   if (!canWrite()) return;
   const eid=+document.getElementById('aeid').value, key=document.getElementById('amk').value, adjId=document.getElementById('aid').value;
-  const adj={ id:adjId?+adjId:uid(), type:document.getElementById('atype').value, value:+document.getElementById('aval').value||0, date:document.getElementById('adate').value, desc:document.getElementById('adesc').value.trim() };
+  const adj={ id:adjId||uid(), type:document.getElementById('atype').value, value:+document.getElementById('aval').value||0, date:document.getElementById('adate').value, desc:document.getElementById('adesc').value.trim() };
   if (!db.adjustments[eid]) db.adjustments[eid]={};
   if (!db.adjustments[eid][key]) db.adjustments[eid][key]=[];
-  if (adjId) { const i=db.adjustments[eid][key].findIndex(a=>a.id===+adjId); if(i>=0)db.adjustments[eid][key][i]=adj; else db.adjustments[eid][key].push(adj); } else db.adjustments[eid][key].push(adj);
+  if (adjId) { const i=db.adjustments[eid][key].findIndex(a=>a.id===adjId); if(i>=0)db.adjustments[eid][key][i]=adj; else db.adjustments[eid][key].push(adj); } else db.adjustments[eid][key].push(adj);
   saveDB(); cm('mod-adj'); render('fech');
   if (isOnline) { try { await _sbSaveAdj(eid,key,adj); saveDB(); } catch(e) { console.error(e); showSyncBanner('error'); } }
   else { enqueue({ type:'saveAdj', empId:eid, mk:key, data:adj }); showSyncBanner('offline'); }
@@ -1909,6 +1912,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
 
 
 
