@@ -419,6 +419,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // ============================================================
 // ATRIUM CASA — JS Unificado com Auth + Multi-tenant + RBAC
 //
@@ -538,84 +539,109 @@ async function doSignup() {
   if (pass.length < 6) { showAuthErr('Senha deve ter ao menos 6 caracteres.'); return; }
   if (mode === 'new' && !casaNome) { showAuthErr('Informe o nome da sua Casa.'); return; }
   if (mode === 'join' && !invCode) { showAuthErr('Informe o código de convite.'); return; }
-  const btn = document.getElementById('btn-signup');
-  btn.disabled = true; btn.textContent = 'Criando conta…';
 
-  // Bloqueia o onAuthStateChange enquanto configuramos a Casa
-  // para evitar race condition entre SIGNED_IN e create_house
+  const btn = document.getElementById('btn-signup');
+  const setBtn = (txt) => { btn.textContent = txt; };
+  btn.disabled = true; setBtn('Criando conta…');
+
+  // Bloqueia onAuthStateChange durante o setup
   _signingUp = true;
 
-  // 1. Cria o usuário — o Supabase retorna a sessão diretamente quando
-  //    "Confirm email" está desativado nas configurações do projeto.
-  //    Se estiver ativado, session será null aqui e o usuário precisará
-  //    confirmar o e-mail antes de criar a Casa.
-  const { data: authData, error: authErr } = await supa.auth.signUp({ email, password: pass });
-  if (authErr) { _signingUp = false; btn.disabled = false; btn.textContent = 'Criar conta'; showAuthErr(authErr.message); return; }
-
-  const session = authData?.session;
-
-  if (!session) {
-    // Confirm email ativado: libera a flag e salva a intenção
-    _signingUp = false;
-    sessionStorage.setItem('atrium_signup_mode', mode);
-    if (mode === 'new')  sessionStorage.setItem('atrium_signup_casa',   casaNome);
-    if (mode === 'join') sessionStorage.setItem('atrium_signup_invite', invCode);
-    btn.disabled = false; btn.textContent = 'Criar conta';
-    showAuthErr('✉️ Conta criada! Verifique seu e-mail para confirmar antes de entrar.');
-    document.getElementById('auth-err').style.background = 'rgba(107,159,191,.08)';
-    document.getElementById('auth-err').style.borderColor = 'rgba(107,159,191,.3)';
-    document.getElementById('auth-err').style.color = 'var(--blue)';
-    return;
-  }
-
-  // 2. Sessão ativa imediatamente (Confirm email desativado) —
-  //    executa o RPC agora, com o JWT do usuário recém-criado.
-  btn.textContent = 'Configurando Casa…';
   try {
-    if (mode === 'new') {
-      const { error: rpcErr } = await supa.rpc('create_house', { house_name: casaNome });
-      if (rpcErr) throw rpcErr;
-    } else {
-      const { error: rpcErr } = await supa.rpc('join_house_by_code', { invite: invCode });
-      if (rpcErr) throw rpcErr;
+    // 1. Cria o usuário
+    const { data: authData, error: authErr } = await supa.auth.signUp({ email, password: pass });
+    if (authErr) throw new Error('Erro no cadastro: ' + authErr.message);
+
+    // Confirm email ativado — sessão null até confirmar
+    if (!authData?.session) {
+      _signingUp = false;
+      sessionStorage.setItem('atrium_signup_mode', mode);
+      if (mode === 'new')  sessionStorage.setItem('atrium_signup_casa',   casaNome);
+      if (mode === 'join') sessionStorage.setItem('atrium_signup_invite', invCode);
+      showAuthErr('✉️ Conta criada! Verifique seu e-mail para confirmar antes de entrar.');
+      const ae = document.getElementById('auth-err');
+      ae.style.cssText += ';background:rgba(107,159,191,.08);border-color:rgba(107,159,191,.3);color:var(--blue)';
+      btn.disabled = false; setBtn('Criar conta');
+      return;
     }
-    // Limpa qualquer intenção residual no sessionStorage
-    sessionStorage.removeItem('atrium_signup_mode');
-    sessionStorage.removeItem('atrium_signup_casa');
-    sessionStorage.removeItem('atrium_signup_invite');
-    // Libera a flag e chama afterLogin manualmente —
-    // o onAuthStateChange que foi bloqueado não vai mais disparar
+
+    // 2. Cria ou entra na Casa diretamente via insert (sem depender de RPC)
+    setBtn('Configurando Casa…');
+    const userId = authData.session.user.id;
+
+    if (mode === 'new') {
+      // Insere a casa diretamente
+      const { data: houseRows, error: hErr } = await supa
+        .from('houses')
+        .insert({ name: casaNome, created_by: userId })
+        .select('id')
+        .single();
+      if (hErr) throw new Error('Erro ao criar Casa: ' + hErr.message);
+
+      // Associa o usuário como admin
+      const { error: mErr } = await supa
+        .from('house_members')
+        .insert({ house_id: houseRows.id, user_id: userId, role: 'admin' });
+      if (mErr) throw new Error('Erro ao associar membro: ' + mErr.message);
+
+    } else {
+      // Entra via código de convite
+      const { data: houseRows, error: hErr } = await supa
+        .from('houses')
+        .select('id')
+        .eq('invite_code', invCode.toUpperCase())
+        .single();
+      if (hErr || !houseRows) throw new Error('Código de convite inválido.');
+
+      const { error: mErr } = await supa
+        .from('house_members')
+        .insert({ house_id: houseRows.id, user_id: userId, role: 'viewer' });
+      if (mErr && !mErr.message.includes('duplicate')) throw new Error('Erro ao entrar na Casa: ' + mErr.message);
+    }
+
+    // 3. Tudo ok — entra no app
     _signingUp = false;
-    await afterLogin(authData.user);
+    setBtn('Entrando…');
+    await afterLogin(authData.session.user);
+
   } catch (e) {
     _signingUp = false;
-    console.error('create_house RPC error:', e);
-    showAuthErr('Conta criada, mas erro ao configurar a Casa: ' + e.message + ' — Verifique se o SQL de setup foi executado no Supabase.');
-    // Mesmo com erro no RPC, tenta entrar no app — afterLogin vai
-    // mostrar a tela de criar casa manualmente
-    if (authData?.user) await afterLogin(authData.user);
+    console.error('doSignup error:', e);
+    showAuthErr(e.message);
+    btn.disabled = false; setBtn('Criar conta');
   }
-  btn.disabled = false; btn.textContent = 'Criar conta';
 }
 async function afterSignupSetup() {
   const mode = sessionStorage.getItem('atrium_signup_mode');
   if (!mode) return;
   try {
+    const userId = currentUser.id;
     if (mode === 'new') {
       const casaNome = sessionStorage.getItem('atrium_signup_casa') || 'Minha Casa';
-      const { data, error } = await supa.rpc('create_house', { house_name: casaNome });
-      if (error) throw error;
-      console.log('Casa criada via afterSignupSetup:', data);
-    } else if (mode === 'join') {
-      const invite = sessionStorage.getItem('atrium_signup_invite') || '';
-      const { error } = await supa.rpc('join_house_by_code', { invite });
-      if (error) throw error;
+      const { data: houseRows, error: hErr } = await supa
+        .from('houses')
+        .insert({ name: casaNome, created_by: userId })
+        .select('id')
+        .single();
+      if (hErr) throw new Error('Erro ao criar Casa: ' + hErr.message);
+      const { error: mErr } = await supa
+        .from('house_members')
+        .insert({ house_id: houseRows.id, user_id: userId, role: 'admin' });
+      if (mErr) throw new Error('Erro ao associar membro: ' + mErr.message);
+    } else {
+      const invite = (sessionStorage.getItem('atrium_signup_invite') || '').toUpperCase();
+      const { data: houseRows, error: hErr } = await supa
+        .from('houses').select('id').eq('invite_code', invite).single();
+      if (hErr || !houseRows) throw new Error('Código de convite inválido.');
+      const { error: mErr } = await supa
+        .from('house_members')
+        .insert({ house_id: houseRows.id, user_id: userId, role: 'viewer' });
+      if (mErr && !mErr.message.includes('duplicate')) throw new Error('Erro ao entrar na Casa: ' + mErr.message);
     }
   } catch (e) {
     console.error('afterSignupSetup error:', e.message);
-    // Exibe erro diretamente na tela de seleção de casa
     const list = document.getElementById('house-list');
-    if (list) list.innerHTML = `<div style="background:rgba(184,92,92,.08);border:1px solid rgba(184,92,92,.25);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--danger);margin-bottom:12px;"><strong>Erro ao criar a Casa:</strong> ${e.message}<br><span style="font-size:11px;opacity:.8;">Verifique se o SQL de setup foi executado no Supabase e tente novamente.</span></div>`;
+    if (list) list.innerHTML = `<div style="background:rgba(184,92,92,.08);border:1px solid rgba(184,92,92,.25);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--danger);margin-bottom:12px;"><strong>Erro:</strong> ${e.message}</div>`;
   } finally {
     sessionStorage.removeItem('atrium_signup_mode');
     sessionStorage.removeItem('atrium_signup_casa');
@@ -1927,6 +1953,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
 
 
 
