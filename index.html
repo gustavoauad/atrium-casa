@@ -418,6 +418,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // ============================================================
 // ATRIUM CASA — JS Unificado com Auth + Multi-tenant + RBAC
 //
@@ -752,26 +753,38 @@ async function doJoinHouse() {
 // ── afterLogin: chamado pelo onAuthStateChange ────────────────
 async function afterLogin(user) {
   currentUser = user;
+  // Garante que a tela de auth some imediatamente, independente do que aconteça depois
+  document.getElementById('auth-screen').classList.add('hidden');
 
-  // Se há intenção de casa pendente no sessionStorage (fluxo com confirm email),
-  // executa o setup antes de tentar carregar as casas.
-  if (sessionStorage.getItem('atrium_signup_mode')) await afterSignupSetup();
+  try {
+    // Se há intenção de casa pendente no sessionStorage (fluxo com confirm email)
+    if (sessionStorage.getItem('atrium_signup_mode')) await afterSignupSetup();
 
-  // Tenta carregar as casas do usuário.
-  // Retry com delay para cobrir o caso em que o RPC create_house acabou de
-  // rodar no doSignup e a RLS ainda está propagando no Supabase (<1 s).
-  let houses = await loadUserHouses();
-  if (!houses.length) {
-    await new Promise(r => setTimeout(r, 1200)); // aguarda propagação RLS
-    houses = await loadUserHouses();
-  }
+    // Tenta carregar as casas; retry para cobrir propagação de RLS após create_house
+    let houses = await loadUserHouses();
+    if (!houses.length) {
+      await new Promise(r => setTimeout(r, 1200));
+      houses = await loadUserHouses();
+    }
 
-  if (!houses.length) {
-    await showHousePicker(); // mostra tela para criar/entrar numa casa
-  } else if (houses.length === 1) {
-    await selectHouse(houses[0].id, houses[0].name, houses[0].role);
-  } else {
-    await showHousePicker();
+    if (!houses.length) {
+      await showHousePicker();
+    } else if (houses.length === 1) {
+      await selectHouse(houses[0].id, houses[0].name, houses[0].role);
+    } else {
+      await showHousePicker();
+    }
+  } catch (e) {
+    // Erro inesperado: loga, reabilita o botão de login e mostra a tela de auth
+    console.error('afterLogin error:', e);
+    currentUser = null;
+    document.getElementById('auth-screen').classList.remove('hidden');
+    document.getElementById('house-screen').classList.add('hidden');
+    document.getElementById('app').style.display = 'none';
+    // Reabilita o botão de login para o usuário tentar novamente
+    const btn = document.getElementById('btn-login');
+    if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
+    showAuthErr('Erro ao carregar conta: ' + e.message + '. Tente novamente.');
   }
 }
 
@@ -1898,6 +1911,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // a Casa neste momento — afterLogin será chamado por ele
         // manualmente após o create_house terminar.
         if (_signingUp) return;
+        // Esconde a tela de auth imediatamente para não parecer travado
+        document.getElementById('auth-screen').classList.add('hidden');
         await afterLogin(session.user);
       } else {
         document.getElementById('auth-screen').classList.remove('hidden');
@@ -1912,6 +1927,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
 
 
 
