@@ -413,6 +413,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // ============================================================
 // ATRIUM CASA — JS Unificado com Auth + Multi-tenant + RBAC
 //
@@ -526,15 +527,50 @@ async function doSignup() {
   if (mode === 'join' && !invCode) { showAuthErr('Informe o código de convite.'); return; }
   const btn = document.getElementById('btn-signup');
   btn.disabled = true; btn.textContent = 'Criando conta…';
-  // 1. Cria o usuário
+
+  // 1. Cria o usuário — o Supabase retorna a sessão diretamente quando
+  //    "Confirm email" está desativado nas configurações do projeto.
+  //    Se estiver ativado, session será null aqui e o usuário precisará
+  //    confirmar o e-mail antes de criar a Casa.
   const { data: authData, error: authErr } = await supa.auth.signUp({ email, password: pass });
   if (authErr) { btn.disabled = false; btn.textContent = 'Criar conta'; showAuthErr(authErr.message); return; }
-  // 2. Cria/entra na casa via RPC (aguarda sessão estar ativa)
-  // O onAuthStateChange vai chamar afterLogin que finaliza o setup
-  // Guardamos a intenção de casa no sessionStorage para ser consumida lá
-  sessionStorage.setItem('atrium_signup_mode', mode);
-  if (mode === 'new') sessionStorage.setItem('atrium_signup_casa', casaNome);
-  if (mode === 'join') sessionStorage.setItem('atrium_signup_invite', invCode);
+
+  const session = authData?.session;
+
+  if (!session) {
+    // Confirm email ativado: salva a intenção no sessionStorage.
+    // afterSignupSetup() será chamado pelo onAuthStateChange após confirmação.
+    sessionStorage.setItem('atrium_signup_mode', mode);
+    if (mode === 'new')  sessionStorage.setItem('atrium_signup_casa',   casaNome);
+    if (mode === 'join') sessionStorage.setItem('atrium_signup_invite', invCode);
+    btn.disabled = false; btn.textContent = 'Criar conta';
+    showAuthErr('✉️ Conta criada! Verifique seu e-mail para confirmar antes de entrar.');
+    document.getElementById('auth-err').style.background = 'rgba(107,159,191,.08)';
+    document.getElementById('auth-err').style.borderColor = 'rgba(107,159,191,.3)';
+    document.getElementById('auth-err').style.color = 'var(--blue)';
+    return;
+  }
+
+  // 2. Sessão ativa imediatamente (Confirm email desativado) —
+  //    executa o RPC agora, com o JWT do usuário recém-criado.
+  btn.textContent = 'Configurando Casa…';
+  try {
+    if (mode === 'new') {
+      const { error: rpcErr } = await supa.rpc('create_house', { house_name: casaNome });
+      if (rpcErr) throw rpcErr;
+    } else {
+      const { error: rpcErr } = await supa.rpc('join_house_by_code', { invite: invCode });
+      if (rpcErr) throw rpcErr;
+    }
+    // Limpa qualquer intenção residual no sessionStorage
+    sessionStorage.removeItem('atrium_signup_mode');
+    sessionStorage.removeItem('atrium_signup_casa');
+    sessionStorage.removeItem('atrium_signup_invite');
+    // onAuthStateChange (SIGNED_IN) já foi disparado — afterLogin será chamado
+    // mas a Casa já existe, então afterSignupSetup() não vai duplicar nada.
+  } catch (e) {
+    showAuthErr('Conta criada, mas erro ao configurar a Casa: ' + e.message);
+  }
   btn.disabled = false; btn.textContent = 'Criar conta';
 }
 async function afterSignupSetup() {
@@ -646,12 +682,22 @@ async function doJoinHouse() {
 // ── afterLogin: chamado pelo onAuthStateChange ────────────────
 async function afterLogin(user) {
   currentUser = user;
-  // Verifica se há setup de signup pendente
+
+  // Se há intenção de casa pendente no sessionStorage (fluxo com confirm email),
+  // executa o setup antes de tentar carregar as casas.
   if (sessionStorage.getItem('atrium_signup_mode')) await afterSignupSetup();
-  const houses = await loadUserHouses();
+
+  // Tenta carregar as casas do usuário.
+  // Retry com delay para cobrir o caso em que o RPC create_house acabou de
+  // rodar no doSignup e a RLS ainda está propagando no Supabase (<1 s).
+  let houses = await loadUserHouses();
   if (!houses.length) {
-    // Novo usuário sem casa — mostra tela de criação
-    await showHousePicker();
+    await new Promise(r => setTimeout(r, 1200)); // aguarda propagação RLS
+    houses = await loadUserHouses();
+  }
+
+  if (!houses.length) {
+    await showHousePicker(); // mostra tela para criar/entrar numa casa
   } else if (houses.length === 1) {
     await selectHouse(houses[0].id, houses[0].name, houses[0].role);
   } else {
@@ -1797,6 +1843,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
 
 
 
