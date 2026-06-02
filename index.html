@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#F5F2EE">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;0,400;0,500;1,300&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
 <!-- Supabase JS via CDN oficial -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
 <style>
 :root{--bg:#F5F2EE;--surface:#FDFCFA;--card:#FFFFFF;--border:#E8E3DC;--text:#2A2520;--muted:#9C9087;--stone:#B8B0A4;--accent:#8B7355;--a2:#C4A882;--cream:#F0EBE0;--sage:#8A9B8A;--warn:#C4973A;--danger:#B85C5C;--blue:#6B9FBF;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -21,7 +21,7 @@ input,button,select,textarea{font-family:'Jost',sans-serif;}
 input::placeholder,textarea::placeholder{color:var(--stone);}
 
 /* ── AUTH SCREEN ─────────────────────────────────────────── */
-#auth-screen{position:fixed;inset:0;background:var(--bg);z-index:9000;display:flex;align-items:center;justify-content:center;padding:24px;}
+#auth-screen{position:fixed;top:0;right:0;bottom:0;left:0;background:var(--bg);z-index:9000;display:flex;align-items:center;justify-content:center;padding:24px;}
 #auth-screen.hidden{display:none;}
 .auth-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:36px 32px;width:100%;max-width:400px;box-shadow:0 8px 40px rgba(42,37,32,.08);}
 .auth-logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:28px;}
@@ -45,7 +45,7 @@ input::placeholder,textarea::placeholder{color:var(--stone);}
 .auth-invite-toggle button{background:none;border:none;cursor:pointer;font-size:12px;color:var(--muted);text-decoration:underline;}
 
 /* ── HOUSE PICKER ────────────────────────────────────────── */
-#house-screen{position:fixed;inset:0;background:var(--bg);z-index:8000;display:flex;align-items:center;justify-content:center;padding:24px;}
+#house-screen{position:fixed;top:0;right:0;bottom:0;left:0;background:var(--bg);z-index:8000;display:flex;align-items:center;justify-content:center;padding:24px;}
 #house-screen.hidden{display:none;}
 .house-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:32px;width:100%;max-width:440px;}
 .house-list{margin-bottom:16px;}
@@ -105,7 +105,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 .btn-sm{padding:7px 14px;font-size:11px;border-radius:7px;}
 .xi{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;color:var(--muted);}
 .av{border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Cormorant',serif;font-weight:400;}
-.ov{position:fixed;inset:0;background:rgba(42,37,32,.55);z-index:500;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);}
+.ov{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(42,37,32,.55);z-index:500;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);}
 .ov.ctr{align-items:center;}
 .modal{background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:680px;max-height:92vh;overflow:hidden;display:flex;flex-direction:column;animation:su .22s ease;}
 .modal.cm{border-radius:20px;animation:fi .18s ease;}
@@ -151,7 +151,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 <div id="sync-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;padding:8px 16px;text-align:center;font-size:12px;font-weight:500;color:#fff;letter-spacing:.04em;transition:background .3s;"></div>
 
 <!-- ── LOADING SCREEN ──────────────────────────────────────── -->
-<div id="loading-screen" style="position:fixed;inset:0;background:var(--bg);z-index:9500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+<div id="loading-screen" style="position:fixed;top:0;right:0;bottom:0;left:0;background:var(--bg);z-index:9500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
   <svg width="36" height="36" viewBox="0 0 72 72" fill="none">
     <rect x="4" y="4" width="64" height="64" rx="6" stroke="#2A2520" stroke-width="1.8" fill="none"/>
     <rect x="22" y="22" width="28" height="28" rx="2" stroke="#8B7355" stroke-width="1.8" fill="none"/>
@@ -431,6 +431,8 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
+
 // ============================================================
 // ATRIUM CASA — JS Unificado com Auth + Multi-tenant + RBAC
 //
@@ -455,7 +457,8 @@ const SUPA_URL = 'https://nrlzctnwtzlcarfchmca.supabase.co';
 const SUPA_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ybHpjdG53dHpsY2FyZmNobWNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMjg3MTAsImV4cCI6MjA5NTkwNDcxMH0.Jjh3-Zzy_e_ZrCw1mXa5Tzlq8NuC8oQMOLKAmRrfx6s';
 
 // Inicializa o cliente Supabase usando o SDK (carregado via CDN)
-const supa = window.supabase.createClient(SUPA_URL, SUPA_ANON_KEY);
+if (!window.supabase) { throw new Error('Supabase SDK not loaded'); }
+let supa = null; // inicializado no DOMContentLoaded após SDK carregar
 
 // ── SESSION STATE ─────────────────────────────────────────────
 // Variáveis de sessão — preenchidas após login e seleção de casa
@@ -919,7 +922,7 @@ function initNetworkListeners() {
     if (document.visibilityState !== 'visible') return;
     if (!currentHouseId || !isOnline) return;
     const now = Date.now();
-    if (now - _lastReload < 60_000) return;
+    if (now - _lastReload < 60000) return;
     _lastReload = now;
     loadFromSupabase();
   });
@@ -1938,46 +1941,52 @@ function renderAll(){render(CT);}
 
 // ── [C] INIT ──────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  initNetworkListeners();
+  try {
+    if (!window.supabase) {
+      document.getElementById('loading-screen').innerHTML =
+        '<div style="text-align:center;padding:32px;font-family:sans-serif;">'
+        + '<p style="color:#B85C5C;font-size:14px;margin-bottom:8px;">&#10060; SDK Supabase bloqueado</p>'
+        + '<p style="color:#9C9087;font-size:12px;margin-bottom:16px;">Desative o bloqueio de rastreamento para este site e recarregue.</p>'
+        + '<button onclick="location.reload()" style="padding:10px 20px;background:#2A2520;color:#fff;border:none;border-radius:8px;cursor:pointer;">Recarregar</button>'
+        + '</div>';
+      return;
+    }
+    supa = window.supabase.createClient(SUPA_URL, SUPA_ANON_KEY);
+    initNetworkListeners();
 
-  // Verifica se o SDK do Supabase carregou corretamente
-  if (!window.supabase || typeof supa === 'undefined') {
-    document.getElementById('loading-screen').innerHTML =
-      '<div style="text-align:center;padding:24px;">' +
-      '<p style="font-family:\'Jost\',sans-serif;font-size:14px;color:#B85C5C;margin-bottom:8px;">&#10060; Erro ao carregar o Supabase</p>' +
-      '<p style="font-family:\'Jost\',sans-serif;font-size:12px;color:#9C9087;">Verifique sua conexão e recarregue a página.</p>' +
-      '<button onclick="location.reload()" style="margin-top:16px;padding:10px 20px;background:#2A2520;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:\'Jost\',sans-serif;">Recarregar</button>' +
-      '</div>';
-    return;
-  }
-
-  // Supabase Auth state listener — ponto central do fluxo de autenticação
-  supa.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-      if (session?.user) {
-        // Se _signingUp estiver ativo, o doSignup está configurando
-        // a Casa neste momento — afterLogin será chamado por ele
-        // manualmente após o create_house terminar.
-        if (_signingUp) return;
-        // Esconde a tela de auth imediatamente para não parecer travado
-        document.getElementById('loading-screen').style.display = 'none';
-        document.getElementById('auth-screen').classList.add('hidden');
-        await afterLogin(session.user);
-      } else {
+    supa.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        if (session?.user) {
+          if (_signingUp) return;
+          document.getElementById('loading-screen').style.display = 'none';
+          document.getElementById('auth-screen').classList.add('hidden');
+          await afterLogin(session.user);
+        } else {
+          document.getElementById('loading-screen').style.display = 'none';
+          document.getElementById('auth-screen').classList.remove('hidden');
+          document.getElementById('house-screen').classList.add('hidden');
+          document.getElementById('app').style.display = 'none';
+        }
+      } else if (event === 'SIGNED_OUT') {
+        _signingUp = false;
         document.getElementById('loading-screen').style.display = 'none';
         document.getElementById('auth-screen').classList.remove('hidden');
         document.getElementById('house-screen').classList.add('hidden');
-        document.getElementById('app').style.display='none';
+        document.getElementById('app').style.display = 'none';
       }
-    } else if (event === 'SIGNED_OUT') {
-      _signingUp = false;
-      document.getElementById('loading-screen').style.display = 'none';
-      document.getElementById('auth-screen').classList.remove('hidden');
-      document.getElementById('house-screen').classList.add('hidden');
-      document.getElementById('app').style.display='none';
-    }
-  });
+    });
+
+  } catch(initErr) {
+    console.error('Atrium init error:', initErr);
+    var ls = document.getElementById('loading-screen');
+    if (ls) ls.innerHTML = '<div style="text-align:center;padding:32px;font-family:sans-serif;">'
+      + '<p style="color:#B85C5C;font-size:14px;margin-bottom:8px;">Erro: ' + initErr.message + '</p>'
+      + '<button onclick="location.reload()" style="padding:10px 20px;background:#2A2520;color:#fff;border:none;border-radius:8px;cursor:pointer;">Recarregar</button>'
+      + '</div>';
+  }
 });
+
+
 
 
 
