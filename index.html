@@ -433,6 +433,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // ============================================================
 // ATRIUM CASA — JS Unificado com Auth + Multi-tenant + RBAC
 //
@@ -613,10 +614,19 @@ async function doSignup() {
       if (mErr && !mErr.message.includes('duplicate')) throw new Error('Erro ao entrar na Casa: ' + mErr.message);
     }
 
-    // 3. Tudo ok — entra no app
+    // 3. Tudo ok — entra direto na casa recém-criada
+    // Não depende de loadUserHouses (evita problema de propagação de RLS)
     _signingUp = false;
     setBtn('Entrando…');
-    await afterLogin(authData.session.user);
+    currentUser = authData.session.user;
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('loading-screen').style.display = 'none';
+    if (mode === 'new') {
+      await selectHouse(houseRows.id, casaNome, 'admin');
+    } else {
+      // Para join, ainda usamos afterLogin pois não temos o houseId em mãos facilmente
+      await afterLogin(authData.session.user);
+    }
 
   } catch (e) {
     _signingUp = false;
@@ -747,15 +757,25 @@ async function criarCasaManual() {
   if (!nome) { if (errEl) { errEl.textContent = 'Informe o nome da Casa.'; errEl.style.display='block'; } return; }
   const btn = document.querySelector('#house-screen .auth-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Criando…'; }
-  const { data, error } = await supa.rpc('create_house', { house_name: nome });
-  if (error) {
-    console.error('criarCasaManual:', error);
-    if (errEl) { errEl.textContent = 'Erro: ' + error.message; errEl.style.display='block'; }
+  try {
+    const userId = currentUser.id;
+    const { data: houseRows, error: hErr } = await supa
+      .from('houses')
+      .insert({ name: nome, created_by: userId })
+      .select('id')
+      .single();
+    if (hErr) throw new Error(hErr.message);
+    const { error: mErr } = await supa
+      .from('house_members')
+      .insert({ house_id: houseRows.id, user_id: userId, role: 'admin' });
+    if (mErr) throw new Error(mErr.message);
+    // Entra direto na casa recém-criada
+    await selectHouse(houseRows.id, nome, 'admin');
+  } catch(e) {
+    console.error('criarCasaManual:', e);
+    if (errEl) { errEl.textContent = 'Erro: ' + e.message; errEl.style.display='block'; }
     if (btn)   { btn.disabled = false; btn.textContent = 'Criar minha Casa'; }
-    return;
   }
-  // Recarrega a lista de casas — agora deve ter a nova
-  await showHousePicker();
 }
 
 async function selectHouse(houseId, houseName, role) {
@@ -1985,6 +2005,7 @@ document.addEventListener('DOMContentLoaded', () => {
       + '</div>';
   }
 });
+
 
 
 
