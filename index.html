@@ -416,6 +416,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // ============================================================
 // ATRIUM CASA — JS Unificado com Auth + Multi-tenant + RBAC
 //
@@ -444,7 +445,8 @@ const supa = window.supabase.createClient(SUPA_URL, SUPA_ANON_KEY);
 
 // ── SESSION STATE ─────────────────────────────────────────────
 // Variáveis de sessão — preenchidas após login e seleção de casa
-let currentUser   = null;  // objeto auth.user do Supabase
+let currentUser   = null;
+let _signingUp    = false; // impede onAuthStateChange durante setup do signup  // objeto auth.user do Supabase
 let currentHouseId = null; // UUID da casa ativa
 let currentHouseName = '';
 let currentRole   = null;  // 'admin' | 'editor' | 'viewer'
@@ -530,6 +532,10 @@ async function doSignup() {
   const btn = document.getElementById('btn-signup');
   btn.disabled = true; btn.textContent = 'Criando conta…';
 
+  // Bloqueia o onAuthStateChange enquanto configuramos a Casa
+  // para evitar race condition entre SIGNED_IN e create_house
+  _signingUp = true;
+
   // 1. Cria o usuário — o Supabase retorna a sessão diretamente quando
   //    "Confirm email" está desativado nas configurações do projeto.
   //    Se estiver ativado, session será null aqui e o usuário precisará
@@ -540,8 +546,8 @@ async function doSignup() {
   const session = authData?.session;
 
   if (!session) {
-    // Confirm email ativado: salva a intenção no sessionStorage.
-    // afterSignupSetup() será chamado pelo onAuthStateChange após confirmação.
+    // Confirm email ativado: libera a flag e salva a intenção
+    _signingUp = false;
     sessionStorage.setItem('atrium_signup_mode', mode);
     if (mode === 'new')  sessionStorage.setItem('atrium_signup_casa',   casaNome);
     if (mode === 'join') sessionStorage.setItem('atrium_signup_invite', invCode);
@@ -568,11 +574,17 @@ async function doSignup() {
     sessionStorage.removeItem('atrium_signup_mode');
     sessionStorage.removeItem('atrium_signup_casa');
     sessionStorage.removeItem('atrium_signup_invite');
-    // onAuthStateChange (SIGNED_IN) já foi disparado — afterLogin será chamado
-    // mas a Casa já existe, então afterSignupSetup() não vai duplicar nada.
+    // Libera a flag e chama afterLogin manualmente —
+    // o onAuthStateChange que foi bloqueado não vai mais disparar
+    _signingUp = false;
+    await afterLogin(authData.user);
   } catch (e) {
+    _signingUp = false;
     console.error('create_house RPC error:', e);
     showAuthErr('Conta criada, mas erro ao configurar a Casa: ' + e.message + ' — Verifique se o SQL de setup foi executado no Supabase.');
+    // Mesmo com erro no RPC, tenta entrar no app — afterLogin vai
+    // mostrar a tela de criar casa manualmente
+    if (authData?.user) await afterLogin(authData.user);
   }
   btn.disabled = false; btn.textContent = 'Criar conta';
 }
@@ -1879,20 +1891,25 @@ document.addEventListener('DOMContentLoaded', () => {
   supa.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
       if (session?.user) {
+        // Se _signingUp estiver ativo, o doSignup está configurando
+        // a Casa neste momento — afterLogin será chamado por ele
+        // manualmente após o create_house terminar.
+        if (_signingUp) return;
         await afterLogin(session.user);
       } else {
-        // Sem sessão → mostrar tela de login
         document.getElementById('auth-screen').classList.remove('hidden');
         document.getElementById('house-screen').classList.add('hidden');
         document.getElementById('app').style.display='none';
       }
     } else if (event === 'SIGNED_OUT') {
+      _signingUp = false;
       document.getElementById('auth-screen').classList.remove('hidden');
       document.getElementById('house-screen').classList.add('hidden');
       document.getElementById('app').style.display='none';
     }
   });
 });
+
 
 
 
