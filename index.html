@@ -450,6 +450,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -1756,11 +1757,13 @@ function goFech(eid){swTab('fech',document.querySelectorAll('.tab')[1]);setTimeo
 function renderFech() {
   const wy=SM===0?SY-1:SY, wm=SM===0?11:SM-1, wl=MP[wm]+' '+wy, pl=MP[SM]+' '+SY;
   const activeEmps=db.employees.filter(e=>e.status!=='desligado');
-  const prevSel=document.getElementById('fechsel'), prevEid=prevSel?+prevSel.value:(activeEmps[0]?.id||0);
-  const selOpts=activeEmps.length?activeEmps.map(e=>`<option value="${e.id}"${e.id===prevEid?' selected':''}>${e.name}</option>`).join(''):'<option>Nenhum</option>';
+  // Preserva o funcionário selecionado sem coerção numérica (IDs são strings)
+  const prevSel=document.getElementById('fechsel');
+  const prevEid=prevSel?.value || (activeEmps[0]?.id || '');
+  const selOpts=activeEmps.length?activeEmps.map(e=>`<option value="${e.id}"${String(e.id)===String(prevEid)?' selected':''}>${e.name}</option>`).join(''):'<option>Nenhum</option>';
   const selH=`<div class="fb" style="margin-bottom:20px;flex-wrap:wrap;gap:12px;"><div><div style="font-family:'Cormorant',serif;font-size:26px;font-weight:300;margin-bottom:4px;">Fechamento</div><div class="tip">${wl} \u00b7 pago em ${pl}</div></div><select id="fechsel" onchange="renderFech()" class="ssel" style="padding:8px 28px 8px 12px;border-radius:9px;border:1px solid var(--border);background:var(--cream);font-size:13px;cursor:pointer;">${selOpts}</select></div>`;
   if(!activeEmps.length){document.getElementById('tab-fech').innerHTML=selH+'<div class="empty"><div class="ei">&#128203;</div><div class="et">Cadastre um funcion\u00e1rio primeiro.</div></div>';return;}
-  const eid=prevEid||(activeEmps[0]?.id||0);
+  const eid=prevEid||(activeEmps[0]?.id||'');
   const c=calc(eid,wy,wm), emp=c.emp, days=mdays(wy,wm), h=allH(), td=tod(), isPaid=!!c.payment;
   const fdow=jd(new Date(wy,wm,1).getDay());
   const evByD={};c.avs.forEach(e=>{evByD[e.date]=e;});
@@ -2242,6 +2245,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
