@@ -316,8 +316,11 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
   <div class="modal cm" style="max-width:440px;">
     <div class="mh"><div class="mt">Di&#225;ria Avulsa</div><button class="xi" onclick="cm('mod-ev')">&#215;</button></div>
     <div class="mb">
-      <input type="hidden" id="eveid"><input type="hidden" id="evdate"><input type="hidden" id="evid">
-      <div id="evinfo" class="cream" style="font-size:13px;font-weight:400;margin-bottom:14px;"></div>
+      <input type="hidden" id="eveid"><input type="hidden" id="evid">
+      <div class="g2" style="margin-bottom:14px;">
+        <div class="field"><label>Data da di&#225;ria</label><input type="date" id="evdate" onchange="onEvDateChange()"></div>
+        <div id="evinfo" class="cream" style="font-size:13px;display:flex;align-items:center;padding:10px 14px;min-height:44px;"></div>
+      </div>
       <div id="evhb" class="alert aw hidden" style="flex-direction:column;"></div>
       <div class="field"><label>Tipo de di&#225;ria</label><select id="evtype" onchange="onET()"></select></div>
       <div class="g2"><div class="field"><label>Valor (R$)</label><input id="evval" type="number" step=".01" placeholder="0,00"></div><div class="field"><label>Dura&#231;&#227;o</label><input id="evdur" placeholder="ex: 12h, 24h"></div></div>
@@ -425,6 +428,8 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 <!-- SDK Supabase hospedado localmente — sem dependência de CDN externo -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" crossorigin="anonymous"></script>
 <script>
+
+
 
 
 
@@ -670,7 +675,11 @@ async function doSignup() {
     // 3. Tudo ok — entra direto na casa recém-criada
     // Não depende de loadUserHouses (evita problema de propagação de RLS)
     _signingUp = false;
+    showAuthErr('✅ Conta criada com sucesso! Entrando no Atrium…');
+    const ae2=document.getElementById('auth-err');
+    if(ae2)ae2.style.cssText+=';background:rgba(138,155,138,.1);border-color:rgba(138,155,138,.3);color:var(--sage)';
     setBtn('Entrando…');
+    await new Promise(r=>setTimeout(r,1200));
     currentUser = authData.session.user;
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('loading-screen').style.display = 'none';
@@ -1172,9 +1181,14 @@ async function _sbSaveAdj(empId, mk, adj) {
 async function _sbDeleteAdj(sbid) { if (sbid) await supa.from('adjustments').delete().eq('id', sbid); }
 async function _sbSavePayment(pay) {
   if (_DEV_MODE) { return; }
-  const payload = { emp_id: pay.empId, month_key: pay.monthKey, data: pay, house_id: currentHouseId };
-  if (pay._sbid) await supa.from('payments').update(payload).eq('id', pay._sbid);
-  else { const { data } = await supa.from('payments').insert(payload).select(); if (data?.[0]) pay._sbid = data[0].id; }
+  const payload = { emp_id: String(pay.empId), month_key: pay.monthKey, data: pay, house_id: currentHouseId };
+  if (pay._sbid) {
+    await supa.from('payments').update(payload).eq('id', pay._sbid);
+  } else {
+    const { data, error } = await supa.from('payments').insert(payload).select();
+    if (error) throw new Error(error.message);
+    if (data?.[0]) { pay._sbid = data[0].id; saveDB(); }
+  }
 }
 async function _sbSaveSettings() {
   if (_DEV_MODE) { return; }
@@ -1369,6 +1383,18 @@ function openEvM(eid, dateStr, evId = null) {
   document.getElementById('mod-ev').classList.remove('hidden');
 }
 function onET() { const v=document.getElementById('evtype').value; if(v==='custom')return; const t=JSON.parse(v); document.getElementById('evval').value=t.value; document.getElementById('evdur').value=t.name; }
+
+function onEvDateChange() {
+  const dateStr=document.getElementById('evdate').value;
+  if(!dateStr)return;
+  const parts=dateStr.split('-'), dt=new Date(+parts[0],+parts[1]-1,+parts[2]), hn=holName(dateStr);
+  const eid=document.getElementById('eveid').value;
+  const emp=db.employees.find(e=>String(e.id)===String(eid));
+  document.getElementById('evinfo').innerHTML=`<strong>${DF[jd(dt.getDay())]}, ${parts[2]}/${parts[1]}/${parts[0]}</strong>${emp?' — '+emp.name:''}${hn?` <span class="badge" style="background:rgba(196,151,58,.15);color:var(--warn);">&#127881; ${hn}</span>`:''}`;
+  const banner=document.getElementById('evhb');
+  if(hn){banner.innerHTML=`&#127881; <strong>${hn}</strong> — Se trabalhou neste feriado, registre a diária avulsa.`;banner.classList.remove('hidden');}
+  else banner.classList.add('hidden');
+}
 async function saveEv() {
   if (!canWrite()) return;
   const eid=document.getElementById('eveid').value, dateStr=document.getElementById('evdate').value, evId=document.getElementById('evid').value;
@@ -1493,7 +1519,7 @@ function clearResc(eid, ry, rm) {
 function calc(eid, ry, rm) {
   const emp=db.employees.find(e=>e.id===eid); if(!emp) return null;
   const h=allH(), days=mdays(ry,rm), events=getEvs(eid,ry,rm), adjs=getAdjs(eid,ry,rm);
-  const key=MK(ry,rm), payment=db.payments.find(p=>p.empId===eid&&p.monthKey===key);
+  const key=MK(ry,rm), payment=db.payments.find(p=>String(p.empId)===String(eid)&&p.monthKey===key);
   const salBase=emp.salary||0, recs=[], holWarns=[];
   for (const rec of (emp.recurring||[])) {
     for (const d of days.filter(d=>d.dow===rec.dow)) {
@@ -1516,7 +1542,16 @@ function calc(eid, ry, rm) {
   const vtWd=vtManualDays!==null?vtManualDays:vtWdAuto;
   const vtGross=vtWd*(emp.vtDaily||0), vtDisc=emp.vtDiscount==='none'?0:Math.min(salBase*0.06,vtGross), vtNet=Math.max(0,vtGross-vtDisc);
   const pyY=rm===11?ry+1:ry, pyM=rm===11?0:rm+1;
-  return { emp,ry,rm,key,payment,salBase,recs,recTot,avs,avTot,holWarns,gross,adjs,deds,bons,inssAmt,netSal,vtY,vtM,vtWd,vtWdAuto,vtManualDays,vtOK,vtGross,vtDisc,vtNet,pay1:bday1(pyY,pyM),pay5:bday5(pyY,pyM),pyY,pyM,total:netSal+vtNet };
+  const admissao=emp.admissao?new Date(emp.admissao):null;
+  const isFirstMonth=admissao&&admissao.getFullYear()===ry&&admissao.getMonth()===rm;
+  let proRataDias=0, proRataSal=netSal;
+  if(isFirstMonth){
+    const totalDias=dim(ry,rm);
+    proRataDias=totalDias-admissao.getDate()+1;
+    const fator=proRataDias/totalDias;
+    proRataSal=Math.round((salBase*fator+recTot+avTot+bons-deds-inssAmt)*100)/100;
+  }
+  return { emp,ry,rm,key,payment,salBase,recs,recTot,avs,avTot,holWarns,gross,adjs,deds,bons,inssAmt,netSal,vtY,vtM,vtWd,vtWdAuto,vtManualDays,vtOK,vtGross,vtDisc,vtNet,pay1:bday1(pyY,pyM),pay5:bday5(pyY,pyM),pyY,pyM,total:netSal+vtNet,isFirstMonth,proRataDias,proRataSal };
 }
 
 // ── MEMO HTML ─────────────────────────────────────────────────
@@ -1524,6 +1559,7 @@ const AL = { advance:'Adiantamento', discount:'Desconto/Falta', bonus:'B\u00f4nu
 function memoHTML(c) {
   const rl=MP[c.rm]+' '+c.ry, vl=MP[c.vtM]+' '+c.vtY, out=[];
   out.push(`<div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:16px;"><p style="font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;font-weight:500;margin-bottom:4px;">Compet\u00eancia \u2014 m\u00eas trabalhado</p><p style="font-family:'Cormorant',serif;font-size:22px;font-weight:300;">${rl}</p><p class="tip" style="margin-top:4px;">Prazo legal: at\u00e9 5\u00ba dia \u00fatil \u2014 <strong>${c.pay5?c.pay5.d+'/'+String(c.pyM+1).padStart(2,'0')+'/'+c.pyY:'-'}</strong> &nbsp;\u00b7&nbsp; 1\u00ba dia \u00fatil: ${c.pay1?fd(c.pay1.iso):'-'}</p></div>`);
+  if(c.isFirstMonth)out.push(`<div class="alert aw" style="margin-bottom:14px;flex-direction:column;gap:4px;"><p style="font-size:12px;font-weight:500;color:var(--warn);">&#8505;&#65039; Primeiro m\u00eas \u2014 Pagamento Pro Rata</p><p style="font-size:11px;color:var(--warn);">Admiss\u00e3o em ${fd(c.emp.admissao)} &nbsp;&middot;&nbsp; ${c.proRataDias} dias trabalhados de ${dim(c.ry,c.rm)}</p><p style="font-size:11px;color:var(--warn);">Sal\u00e1rio proporcional: <strong>R\$ ${fm(c.proRataSal)}</strong> (${c.proRataDias}/${dim(c.ry,c.rm)} &times; R\$ ${fm(c.salBase)})</p></div>`);
   if (c.holWarns.length) {
     out.push(`<div class="alert aw" style="flex-direction:column;gap:6px;margin-bottom:14px;"><p style="font-size:12px;font-weight:500;color:var(--warn);">&#9888;&#65039; ${c.holWarns.length} dia(s) recorrente(s) em feriado sem di\u00e1ria lan\u00e7ada</p>`);
     c.holWarns.forEach(w=>out.push(`<div style="font-size:11px;color:var(--warn);padding-left:4px;">&#8226; ${fd(w.iso)} \u2014 ${w.hn} (${w.desc}) &nbsp;<button onclick="openEvM('${c.emp.id}','${w.iso}')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;text-decoration:underline;">Lan\u00e7ar di\u00e1ria &#8594;</button></div>`));
@@ -1568,7 +1604,8 @@ async function confirmPay() {
   const rec={ id:uid(), empId:eid, empName:c.emp.name, empRole:c.emp.role, monthKey:c.key, ry, rm, salBase:c.salBase, recTot:c.recTot, avTot:c.avTot, bons:c.bons, deds:c.deds, inssAmt:c.inssAmt, netSal:c.netSal, vtNet:c.vtNet, vtGross:c.vtGross, vtDisc:c.vtDisc, vtWd:c.vtWd, vtWdAuto:c.vtWdAuto, vtY:c.vtY, vtM:c.vtM, total:c.total, paidDate:document.getElementById('pdate').value, method:document.getElementById('pmeth').value, notes:document.getElementById('pnotes').value.trim(), events:c.avs, adjs:c.adjs, recs:c.recs, paidAt:new Date().toISOString() };
   db.payments=db.payments.filter(p=>!(String(p.empId)===String(eid)&&p.monthKey===c.key));
   db.payments.push(rec); saveDB(); cm('mod-pay');
-  swTab('hist', document.querySelectorAll('.tab')[3]);
+  const histBtn=[...document.querySelectorAll('.tab')].find(b=>b.textContent.includes('Hist'));
+  swTab('hist', histBtn);
   if (isOnline) { try { await _sbSavePayment(rec); saveDB(); } catch(e) { console.error(e); showSyncBanner('error'); } }
   else enqueue({ type:'savePayment', data:rec });
 }
@@ -1580,7 +1617,7 @@ function openPayM(eid, ry, rm) {
     `<div class="fi" style="gap:12px;margin-bottom:16px;">${avt(c.emp.name,44)}<div><div style="font-size:16px;font-weight:400;word-break:break-word;">${c.emp.name}</div><div class="tip">${c.emp.role} \u00b7 compet\u00eancia ${MP[rm]} ${ry}</div></div></div>`,
     memoHTML(c),
     '<div class="div"></div>',
-    `<div class="g2" style="gap:12px;margin-bottom:14px;"><div class="field"><label>Data do pagamento</label><input id="pdate" type="date" value="${tod()}"></div><div class="field"><label>Forma</label><select id="pmeth"><option>PIX</option><option>Transfer\u00eancia</option><option>Dinheiro</option><option>Dep\u00f3sito</option></select></div></div>`,
+    `<div class="g2" style="gap:12px;margin-bottom:14px;"><div class="field"><label>Data do pagamento</label><input id="pdate" type="date" value="${tod()}"></div><div class="field"><label>Forma</label><select id="pmeth"><option>PIX</option><option>Transfer\u00eancia</option><option>Dinheiro</option><option>Dep\u00f3sito</option><option>Quinzena (1ª parcela)</option><option>Quinzena (2ª parcela)</option></select></div></div>`,
     '<div class="field"><label>Observa\u00e7\u00f5es</label><input id="pnotes" placeholder="Opcional"></div>',
     '<div class="div"></div><div class="fe"><button class="btn btn-gh" onclick="cm(\'mod-pay\')">Cancelar</button><button class="btn btn-sg" onclick="confirmPay()">&#10003; Registrar pagamento</button></div>'
   ].join('');
@@ -1593,7 +1630,13 @@ function calcVerbas(salario, motivo, admissaoISO, desligamentoISO, fgtsSaldo, av
   const adm=new Date(admissaoISO), desc=new Date(desligamentoISO);
   const diffDays=Math.floor((desc-adm)/86400000), anos=Math.floor(diffDays/365), meses=Math.floor((diffDays%365)/30), diasR=diffDays%30;
   const salDia=salario/30, diasTrab=desc.getDate(), saldoSal=salDia*diasTrab;
-  const mesesAno=desc.getDate()>=15?desc.getMonth()+1:desc.getMonth();
+  // 13o: meses no ano corrente desde admissão (mês conta se >=15 dias trabalhados)
+  const anoDesc=desc.getFullYear();
+  const mesAdmNoAno=adm.getFullYear()===anoDesc?adm.getMonth():0;
+  const diasMesAdm=adm.getFullYear()===anoDesc?(new Date(anoDesc,adm.getMonth()+1,0).getDate()-adm.getDate()+1):30;
+  const primeiroMes=diasMesAdm>=15?mesAdmNoAno:mesAdmNoAno+1;
+  const ultimoMes=desc.getDate()>=15?desc.getMonth():desc.getMonth()-1;
+  const mesesAno=Math.max(0,Math.min(ultimoMes-primeiroMes+1,12));
   const dec13=(salario/12)*Math.min(mesesAno,12), mesesFerias=meses+(diasR>=15?1:0);
   const feriasProp=(salario/12)*mesesFerias*(4/3), feriasVenc=anos>=1?salario*(4/3):0;
   const diasAviso=Math.min(30+anos*3,90); let avisoVal=0,avisoDesc='';
@@ -2256,6 +2299,8 @@ function initApp() {
       + '</div>';
   }
 }
+
+
 
 
 
