@@ -9,6 +9,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Atrium">
 <meta name="theme-color" content="#F5F2EE">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;0,400;0,500;1,300&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
 <!-- Supabase JS via CDN oficial -->
 
@@ -442,6 +445,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -556,6 +560,13 @@ async function doLogin() {
   }
   // Sucesso: mantém botão bloqueado até onAuthStateChange trocar a tela
   btn.textContent = 'Entrando…';
+  // Safety: se onAuthStateChange não disparar em 5s, recupera
+  setTimeout(() => {
+    if (btn.disabled && btn.textContent === 'Entrando…') {
+      btn.disabled = false; btn.textContent = 'Entrar';
+      showAuthErr('Tempo esgotado. Tente novamente.');
+    }
+  }, 5000);
 }
 async function doSignup() {
   clearAuthErr();
@@ -2021,7 +2032,7 @@ function initApp() {
         persistSession:     true,
         autoRefreshToken:   true,
         detectSessionInUrl: true,
-        storageKey:         'atrium-auth-token'
+        storageKey:         'sb-nrlzctnwtzlcarfchmca-auth-token'
       }
     });
     initNetworkListeners();
@@ -2112,7 +2123,7 @@ function initApp() {
         console.error('getSession fallback error:', err);
         handleNoSession();
       }
-    }, 1500);
+    }, 800);
 
   } catch (initErr) {
     console.error('Atrium init error:', initErr);
@@ -2124,6 +2135,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
