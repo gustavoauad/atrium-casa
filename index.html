@@ -419,8 +419,9 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 </div><!-- /#app -->
 
 <!-- SDK Supabase hospedado localmente — sem dependência de CDN externo -->
-<script src="supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" crossorigin="anonymous"></script>
 <script>
+
 
 
 
@@ -2004,7 +2005,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (ls) ls.innerHTML =
       '<div style="text-align:center;padding:32px;font-family:sans-serif;">'
       + '<p style="color:#B85C5C;font-size:14px;margin-bottom:8px;">&#10060; Arquivo supabase.js não encontrado</p>'
-      + '<p style="color:#9C9087;font-size:12px;margin-bottom:16px;">Certifique-se de que o arquivo supabase.js está na raiz do repositório.</p>'
+      + '<p style="color:#9C9087;font-size:12px;margin-bottom:16px;">Verifique sua conexão com a internet e recarregue.</p>'
       + '<button onclick="location.reload()" style="padding:10px 20px;background:#2A2520;color:#fff;border:none;border-radius:8px;cursor:pointer;">Recarregar</button>'
       + '</div>';
     return;
@@ -2016,65 +2017,102 @@ function initApp() {
   try {
     supa = window.supabase.createClient(SUPA_URL, SUPA_ANON_KEY, {
       auth: {
-        persistSession: true,
-        autoRefreshToken: true,
+        persistSession:     true,
+        autoRefreshToken:   true,
         detectSessionInUrl: true,
-        storageKey: 'atrium-auth-token'
+        storageKey:         'atrium-auth-token'
       }
     });
     initNetworkListeners();
 
-    supa.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-        if (session?.user) {
-          if (_signingUp) return;
-          document.getElementById('loading-screen').style.display = 'none';
-          document.getElementById('auth-screen').classList.add('hidden');
-          await afterLogin(session.user);
-        } else {
-          document.getElementById('loading-screen').style.display = 'none';
-          document.getElementById('auth-screen').classList.remove('hidden');
-          document.getElementById('house-screen').classList.add('hidden');
-          document.getElementById('app').style.display = 'none';
-        }
-      } else if (event === 'SIGNED_OUT') {
-        _signingUp = false;
-        document.getElementById('loading-screen').style.display = 'none';
-        document.getElementById('auth-screen').classList.remove('hidden');
-        document.getElementById('house-screen').classList.add('hidden');
-        document.getElementById('app').style.display = 'none';
-      }
-    });
-
-    // Verifica ativamente a sessão persistida (cobre recargas de página).
-    // Se INITIAL_SESSION não disparar de forma confiável, getSession garante
-    // que a sessão salva no localStorage seja recuperada.
-    supa.auth.getSession().then(({ data }) => {
-      if (!data?.session) {
-        // Sem sessão salva — mostra login (caso INITIAL_SESSION não tenha disparado)
-        const ls = document.getElementById('loading-screen');
-        if (ls && ls.style.display !== 'none') {
-          ls.style.display = 'none';
-          document.getElementById('auth-screen').classList.remove('hidden');
-        }
-      }
-      // Se há sessão, o onAuthStateChange(INITIAL_SESSION) já cuidou do login
-    }).catch(err => {
-      console.error('getSession error:', err);
-      const ls = document.getElementById('loading-screen');
-      if (ls) ls.style.display = 'none';
+    // ── Helpers visuais ───────────────────────────────────────
+    function showAuth() {
+      document.getElementById('loading-screen').style.display = 'none';
       document.getElementById('auth-screen').classList.remove('hidden');
+      document.getElementById('house-screen').classList.add('hidden');
+      document.getElementById('app').style.display = 'none';
+    }
+    function hideLoading() {
+      document.getElementById('loading-screen').style.display = 'none';
+      document.getElementById('auth-screen').classList.add('hidden');
+    }
+
+    // ── Trava anti-duplicata ──────────────────────────────────
+    // Garante que afterLogin() seja chamado no máximo uma vez
+    // mesmo que INITIAL_SESSION e SIGNED_IN disparem juntos.
+    let sessionProcessed = false;
+
+    async function handleSession(user) {
+      if (sessionProcessed) return;
+      sessionProcessed = true;
+      hideLoading();
+      await afterLogin(user);
+    }
+
+    function handleNoSession() {
+      if (sessionProcessed) return;
+      sessionProcessed = true;
+      showAuth();
+    }
+
+    // ── Listener principal ────────────────────────────────────
+    supa.auth.onAuthStateChange(async (event, session) => {
+      dbg('onAuthStateChange: ' + event);
+
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        // _signingUp: doSignup ainda está configurando a Casa,
+        // vai chamar afterLogin manualmente quando terminar.
+        if (_signingUp) return;
+
+        if (session?.user) {
+          await handleSession(session.user);
+        } else {
+          handleNoSession();
+        }
+
+      } else if (event === 'TOKEN_REFRESHED') {
+        // Silencioso — sessão já estava ativa, não reprocessar
+        dbg('Token renovado silenciosamente');
+
+      } else if (event === 'SIGNED_OUT') {
+        _signingUp        = false;
+        sessionProcessed  = false; // permite novo login
+        showAuth();
+      }
     });
 
-  } catch(initErr) {
+    // ── Fallback: getSession após 1.5 s ──────────────────────
+    // Se onAuthStateChange(INITIAL_SESSION) não disparar dentro
+    // de 1.5 s (ex: SDK lento, sessão expirada silenciosa),
+    // getSession() garante que o estado visual é resolvido.
+    setTimeout(async () => {
+      if (sessionProcessed) return; // listener já resolveu, não fazer nada
+      dbg('Fallback getSession acionado');
+      try {
+        const { data, error } = await supa.auth.getSession();
+        if (error) throw error;
+        if (data?.session?.user) {
+          await handleSession(data.session.user);
+        } else {
+          handleNoSession();
+        }
+      } catch (err) {
+        console.error('getSession fallback error:', err);
+        handleNoSession();
+      }
+    }, 1500);
+
+  } catch (initErr) {
     console.error('Atrium init error:', initErr);
-    var ls = document.getElementById('loading-screen');
-    if (ls) ls.innerHTML = '<div style="text-align:center;padding:32px;font-family:sans-serif;">'
+    const ls = document.getElementById('loading-screen');
+    if (ls) ls.innerHTML =
+      '<div style="text-align:center;padding:32px;font-family:sans-serif;">'
       + '<p style="color:#B85C5C;font-size:14px;margin-bottom:8px;">Erro: ' + initErr.message + '</p>'
       + '<button onclick="location.reload()" style="padding:10px 20px;background:#2A2520;color:#fff;border:none;border-radius:8px;cursor:pointer;">Recarregar</button>'
       + '</div>';
   }
 }
+
 
 
 
