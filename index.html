@@ -434,6 +434,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // ============================================================
 // ATRIUM CASA — JS Unificado com Auth + Multi-tenant + RBAC
 //
@@ -779,24 +780,43 @@ async function criarCasaManual() {
 }
 
 async function selectHouse(houseId, houseName, role) {
+  dbg('selectHouse chamado: ' + houseName + ' (' + role + ')');
   currentHouseId   = houseId;
   currentHouseName = houseName;
   currentRole      = role;
   document.getElementById('house-screen').classList.add('hidden');
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('loading-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('app').classList.add('visible');
   applyRoleToBody();
   db = defDB();
   buildMS();
+  dbg('App visível — carregando dados...');
   if (isOnline) {
     await loadFromSupabase();
   } else {
-    // Tenta carregar cache local da casa
     const cached = localStorage.getItem(DBK + '_' + houseId);
     if (cached) try { db = JSON.parse(cached); } catch (_) { db = defDB(); }
     renderAll();
     showSyncBanner('offline');
   }
+  dbg('selectHouse concluído');
+}
+
+// Debug visual — mostra mensagens na tela sobre a loading screen
+function dbg(msg) {
+  console.log('[Atrium]', msg);
+  const ls = document.getElementById('loading-screen');
+  if (!ls || ls.style.display === 'none') return;
+  let dbgEl = document.getElementById('dbg-log');
+  if (!dbgEl) {
+    dbgEl = document.createElement('div');
+    dbgEl.id = 'dbg-log';
+    dbgEl.style.cssText = 'margin-top:16px;font-size:11px;color:#9C9087;font-family:monospace;text-align:left;max-width:300px;';
+    ls.appendChild(dbgEl);
+  }
+  dbgEl.innerHTML += '<div>' + msg + '</div>';
 }
 function showJoinHouseModal() {
   document.getElementById('join-house-form').style.display = '';
@@ -817,21 +837,26 @@ async function afterLogin(user) {
   document.getElementById('auth-screen').classList.add('hidden');
 
   try {
-    // Se há intenção de casa pendente no sessionStorage (fluxo com confirm email)
+    dbg('afterLogin iniciado');
     if (sessionStorage.getItem('atrium_signup_mode')) await afterSignupSetup();
 
-    // Tenta carregar as casas; retry para cobrir propagação de RLS após create_house
+    dbg('Buscando casas...');
     let houses = await loadUserHouses();
+    dbg('Casas encontradas: ' + houses.length);
     if (!houses.length) {
       await new Promise(r => setTimeout(r, 1200));
       houses = await loadUserHouses();
+      dbg('Casas após retry: ' + houses.length);
     }
 
     if (!houses.length) {
+      dbg('Nenhuma casa — abrindo picker');
       await showHousePicker();
     } else if (houses.length === 1) {
+      dbg('1 casa — entrando direto');
       await selectHouse(houses[0].id, houses[0].name, houses[0].role);
     } else {
+      dbg('Múltiplas casas — abrindo picker');
       await showHousePicker();
     }
   } catch (e) {
@@ -2005,6 +2030,7 @@ document.addEventListener('DOMContentLoaded', () => {
       + '</div>';
   }
 });
+
 
 
 
