@@ -449,6 +449,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -481,6 +482,27 @@ const SUPA_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 // Inicializa o cliente Supabase usando o SDK (carregado via CDN)
 if (!window.supabase) { throw new Error('Supabase SDK not loaded'); }
 let supa = null; // inicializado no DOMContentLoaded após SDK carregar
+
+// ── MODO DESENVOLVEDOR ──────────────────────────────────────
+// Ativado por: URL com ?dev=1  ou  localStorage.atrium_dev = '1'
+// Desativado automaticamente em *.github.io e domínios de produção.
+// No modo dev: sem Supabase, dados apenas no localStorage.
+// Para ativar aqui no Claude: abra o artifact e adicione ?dev=1 na URL.
+
+const _IS_PROD = typeof window !== 'undefined' &&
+  (window.location.hostname.includes('github.io') ||
+   window.location.hostname.includes('atrium'));
+
+const _DEV_MODE = !_IS_PROD && (
+  new URLSearchParams(window.location?.search).get('dev') === '1' ||
+  localStorage.getItem('atrium_dev') === '1'
+);
+
+if (_DEV_MODE) {
+  console.warn('[Atrium Dev Mode] Autenticação desativada. Dados locais apenas.');
+}
+
+
 
 // ── SESSION STATE ─────────────────────────────────────────────
 // Variáveis de sessão — preenchidas após login e seleção de casa
@@ -1105,6 +1127,7 @@ async function syncAll() {
 
 // ── SUPABASE WRITE HELPERS ────────────────────────────────────
 async function _sbSaveEmployee(emp) {
+  if (_DEV_MODE) { return; } // dev mode: skip Supabase
   const payload = { data: emp, house_id: currentHouseId };
   if (emp._sbid) {
     await supa.from('employees').update(payload).eq('id', emp._sbid);
@@ -1131,23 +1154,27 @@ async function _sbDeleteEmployee(sbid, empId) {
   }
 }
 async function _sbSaveEvent(empId, mk, ev) {
+  if (_DEV_MODE) { return; }
   const payload = { emp_id: empId, month_key: mk, data: ev, house_id: currentHouseId };
   if (ev._sbid) await supa.from('events').update(payload).eq('id', ev._sbid);
   else { const { data } = await supa.from('events').insert(payload).select(); if (data?.[0]) ev._sbid = data[0].id; }
 }
 async function _sbDeleteEvent(sbid) { if (sbid) await supa.from('events').delete().eq('id', sbid); }
 async function _sbSaveAdj(empId, mk, adj) {
+  if (_DEV_MODE) { return; }
   const payload = { emp_id: empId, month_key: mk, data: adj, house_id: currentHouseId };
   if (adj._sbid) await supa.from('adjustments').update(payload).eq('id', adj._sbid);
   else { const { data } = await supa.from('adjustments').insert(payload).select(); if (data?.[0]) adj._sbid = data[0].id; }
 }
 async function _sbDeleteAdj(sbid) { if (sbid) await supa.from('adjustments').delete().eq('id', sbid); }
 async function _sbSavePayment(pay) {
+  if (_DEV_MODE) { return; }
   const payload = { emp_id: pay.empId, month_key: pay.monthKey, data: pay, house_id: currentHouseId };
   if (pay._sbid) await supa.from('payments').update(payload).eq('id', pay._sbid);
   else { const { data } = await supa.from('payments').insert(payload).select(); if (data?.[0]) pay._sbid = data[0].id; }
 }
 async function _sbSaveSettings() {
+  if (_DEV_MODE) { return; }
   await supa.from('settings').upsert(
     { key: 'regional', value: db.regional || [], house_id: currentHouseId },
     { onConflict: 'key,house_id' }
@@ -1156,6 +1183,7 @@ async function _sbSaveSettings() {
 
 // ── LOAD FROM SUPABASE ────────────────────────────────────────
 async function loadFromSupabase() {
+  if (_DEV_MODE) { renderAll(); return; }
   if (!currentHouseId) return;
   showSyncBanner('syncing');
   try {
@@ -1190,6 +1218,7 @@ async function loadFromSupabase() {
 
 // ── PUSH ALL LOCAL DATA ───────────────────────────────────────
 async function pushAllToSupabase() {
+  if (_DEV_MODE) { showSyncBanner('offline'); return; }
   if (!canWrite()) return;
   showSyncBanner('syncing');
   try {
@@ -2042,7 +2071,68 @@ document.addEventListener('DOMContentLoaded', () => {
   initApp();
 });
 
+function initDevMode() {
+  // Simula sessão autenticada com casa fictícia (localStorage only)
+  currentUser      = { id: 'dev-user-001', email: 'dev@atrium.local' };
+  currentHouseId   = 'dev-house-001';
+  currentHouseName = 'Casa Dev';
+  currentRole      = 'admin';
+
+  // Carrega ou cria DB local de demonstração
+  const cached = localStorage.getItem(DBK + '_dev-house-001');
+  if (cached) {
+    try { db = JSON.parse(cached); } catch (_) { db = defDB(); }
+  } else {
+    db = defDB();
+    // Funcionária de demonstração
+    db.employees.push({
+      id: 'dev-emp-001',
+      name: 'Maria Silva',
+      role: 'Empregada Doméstica',
+      salary: 1621,
+      contract: 'mensalista',
+      admissao: '2023-03-01',
+      vtDaily: 7.60,
+      vtDiscount: 'legal',
+      inss: 'yes',
+      workDays: [0,1,2,3,4],
+      recurring: [{ dow: 0, desc: 'Segunda', value: 0, countHolidays: false }],
+      extraTypes: [{ name: 'Diária 12h', value: 200 }, { name: 'Diária 24h', value: 350 }],
+      notes: 'Funcionária de demonstração (modo dev)',
+      createdAt: '2023-03-01'
+    });
+    localStorage.setItem(DBK + '_dev-house-001', JSON.stringify(db));
+  }
+
+  // Esconde telas de auth, mostra app
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('house-screen').classList.add('hidden');
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('app').classList.add('visible');
+
+  applyRoleToBody();
+  buildMS();
+  initNetworkListeners();
+
+  // Banner indicando modo dev
+  showSyncBanner('offline');
+  const banner = document.getElementById('sync-banner');
+  if (banner) {
+    banner.textContent = '⚙️ Modo Desenvolvedor — sem Supabase — dados locais apenas';
+    banner.style.background = 'rgba(107,159,191,.9)';
+    banner.style.display = 'block';
+  }
+
+  renderAll();
+}
+
 function initApp() {
+  // Dev mode: pula autenticação e entra direto com dados locais
+  if (_DEV_MODE) {
+    initDevMode();
+    return;
+  }
   try {
     supa = window.supabase.createClient(SUPA_URL, SUPA_ANON_KEY, {
       auth: {
@@ -2152,6 +2242,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
