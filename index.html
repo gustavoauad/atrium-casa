@@ -202,7 +202,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
         </select>
       </div>
       <div id="signup-casa-new" class="auth-field"><label>Nome da Casa</label><input id="signup-casa-name" placeholder="Ex: Família Silva"></div>
-      <div id="signup-casa-join" class="auth-field" style="display:none;"><label>Código de Convite</label><input id="signup-invite-code" placeholder="Ex: a3f9c2b1" style="letter-spacing:.1em;text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+      <div id="signup-casa-join" class="auth-field" style="display:none;"><label>Código de Convite</label><input id="signup-invite-code" placeholder="Ex: a3f9c2b1" style="letter-spacing:.1em;text-transform:uppercase;" oninput="this.value=this.value.toLowerCase()"></div>
       <button class="auth-btn" id="btn-signup" onclick="doSignup()">Criar conta</button>
     </div>
   </div>
@@ -220,8 +220,9 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
     <div class="div"></div>
     <button class="btn btn-gh" style="width:100%;justify-content:center;" onclick="showJoinHouseModal()">+ Entrar em outra Casa com código</button>
     <div id="join-house-form" style="display:none;margin-top:12px;">
-      <div class="auth-field"><label>Código de convite</label><input id="join-code" placeholder="Ex: A3F9C2B1" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="auth-field"><label>Código de convite</label><input id="join-code" placeholder="Ex: A3F9C2B1" oninput="this.value=this.value.toLowerCase()"></div>
       <div class="fe"><button class="btn btn-gh btn-sm" onclick="document.getElementById('join-house-form').style.display='none'">Cancelar</button><button class="btn btn-dk btn-sm" onclick="doJoinHouse()">Entrar</button></div>
+    <div id="join-house-err" style="display:none;margin-top:8px;font-size:12px;color:var(--danger);"></div>
     </div>
     <div style="text-align:center;margin-top:16px;"><button style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--muted);" onclick="doLogout()">Sair da conta</button></div>
   </div>
@@ -424,6 +425,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 <!-- SDK Supabase hospedado localmente — sem dependência de CDN externo -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" crossorigin="anonymous"></script>
 <script>
+
 
 
 
@@ -846,12 +848,26 @@ function showJoinHouseModal() {
   document.getElementById('join-house-form').style.display = '';
 }
 async function doJoinHouse() {
-  const code = document.getElementById('join-code').value.trim();
+  const code = document.getElementById('join-code').value.trim().toLowerCase();
   if (!code) return;
-  const { error } = await supa.rpc('join_house_by_code', { invite: code });
-  if (error) { alert('Código inválido: ' + error.message); return; }
-  document.getElementById('join-house-form').style.display = 'none';
-  await showHousePicker();
+  const btn = document.querySelector('button[onclick="doJoinHouse()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Entrando…'; }
+  try {
+    const { data: houseRows, error: hErr } = await supa
+      .from('houses').select('id, name').eq('invite_code', code).single();
+    if (hErr || !houseRows) throw new Error('Código de convite inválido. Verifique e tente novamente.');
+    const { error: mErr } = await supa
+      .from('house_members')
+      .insert({ house_id: houseRows.id, user_id: currentUser.id, role: 'viewer' });
+    if (mErr && !mErr.message.includes('duplicate')) throw new Error('Erro ao entrar na Casa: ' + mErr.message);
+    document.getElementById('join-house-form').style.display = 'none';
+    await selectHouse(houseRows.id, houseRows.name, 'viewer');
+  } catch (e) {
+    const errEl = document.getElementById('join-house-err');
+    if (errEl) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+    else alert(e.message);
+    if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
+  }
 }
 
 // ── afterLogin: chamado pelo onAuthStateChange ────────────────
@@ -1214,7 +1230,7 @@ function swTab(tab, btn) {
 
 // ── EMPLOYEE MODAL ────────────────────────────────────────────
 function openEM(id = null) {
-  const e = id ? db.employees.find(x => x.id === id) : null;
+  const e = id ? db.employees.find(x => String(x.id) === String(id)) : null;
   document.getElementById('emp-ttl').textContent = e ? 'Editar Funcion\u00e1rio' : 'Novo Funcion\u00e1rio';
   ['eid','ename','esal','eadm','evt','enotes'].forEach(f => document.getElementById(f).value = '');
   document.getElementById('eid').value     = e?.id ?? '';
@@ -1276,7 +1292,7 @@ async function saveE() {
   }).filter(Boolean);
   const data = { id:idVal||uid(), name, role:document.getElementById('erole').value, salary:+document.getElementById('esal').value||0, contract:document.getElementById('ecnt').value, admissao:document.getElementById('eadm').value, vtDaily:+document.getElementById('evt').value||0, vtDiscount:document.getElementById('evtdesc').value, inss:document.getElementById('einss').value, workDays, recurring, extraTypes, notes:document.getElementById('enotes').value.trim(), createdAt:idVal?undefined:tod() };
   if (idVal) {
-    const i = db.employees.findIndex(e => e.id === idVal);
+    const i = db.employees.findIndex(e => String(e.id) === String(idVal));
     if (i >= 0) { data.createdAt = db.employees[i].createdAt; data._sbid = db.employees[i]._sbid; db.employees[i] = data; }
   } else db.employees.push(data);
   saveDB(); cm('mod-emp'); renderAll();
@@ -1286,7 +1302,7 @@ async function saveE() {
 // [A][H] delE unificado com RBAC admin-only
 async function delE(id) {
   if (!canDelete()) return;
-  const emp = db.employees.find(e => e.id === id); if (!emp) return;
+  const emp = db.employees.find(e => String(e.id) === String(id)); if (!emp) return;
   if (!confirm('Excluir funcionário permanentemente?')) return;
   const sbid = emp._sbid;
   db.employees = db.employees.filter(e => e.id !== id);
@@ -1575,7 +1591,7 @@ function openRescisao() {
   document.getElementById('mod-rescisao').classList.remove('hidden');
 }
 function onRescEmpChange() {
-  const eid=+document.getElementById('resc-emp').value, emp=db.employees.find(e=>e.id===eid); if(!emp)return;
+  const eid=document.getElementById('resc-emp').value; const emp=db.employees.find(e=>String(e.id)===String(eid)); if(!emp)return;
   document.getElementById('resc-sal').value=emp.salary||'';
   document.getElementById('resc-admissao').value=emp.admissao||'';
 }
@@ -1632,7 +1648,7 @@ function openBaixa(id) {
   document.getElementById('mod-baixa').classList.remove('hidden');
 }
 function calcRescisao() {
-  const eid=+document.getElementById('baixa-eid').value, emp=db.employees.find(e=>e.id===eid);
+  const eid=document.getElementById('baixa-eid').value; const emp=db.employees.find(e=>String(e.id)===String(eid));
   const motivo=document.getElementById('baixa-motivo').value, admissao=document.getElementById('baixa-admissao').value, dataDesc=document.getElementById('baixa-data').value;
   if(!admissao||!dataDesc){alert('Preencha as datas.');return;}
   document.getElementById('baixa-calc-result').innerHTML=renderVerbasSummary(calcVerbas(emp.salary,motivo,admissao,dataDesc,0,'indenizado'),false);
@@ -1695,7 +1711,7 @@ function renderDash() {
     if(hw)out.push(`<div class="alert aw" style="margin-bottom:12px;"><span style="font-size:11px;color:var(--warn);">&#9888;&#65039; ${c.holWarns.length} feriado(s) sem di\u00e1ria &nbsp;<button onclick="goFech(${c.emp.id})" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;text-decoration:underline;">ver detalhes</button></span></div>`);
     out.push('<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">');
     [['Base','R$ '+fm(c.salBase),'var(--text)'],['Di\u00e1rias','R$ '+fm(c.recTot+c.avTot),'var(--sage)'],['Descontos','R$ '+fm(c.deds+c.inssAmt),'var(--danger)'],[MP[c.vtM].slice(0,3)+' VT','R$ '+fm(c.vtNet),'var(--blue)']].forEach(k=>out.push(`<div style="background:var(--cream);border-radius:9px;padding:10px;text-align:center;"><div class="lbl" style="margin-bottom:4px;">${k[0]}</div><div class="money" style="font-size:14px;color:${k[2]};">${k[1]}</div></div>`));
-    out.push('</div><div class="fi" style="gap:8px;flex-wrap:wrap;"><button class="btn btn-gh btn-sm" onclick="goFech('+c.emp.id+')">Ver mem\u00f3ria</button>');
+        out.push(`</div><div class="fi" style="gap:8px;flex-wrap:wrap;"><button class="btn btn-gh btn-sm" onclick="goFech('${c.emp.id}')">Ver memória</button>`);
     out.push(isPaid?`<span style="margin-left:auto;font-size:11px;color:var(--sage);">&#10003; Pago em ${fd(c.payment.paidDate)} via ${c.payment.method}</span>`:canWrite()?`<button class="btn btn-sg btn-sm write-only" style="margin-left:auto;" onclick="openPayM(${c.emp.id},${wy},${wm})">Confirmar pagamento</button>`:'');
     out.push('</div></div>');
   });
@@ -2135,6 +2151,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
