@@ -441,6 +441,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -2056,27 +2057,38 @@ function initApp() {
     }
 
     // ── Listener principal ────────────────────────────────────
+    // sessionProcessed bloqueia APENAS chamadas duplicadas de
+    // INITIAL_SESSION + SIGNED_IN que disparam juntas no reload.
+    // SIGNED_IN após um login real sempre deve ser processado,
+    // então a trava só se aplica a INITIAL_SESSION.
     supa.auth.onAuthStateChange(async (event, session) => {
       dbg('onAuthStateChange: ' + event);
 
-      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-        // _signingUp: doSignup ainda está configurando a Casa,
-        // vai chamar afterLogin manualmente quando terminar.
+      if (event === 'INITIAL_SESSION') {
+        // Dispara uma vez ao carregar — define o estado inicial.
+        // _signingUp: doSignup está no controle, ignorar.
         if (_signingUp) return;
-
         if (session?.user) {
           await handleSession(session.user);
         } else {
+          // Sem sessão — mostra login e libera trava para SIGNED_IN futuro
           handleNoSession();
         }
 
+      } else if (event === 'SIGNED_IN') {
+        // Login explícito do usuário — SEMPRE processar,
+        // independente da trava (que pode ter sido setada pelo INITIAL_SESSION).
+        if (_signingUp) return;
+        sessionProcessed = false;   // reseta para garantir execução
+        await handleSession(session.user);
+
       } else if (event === 'TOKEN_REFRESHED') {
-        // Silencioso — sessão já estava ativa, não reprocessar
+        // Renovação silenciosa — não reprocessar
         dbg('Token renovado silenciosamente');
 
       } else if (event === 'SIGNED_OUT') {
-        _signingUp        = false;
-        sessionProcessed  = false; // permite novo login
+        _signingUp       = false;
+        sessionProcessed = false;   // permite novo login
         showAuth();
       }
     });
@@ -2112,6 +2124,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
