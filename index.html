@@ -458,6 +458,8 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -1475,6 +1477,89 @@ async function rmReg(date) {
 }
 
 // ── VT OVERRIDE ───────────────────────────────────────────────
+
+// ── Rescisão inline no fechamento ────────────────────────────
+
+function toggleRescCalc(eid, wy, wm) {
+  const el = document.getElementById('resc-inline-' + eid);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+
+function calcRescInline(eid, wy, wm) {
+  const emp = db.employees.find(e => String(e.id) === String(eid));
+  if (!emp) return;
+  const adm    = document.getElementById('ri-adm-'   + eid)?.value;
+  const desc   = document.getElementById('ri-desc-'  + eid)?.value;
+  const motivo = document.getElementById('ri-motivo-'+ eid)?.value;
+  const fgts   = +document.getElementById('ri-fgts-' + eid)?.value || 0;
+  const aviso  = document.getElementById('ri-aviso-' + eid)?.value;
+  if (!adm || !desc) { alert('Preencha as datas de admissão e desligamento.'); return; }
+  const r = calcVerbas(emp.salary, motivo, adm, desc, fgts, aviso);
+  const res = document.getElementById('ri-result-' + eid);
+  if (res) {
+    res.innerHTML = renderVerbasSummary(r, true);
+    // Armazena resultado para uso no applyRescInline
+    res.dataset.resc = JSON.stringify(r);
+  }
+  const applyBtn  = document.getElementById('ri-apply-btn-'  + eid);
+  const customBtn = document.getElementById('ri-custom-btn-' + eid);
+  if (applyBtn)  applyBtn.style.display  = '';
+  if (customBtn) customBtn.style.display = '';
+}
+
+function toggleRescCustom(eid, wy, wm) {
+  const el = document.getElementById('ri-custom-' + eid);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+
+function applyRescInline(eid, wy, wm) {
+  const res = document.getElementById('ri-result-' + eid);
+  if (!res?.dataset.resc) { alert('Calcule as verbas primeiro.'); return; }
+  const r = JSON.parse(res.dataset.resc);
+  localStorage.setItem('resc_' + String(eid) + '_' + MK(wy, wm), JSON.stringify(r));
+  renderFech();
+}
+
+function applyRescCustom(eid, wy, wm) {
+  const input = document.getElementById('ri-valor-' + eid);
+  const val   = +(input?.value || 0);
+  if (!val || val <= 0) { alert('Informe o valor acertado.'); return; }
+  const res = document.getElementById('ri-result-' + eid);
+  let r = res?.dataset.resc ? JSON.parse(res.dataset.resc) : { itens:[], total:val, motivo:'acordo' };
+  r.customValue = val;
+  localStorage.setItem('resc_' + String(eid) + '_' + MK(wy, wm), JSON.stringify(r));
+  renderFech();
+}
+
+function editRescValue(eid, wy, wm) {
+  const el = document.getElementById('edit-resc-' + eid);
+  if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+
+function saveRescEdit(eid, wy, wm) {
+  const key     = 'resc_' + String(eid) + '_' + MK(wy, wm);
+  const existing = localStorage.getItem(key);
+  if (!existing) return;
+  const r   = JSON.parse(existing);
+  const val = +document.getElementById('edit-resc-val-' + eid)?.value || 0;
+  r.customValue = val > 0 ? val : null;
+  localStorage.setItem(key, JSON.stringify(r));
+  renderFech();
+}
+
+function setProRata(key, active) {
+  if (!canWrite()) return;
+  if (active) localStorage.setItem(key, '1');
+  else localStorage.removeItem(key);
+  if (CT==='fech') renderFech(); else renderAll();
+  // Atualiza modal se aberto
+  const mp=document.getElementById('mod-pay');
+  if (mp&&!mp.classList.contains('hidden')&&mp.dataset.eid)
+    openPayM(mp.dataset.eid, +mp.dataset.ry, +mp.dataset.rm);
+}
+
 function setVTDays(key, val) {
   if (!canWrite()) return;
   const n=parseInt(val,10); if(isNaN(n)||n<0)return;
@@ -1544,14 +1629,20 @@ function calc(eid, ry, rm) {
   const pyY=rm===11?ry+1:ry, pyM=rm===11?0:rm+1;
   const admissao=emp.admissao?new Date(emp.admissao):null;
   const isFirstMonth=admissao&&admissao.getFullYear()===ry&&admissao.getMonth()===rm;
-  let proRataDias=0, proRataSal=netSal;
+  let proRataDias=0, proRataSal=netSal, proRataActive=false;
   if(isFirstMonth){
     const totalDias=dim(ry,rm);
     proRataDias=totalDias-admissao.getDate()+1;
     const fator=proRataDias/totalDias;
     proRataSal=Math.round((salBase*fator+recTot+avTot+bons-deds-inssAmt)*100)/100;
+    // proRataActive: usuário escolheu usar o valor proporcional
+    const prKey='prorata_'+String(eid)+'_'+key;
+    proRataActive=localStorage.getItem(prKey)==='1';
   }
-  return { emp,ry,rm,key,payment,salBase,recs,recTot,avs,avTot,holWarns,gross,adjs,deds,bons,inssAmt,netSal,vtY,vtM,vtWd,vtWdAuto,vtManualDays,vtOK,vtGross,vtDisc,vtNet,pay1:bday1(pyY,pyM),pay5:bday5(pyY,pyM),pyY,pyM,total:netSal+vtNet,isFirstMonth,proRataDias,proRataSal };
+  // Se pro-rata ativo, sobrepõe o total e netSal com o valor proporcional
+  const finalNetSal = proRataActive ? proRataSal : netSal;
+  const finalTotal  = proRataActive ? proRataSal + vtNet : netSal + vtNet;
+  return { emp,ry,rm,key,payment,salBase,recs,recTot,avs,avTot,holWarns,gross,adjs,deds,bons,inssAmt,netSal,finalNetSal,vtY,vtM,vtWd,vtWdAuto,vtManualDays,vtOK,vtGross,vtDisc,vtNet,pay1:bday1(pyY,pyM),pay5:bday5(pyY,pyM),pyY,pyM,total:finalTotal,isFirstMonth,proRataDias,proRataSal,proRataActive };
 }
 
 // ── MEMO HTML ─────────────────────────────────────────────────
@@ -1565,7 +1656,26 @@ function memoHTML(c) {
     c.holWarns.forEach(w=>out.push(`<div style="font-size:11px;color:var(--warn);padding-left:4px;">&#8226; ${fd(w.iso)} \u2014 ${w.hn} (${w.desc}) &nbsp;<button onclick="openEvM('${c.emp.id}','${w.iso}')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;text-decoration:underline;">Lan\u00e7ar di\u00e1ria &#8594;</button></div>`));
     out.push('</div>');
   }
-  out.push(`<div class="card" style="margin-bottom:12px;"><p class="lbl" style="margin-bottom:12px;">&#9312; Sal\u00e1rio Base \u2014 ${rl}</p><div class="fb"><span style="font-size:13px;">Sal\u00e1rio contratual</span><span class="money" style="font-size:20px;">R$ ${fm(c.salBase)}</span></div></div>`);
+  // ① Salário Base — com toggle pro-rata se primeiro mês
+  if(c.isFirstMonth){
+    const prKey='prorata_'+String(c.emp.id)+'_'+c.key;
+    const canToggle=canWrite()&&!c.payment;
+    out.push(`<div class="card" style="margin-bottom:12px;border:1px solid ${c.proRataActive?'rgba(196,151,58,.4)':'var(--border)'};">`);
+    out.push(`<div class="fb" style="margin-bottom:10px;"><p class="lbl">&#9312; Sal\u00e1rio \u2014 ${rl}</p><span class="badge" style="background:rgba(196,151,58,.12);color:var(--warn);">Pro Rata</span></div>`);
+    out.push(`<div class="g2" style="gap:10px;margin-bottom:12px;">`);
+    out.push(`<div style="background:var(--cream);border-radius:10px;padding:12px;"><div class="lbl" style="margin-bottom:4px;">Integral</div><div class="money" style="font-size:18px;">R$ ${fm(c.netSal)}</div><div class="tip" style="margin-top:4px;">M\u00eas completo</div></div>`);
+    out.push(`<div style="background:${c.proRataActive?'rgba(196,151,58,.08)':'var(--cream)'};border:1px solid ${c.proRataActive?'var(--warn)':'transparent'};border-radius:10px;padding:12px;"><div class="lbl" style="margin-bottom:4px;">Pro Rata (${c.proRataDias}/${dim(c.ry,c.rm)} dias)</div><div class="money" style="font-size:18px;color:var(--warn);">R$ ${fm(c.proRataSal)}</div><div class="tip" style="margin-top:4px;">Admiss\u00e3o em ${fd(c.emp.admissao)}</div></div>`);
+    out.push('</div>');
+    if(canToggle){
+      out.push(`<div class="fi" style="gap:8px;">`);
+      out.push(`<button class="btn btn-sm ${c.proRataActive?'btn-gh':'btn-dk'}" onclick="setProRata('${prKey}',false)" style="flex:1;">Usar integral (R$ ${fm(c.netSal)})</button>`);
+      out.push(`<button class="btn btn-sm ${c.proRataActive?'btn-dk':'btn-gh'}" style="flex:1;${c.proRataActive?'':'border-color:var(--warn);color:var(--warn);'}" onclick="setProRata('${prKey}',true)">Usar Pro Rata (R$ ${fm(c.proRataSal)})</button>`);
+      out.push('</div>');
+    }
+    out.push('</div>');
+  } else {
+    out.push(`<div class="card" style="margin-bottom:12px;"><p class="lbl" style="margin-bottom:12px;">&#9312; Sal\u00e1rio Base \u2014 ${rl}</p><div class="fb"><span style="font-size:13px;">Sal\u00e1rio contratual</span><span class="money" style="font-size:20px;">R$ ${fm(c.salBase)}</span></div></div>`);
+  }
   if (c.recs.length) {
     const grp={};
     c.recs.forEach(r=>{const k=r.desc+'|'+r.value;if(!grp[k])grp[k]={desc:r.desc,value:r.value,items:[]};grp[k].items.push({day:r.iso.slice(8),autoHol:r.autoHol});});
@@ -1601,7 +1711,7 @@ async function confirmPay() {
   const eid=md.dataset.eid; // string ID — no coercion
   const ry=+md.dataset.ry, rm=+md.dataset.rm; // year/month are numbers
   const c=calc(eid,ry,rm);
-  const rec={ id:uid(), empId:eid, empName:c.emp.name, empRole:c.emp.role, monthKey:c.key, ry, rm, salBase:c.salBase, recTot:c.recTot, avTot:c.avTot, bons:c.bons, deds:c.deds, inssAmt:c.inssAmt, netSal:c.netSal, vtNet:c.vtNet, vtGross:c.vtGross, vtDisc:c.vtDisc, vtWd:c.vtWd, vtWdAuto:c.vtWdAuto, vtY:c.vtY, vtM:c.vtM, total:c.total, paidDate:document.getElementById('pdate').value, method:document.getElementById('pmeth').value, notes:document.getElementById('pnotes').value.trim(), events:c.avs, adjs:c.adjs, recs:c.recs, paidAt:new Date().toISOString() };
+  const rec={ id:uid(), empId:eid, empName:c.emp.name, empRole:c.emp.role, monthKey:c.key, ry, rm, salBase:c.salBase, recTot:c.recTot, avTot:c.avTot, bons:c.bons, deds:c.deds, inssAmt:c.inssAmt, netSal:c.finalNetSal, proRataActive:c.proRataActive||false, vtNet:c.vtNet, vtGross:c.vtGross, vtDisc:c.vtDisc, vtWd:c.vtWd, vtWdAuto:c.vtWdAuto, vtY:c.vtY, vtM:c.vtM, total:c.total, paidDate:document.getElementById('pdate').value, method:document.getElementById('pmeth').value, notes:document.getElementById('pnotes').value.trim(), events:c.avs, adjs:c.adjs, recs:c.recs, paidAt:new Date().toISOString() };
   db.payments=db.payments.filter(p=>!(String(p.empId)===String(eid)&&p.monthKey===c.key));
   db.payments.push(rec); saveDB(); cm('mod-pay');
   const histBtn=[...document.querySelectorAll('.tab')].find(b=>b.textContent.includes('Hist'));
@@ -1801,7 +1911,7 @@ function renderDash() {
     out.push('</div></div>');
   });
   out.push(`<div class="card" style="margin-top:8px;"><p class="lbl" style="margin-bottom:14px;">Consolidado \u2014 ${wl}</p><div class="mt2"><div class="mr mrh"><span>Funcion\u00e1rio</span><span>Sal\u00e1rio l\u00edquido</span><span style="text-align:right;">VT (${MP[calcs[0].vtM].slice(0,3)}) \u00b7 Envelope</span></div>`);
-  calcs.forEach(c=>out.push(`<div class="mr"><span style="word-break:break-word;">${c.emp.name}</span><span class="money">R$ ${fm(c.netSal)}</span><span class="money" style="text-align:right;">R$ ${fm(c.vtNet)} \u00b7 <strong>R$ ${fm(c.total)}</strong></span></div>`));
+  calcs.forEach(c=>out.push(`<div class="mr"><span style="word-break:break-word;">${c.emp.name}</span><span class="money">R$ ${fm(c.finalNetSal)}</span><span class="money" style="text-align:right;">R$ ${fm(c.vtNet)} \u00b7 <strong>R$ ${fm(c.total)}</strong></span></div>`));
   out.push(`<div class="mr" style="background:var(--cream);font-weight:500;"><span>TOTAL</span><span class="money">R$ ${fm(totSal)}</span><span class="money" style="text-align:right;">R$ ${fm(totVT)} \u00b7 <strong>R$ ${fm(totAll)}</strong></span></div></div></div>`);
   document.getElementById('tab-dash').innerHTML=out.join('');
 }
@@ -1846,9 +1956,79 @@ function renderFech() {
   else c.adjs.forEach(a=>{const isD=['advance','discount','loan','other'].includes(a.type);adjL.push(`<div class="ep"><div><div style="font-size:13px;">${AL[a.type]||a.type}${a.desc?' \u00b7 '+a.desc:''}</div><div class="tip">${fd(a.date)}</div></div><div class="fi" style="gap:8px;flex-shrink:0;"><span class="money" style="font-size:16px;color:${isD?'var(--danger)':'var(--sage)'};">${isD?'\u2212':'+'}R$ ${fm(a.value)}</span>${canAct?`<button onclick="delA('${emp.id}',${wy},${wm},'${a.id}')" style="background:none;border:none;cursor:pointer;color:var(--danger);">\xd7</button>`:''}</div></div>`);});
   adjL.push('</div>');
   const rescKey='resc_'+eid+'_'+MK(wy,wm), rescData=JSON.parse(localStorage.getItem(rescKey)||'null'), isResc=!!rescData;
-  const rescBar=[`<div class="card" style="margin-bottom:12px;border:1px solid ${isResc?'rgba(184,92,92,.35)':'var(--border)'};">`];
-  rescBar.push(`<div class="fb"><div class="fi" style="gap:10px;"><span style="font-size:13px;font-weight:400;">Modo Rescis\u00e3o</span><span class="badge" style="background:rgba(184,92,92,.1);color:var(--danger);">experimental</span></div>${canAct?`<div class="fi" style="gap:8px;">${isResc?`<button class="btn btn-sm" style="border:1px solid rgba(184,92,92,.3);color:var(--danger);" onclick="clearResc('${eid}',${wy},${wm})">Cancelar</button>`:`<button class="btn btn-gh btn-sm" onclick="openRescMode('${eid}',${wy},${wm})">Configurar</button>`}</div>`:''}</div>`);
-  if(isResc){rescBar.push('<div class="div"></div><div class="mt2"><div class="mr mrh"><span>Verba</span><span></span><span style="text-align:right;">Valor</span></div>');rescData.itens.forEach(it=>rescBar.push(`<div class="mr"><span>${it.l}</span><span></span><span class="money" style="text-align:right;color:${it.pos?'var(--sage)':'var(--danger)'};">${it.pos?'+':'-'}R$ ${fm(it.v)}</span></div>`));rescBar.push(`</div><div class="fb" style="padding:12px 0 0;border-top:2px solid var(--border);"><span style="font-size:13px;font-weight:500;">Total l\u00edquido</span><span class="money" style="font-size:20px;color:var(--danger);">R$ ${fm(rescData.total)}</span></div>`);}
+  const rescBar=[];
+  // ── Bloco Rescisão Contratual ─────────────────────────────
+  rescBar.push(`<div class="card" style="margin-bottom:12px;border:1px solid ${isResc?'rgba(184,92,92,.35)':'var(--border)'};background:${isResc?'rgba(184,92,92,.03)':'var(--card)'};">`);
+  rescBar.push(`<div class="fb" style="margin-bottom:${isResc?'14':'0'}px;">
+    <div class="fi" style="gap:10px;">
+      <span style="font-size:13px;font-weight:400;">Rescis\u00e3o Contratual</span>
+      ${isResc?'<span class="badge" style="background:rgba(184,92,92,.1);color:var(--danger);">ativa</span>':''}
+    </div>
+    ${canAct?`<div class="fi" style="gap:8px;">
+      ${isResc
+        ?`<button class="btn btn-sm" style="border:1px solid rgba(184,92,92,.3);color:var(--danger);" onclick="clearResc('${eid}',${wy},${wm})">&#10005; Cancelar rescis\u00e3o</button>`
+        :`<button class="btn btn-gh btn-sm" style="color:var(--danger);border-color:rgba(184,92,92,.3);" onclick="toggleRescCalc('${eid}',${wy},${wm})">&#9998; Configurar rescis\u00e3o</button>`
+      }
+    </div>`:''}
+  </div>`);
+  // Calculadora de rescisão inline
+  if(!isResc && canAct){
+    rescBar.push(`<div id="resc-inline-${eid}" style="display:none;">
+      <div class="div"></div>
+      <div class="g2" style="gap:10px;margin-bottom:12px;">
+        <div class="field"><label>Data de admiss\u00e3o</label><input type="date" id="ri-adm-${eid}" value="${emp.admissao||''}"></div>
+        <div class="field"><label>Data do desligamento</label><input type="date" id="ri-desc-${eid}" value="${tod()}"></div>
+      </div>
+      <div class="g2" style="gap:10px;margin-bottom:12px;">
+        <div class="field"><label>Motivo</label><select id="ri-motivo-${eid}">
+          <option value="semjusta">Demiss\u00e3o sem justa causa</option>
+          <option value="pedido">Pedido de demiss\u00e3o</option>
+          <option value="acordo">Acordo m\u00fatuo (484-A)</option>
+          <option value="comjusta">Demiss\u00e3o com justa causa</option>
+          <option value="termino">T\u00e9rmino de contrato</option>
+        </select></div>
+        <div class="field"><label>Saldo FGTS (R$)</label><input type="number" step=".01" id="ri-fgts-${eid}" value="0" placeholder="0,00"></div>
+      </div>
+      <div class="field" style="margin-bottom:12px;"><label>Aviso pr\u00e9vio</label><select id="ri-aviso-${eid}">
+        <option value="indenizado">Indenizado pelo empregador</option>
+        <option value="trabalhado">Trabalhado</option>
+        <option value="dispensado">Dispensado pelo empregado</option>
+      </select></div>
+      <div id="ri-result-${eid}"></div>
+      <div class="fi" style="gap:8px;margin-top:10px;flex-wrap:wrap;">
+        <button class="btn btn-gh btn-sm" onclick="calcRescInline('${eid}',${wy},${wm})">Calcular verbas</button>
+        <button class="btn btn-gh btn-sm" id="ri-custom-btn-${eid}" style="display:none;" onclick="toggleRescCustom('${eid}',${wy},${wm})">Inserir valor acertado</button>
+        <button class="btn btn-dr btn-sm" id="ri-apply-btn-${eid}" style="display:none;margin-left:auto;" onclick="applyRescInline('${eid}',${wy},${wm})">Aplicar ao fechamento</button>
+      </div>
+      <div id="ri-custom-${eid}" style="display:none;margin-top:12px;">
+        <div class="div"></div>
+        <p class="tip" style="margin-bottom:8px;">Insira o valor total acertado entre as partes:</p>
+        <div class="fi" style="gap:8px;">
+          <div class="field" style="flex:1;margin-bottom:0;"><label>Valor acertado (R$)</label><input type="number" step=".01" id="ri-valor-${eid}" placeholder="0,00"></div>
+          <button class="btn btn-dr btn-sm" style="margin-top:20px;" onclick="applyRescCustom('${eid}',${wy},${wm})">Aplicar</button>
+        </div>
+      </div>
+    </div>`);
+  }
+  if(isResc){
+    rescBar.push('<div class="mt2"><div class="mr mrh"><span>Verba</span><span></span><span style="text-align:right;">Valor</span></div>');
+    rescData.itens.forEach(it=>rescBar.push(`<div class="mr"><span>${it.l}</span><span></span><span class="money" style="text-align:right;color:${it.pos?'var(--sage)':'var(--danger)'};">${it.pos?'+':'-'}R$ ${fm(it.v)}</span></div>`));
+    // Permite editar valor acertado
+    const rescCustom=rescData.customValue!=null;
+    rescBar.push(`<div class="fb" style="padding:12px 0 0;border-top:2px solid var(--border);">
+      <div><span style="font-size:13px;font-weight:500;">Total ${rescCustom?'(valor acertado)':'calculado'}</span></div>
+      <div class="fi" style="gap:10px;">
+        <span class="money" style="font-size:20px;color:var(--danger);">R$ ${fm(rescData.customValue??rescData.total)}</span>
+        ${canAct?`<button class="btn btn-gh btn-sm" onclick="editRescValue('${eid}',${wy},${wm})">&#9998;</button>`:''}
+      </div>
+    </div>`);
+    if(canAct) rescBar.push(`<div id="edit-resc-${eid}" style="display:none;margin-top:8px;">
+      <div class="fi" style="gap:8px;">
+        <div class="field" style="flex:1;margin-bottom:0;"><label>Alterar valor acertado (R$)</label><input type="number" step=".01" id="edit-resc-val-${eid}" value="${rescData.customValue??rescData.total}" placeholder="0,00"></div>
+        <button class="btn btn-dr btn-sm" style="margin-top:20px;" onclick="saveRescEdit('${eid}',${wy},${wm})">Salvar</button>
+      </div>
+    </div>`);
+  }
   rescBar.push('</div>');
   const paidB=isPaid?`<div class="alert as" style="margin-bottom:16px;"><div><div style="font-size:13px;font-weight:500;color:var(--sage);">&#10003; Pago em ${fd(c.payment.paidDate)} via ${c.payment.method}</div><div class="tip" style="margin-top:4px;">R$ ${fm(c.payment.netSal)} sal\u00e1rio + R$ ${fm(c.payment.vtNet)} VT = R$ ${fm(c.payment.total)}</div></div></div>`:'';
   const cta=canAct?`<div class="fe" style="margin-top:16px;"><button class="btn btn-gh" onclick="openAM('${emp.id}',${wy},${wm})">+ Ajuste</button><button class="btn btn-sg" onclick="openPayM('${emp.id}',${wy},${wm})">Ver mem\u00f3ria &amp; confirmar</button></div>`:'';
@@ -2299,6 +2479,8 @@ function initApp() {
       + '</div>';
   }
 }
+
+
 
 
 
