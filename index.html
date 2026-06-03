@@ -418,7 +418,8 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 </div><!-- /#app -->
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<!-- SDK Supabase hospedado localmente — sem dependência de CDN externo -->
+<script src="supabase.js"></script>
 <script>
 
 
@@ -434,6 +435,16 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
+
+
+
+
+// Captura erros globais e mostra na loading screen (ajuda diagnóstico)
+window.addEventListener('error', function(ev) {
+  if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
+  console.error('Erro global:', ev.message, ev.filename, ev.lineno);
+});
 
 // ============================================================
 // ATRIUM CASA — JS Unificado com Auth + Multi-tenant + RBAC
@@ -1986,17 +1997,31 @@ function renderAll(){render(CT);}
 
 // ── [C] INIT ──────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  // supabase.js é carregado localmente (mesmo repositório)
+  // Se não estiver disponível, mostra erro claro
+  if (!window.supabase) {
+    const ls = document.getElementById('loading-screen');
+    if (ls) ls.innerHTML =
+      '<div style="text-align:center;padding:32px;font-family:sans-serif;">'
+      + '<p style="color:#B85C5C;font-size:14px;margin-bottom:8px;">&#10060; Arquivo supabase.js não encontrado</p>'
+      + '<p style="color:#9C9087;font-size:12px;margin-bottom:16px;">Certifique-se de que o arquivo supabase.js está na raiz do repositório.</p>'
+      + '<button onclick="location.reload()" style="padding:10px 20px;background:#2A2520;color:#fff;border:none;border-radius:8px;cursor:pointer;">Recarregar</button>'
+      + '</div>';
+    return;
+  }
+  initApp();
+});
+
+function initApp() {
   try {
-    if (!window.supabase) {
-      document.getElementById('loading-screen').innerHTML =
-        '<div style="text-align:center;padding:32px;font-family:sans-serif;">'
-        + '<p style="color:#B85C5C;font-size:14px;margin-bottom:8px;">&#10060; SDK Supabase bloqueado</p>'
-        + '<p style="color:#9C9087;font-size:12px;margin-bottom:16px;">Desative o bloqueio de rastreamento para este site e recarregue.</p>'
-        + '<button onclick="location.reload()" style="padding:10px 20px;background:#2A2520;color:#fff;border:none;border-radius:8px;cursor:pointer;">Recarregar</button>'
-        + '</div>';
-      return;
-    }
-    supa = window.supabase.createClient(SUPA_URL, SUPA_ANON_KEY);
+    supa = window.supabase.createClient(SUPA_URL, SUPA_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storageKey: 'atrium-auth-token'
+      }
+    });
     initNetworkListeners();
 
     supa.auth.onAuthStateChange(async (event, session) => {
@@ -2021,6 +2046,26 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    // Verifica ativamente a sessão persistida (cobre recargas de página).
+    // Se INITIAL_SESSION não disparar de forma confiável, getSession garante
+    // que a sessão salva no localStorage seja recuperada.
+    supa.auth.getSession().then(({ data }) => {
+      if (!data?.session) {
+        // Sem sessão salva — mostra login (caso INITIAL_SESSION não tenha disparado)
+        const ls = document.getElementById('loading-screen');
+        if (ls && ls.style.display !== 'none') {
+          ls.style.display = 'none';
+          document.getElementById('auth-screen').classList.remove('hidden');
+        }
+      }
+      // Se há sessão, o onAuthStateChange(INITIAL_SESSION) já cuidou do login
+    }).catch(err => {
+      console.error('getSession error:', err);
+      const ls = document.getElementById('loading-screen');
+      if (ls) ls.style.display = 'none';
+      document.getElementById('auth-screen').classList.remove('hidden');
+    });
+
   } catch(initErr) {
     console.error('Atrium init error:', initErr);
     var ls = document.getElementById('loading-screen');
@@ -2029,7 +2074,11 @@ document.addEventListener('DOMContentLoaded', () => {
       + '<button onclick="location.reload()" style="padding:10px 20px;background:#2A2520;color:#fff;border:none;border-radius:8px;cursor:pointer;">Recarregar</button>'
       + '</div>';
   }
-});
+}
+
+
+
+
 
 
 
