@@ -448,6 +448,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -1338,7 +1339,7 @@ function openEvM(eid, dateStr, evId = null) {
 function onET() { const v=document.getElementById('evtype').value; if(v==='custom')return; const t=JSON.parse(v); document.getElementById('evval').value=t.value; document.getElementById('evdur').value=t.name; }
 async function saveEv() {
   if (!canWrite()) return;
-  const eid=+document.getElementById('eveid').value, dateStr=document.getElementById('evdate').value, evId=document.getElementById('evid').value;
+  const eid=document.getElementById('eveid').value, dateStr=document.getElementById('evdate').value, evId=document.getElementById('evid').value;
   const parts=dateStr.split('-'), key=parts[0]+'-'+parts[1];
   const ev={ id:evId||uid(), date:dateStr, value:+document.getElementById('evval').value||0, duration:document.getElementById('evdur').value.trim(), holiday:!!holName(dateStr), notes:document.getElementById('evnotes').value.trim() };
   if (!db.events[eid]) db.events[eid]={};
@@ -1369,7 +1370,7 @@ function openAM(eid, y, m, adjId = null) {
 }
 async function saveA() {
   if (!canWrite()) return;
-  const eid=+document.getElementById('aeid').value, key=document.getElementById('amk').value, adjId=document.getElementById('aid').value;
+  const eid=document.getElementById('aeid').value, key=document.getElementById('amk').value, adjId=document.getElementById('aid').value;
   const adj={ id:adjId||uid(), type:document.getElementById('atype').value, value:+document.getElementById('aval').value||0, date:document.getElementById('adate').value, desc:document.getElementById('adesc').value.trim() };
   if (!db.adjustments[eid]) db.adjustments[eid]={};
   if (!db.adjustments[eid][key]) db.adjustments[eid][key]=[];
@@ -1446,7 +1447,7 @@ function openRescMode(eid, ry, rm) {
 }
 function clearResc(eid, ry, rm) {
   if (!canWrite()) return;
-  localStorage.removeItem('resc_'+eid+'_'+MK(ry,rm)); renderFech();
+  localStorage.removeItem('resc_'+String(eid)+'_'+MK(ry,rm)); renderFech();
 }
 
 // ── CALCULATION ENGINE ────────────────────────────────────────
@@ -1486,7 +1487,7 @@ function memoHTML(c) {
   out.push(`<div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:16px;"><p style="font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;font-weight:500;margin-bottom:4px;">Compet\u00eancia \u2014 m\u00eas trabalhado</p><p style="font-family:'Cormorant',serif;font-size:22px;font-weight:300;">${rl}</p><p class="tip" style="margin-top:4px;">Prazo legal: at\u00e9 5\u00ba dia \u00fatil \u2014 <strong>${c.pay5?c.pay5.d+'/'+String(c.pyM+1).padStart(2,'0')+'/'+c.pyY:'-'}</strong> &nbsp;\u00b7&nbsp; 1\u00ba dia \u00fatil: ${c.pay1?fd(c.pay1.iso):'-'}</p></div>`);
   if (c.holWarns.length) {
     out.push(`<div class="alert aw" style="flex-direction:column;gap:6px;margin-bottom:14px;"><p style="font-size:12px;font-weight:500;color:var(--warn);">&#9888;&#65039; ${c.holWarns.length} dia(s) recorrente(s) em feriado sem di\u00e1ria lan\u00e7ada</p>`);
-    c.holWarns.forEach(w=>out.push(`<div style="font-size:11px;color:var(--warn);padding-left:4px;">&#8226; ${fd(w.iso)} \u2014 ${w.hn} (${w.desc}) &nbsp;<button onclick="openEvM(${c.emp.id},'${w.iso}')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;text-decoration:underline;">Lan\u00e7ar di\u00e1ria &#8594;</button></div>`));
+    c.holWarns.forEach(w=>out.push(`<div style="font-size:11px;color:var(--warn);padding-left:4px;">&#8226; ${fd(w.iso)} \u2014 ${w.hn} (${w.desc}) &nbsp;<button onclick="openEvM('${c.emp.id}','${w.iso}')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;text-decoration:underline;">Lan\u00e7ar di\u00e1ria &#8594;</button></div>`));
     out.push('</div>');
   }
   out.push(`<div class="card" style="margin-bottom:12px;"><p class="lbl" style="margin-bottom:12px;">&#9312; Sal\u00e1rio Base \u2014 ${rl}</p><div class="fb"><span style="font-size:13px;">Sal\u00e1rio contratual</span><span class="money" style="font-size:20px;">R$ ${fm(c.salBase)}</span></div></div>`);
@@ -1626,7 +1627,7 @@ function calcRescisaoStandalone() {
 }
 function printRescisao() {
   if(!_lastRescResult)return;
-  const r=_lastRescResult, eid=+document.getElementById('resc-emp').value;
+  const r=_lastRescResult, eid=document.getElementById('resc-emp').value;
   const emp=db.employees.find(e=>e.id===eid), nome=emp?emp.name:'Funcion\u00e1rio';
   const w=window.open('','_blank','width=700,height=800');
   const rows=r.itens.map(it=>`<tr style="border-bottom:1px solid #E8E3DC;"><td style="padding:8px 0;font-size:13px;">${it.l}</td><td style="padding:8px 0;text-align:right;font-family:'Cormorant',serif;font-size:15px;color:${it.pos?'#8A9B8A':'#B85C5C'}">${it.pos?'+':'\u2212'} R$ ${fm(it.v)}</td></tr>`).join('');
@@ -1655,7 +1656,7 @@ function calcRescisao() {
 }
 async function confirmarBaixa() {
   if (!canWrite()) return;
-  const eid=+document.getElementById('baixa-eid').value, motivo=document.getElementById('baixa-motivo').value, data=document.getElementById('baixa-data').value, obs=document.getElementById('baixa-obs').value.trim(), adm=document.getElementById('baixa-admissao').value;
+  const eid=document.getElementById('baixa-eid').value, motivo=document.getElementById('baixa-motivo').value, data=document.getElementById('baixa-data').value, obs=document.getElementById('baixa-obs').value.trim(), adm=document.getElementById('baixa-admissao').value;
   if(!data){alert('Informe a data do desligamento.');return;}
   const emp=db.employees.find(e=>e.id===eid); if(!emp)return;
   emp.status='desligado'; emp.motivoBaixa=motivo; emp.dataBaixa=data; emp.admissao=adm; emp.obsBaixa=obs;
@@ -1679,7 +1680,7 @@ function openTemplates() {
   document.getElementById('mod-templates').classList.remove('hidden');
 }
 function gerarTemplate() {
-  const eid=+document.getElementById('tmpl-emp').value, tipo=document.getElementById('tmpl-doc').value;
+  const eid=document.getElementById('tmpl-emp').value, tipo=document.getElementById('tmpl-doc').value;
   const adm=document.getElementById('tmpl-admissao').value, data=document.getElementById('tmpl-data').value;
   const empregador=document.getElementById('tmpl-empregador').value.trim()||'[Nome do Empregador]';
   const emp=db.employees.find(e=>e.id===eid); if(!emp)return;
@@ -1708,11 +1709,11 @@ function renderDash() {
     const isPaid=!!c.payment, hw=c.holWarns.length>0;
     out.push(`<div class="card" style="border:1px solid ${isPaid?'rgba(138,155,138,.4)':hw?'rgba(196,151,58,.4)':'var(--border)'};">`);
     out.push(`<div class="fb" style="margin-bottom:14px;"><div class="fi" style="gap:12px;">${avt(c.emp.name,44)}<div><div style="font-size:15px;font-weight:400;word-break:break-word;">${c.emp.name}</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">${c.emp.role}</div></div></div><div style="text-align:right;flex-shrink:0;"><div class="money" style="font-size:24px;color:var(--accent);">R$ ${fm(c.total)}</div><div style="font-size:10px;color:var(--muted);">sal. R$ ${fm(c.netSal)} + VT R$ ${fm(c.vtNet)}</div></div></div>`);
-    if(hw)out.push(`<div class="alert aw" style="margin-bottom:12px;"><span style="font-size:11px;color:var(--warn);">&#9888;&#65039; ${c.holWarns.length} feriado(s) sem di\u00e1ria &nbsp;<button onclick="goFech(${c.emp.id})" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;text-decoration:underline;">ver detalhes</button></span></div>`);
+    if(hw)out.push(`<div class="alert aw" style="margin-bottom:12px;"><span style="font-size:11px;color:var(--warn);">&#9888;&#65039; ${c.holWarns.length} feriado(s) sem di\u00e1ria &nbsp;<button onclick="goFech('${c.emp.id}')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;text-decoration:underline;">ver detalhes</button></span></div>`);
     out.push('<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">');
     [['Base','R$ '+fm(c.salBase),'var(--text)'],['Di\u00e1rias','R$ '+fm(c.recTot+c.avTot),'var(--sage)'],['Descontos','R$ '+fm(c.deds+c.inssAmt),'var(--danger)'],[MP[c.vtM].slice(0,3)+' VT','R$ '+fm(c.vtNet),'var(--blue)']].forEach(k=>out.push(`<div style="background:var(--cream);border-radius:9px;padding:10px;text-align:center;"><div class="lbl" style="margin-bottom:4px;">${k[0]}</div><div class="money" style="font-size:14px;color:${k[2]};">${k[1]}</div></div>`));
         out.push(`</div><div class="fi" style="gap:8px;flex-wrap:wrap;"><button class="btn btn-gh btn-sm" onclick="goFech('${c.emp.id}')">Ver memória</button>`);
-    out.push(isPaid?`<span style="margin-left:auto;font-size:11px;color:var(--sage);">&#10003; Pago em ${fd(c.payment.paidDate)} via ${c.payment.method}</span>`:canWrite()?`<button class="btn btn-sg btn-sm write-only" style="margin-left:auto;" onclick="openPayM(${c.emp.id},${wy},${wm})">Confirmar pagamento</button>`:'');
+    out.push(isPaid?`<span style="margin-left:auto;font-size:11px;color:var(--sage);">&#10003; Pago em ${fd(c.payment.paidDate)} via ${c.payment.method}</span>`:canWrite()?`<button class="btn btn-sg btn-sm write-only" style="margin-left:auto;" onclick="openPayM('${c.emp.id}',${wy},${wm})">Confirmar pagamento</button>`:'');
     out.push('</div></div>');
   });
   out.push(`<div class="card" style="margin-top:8px;"><p class="lbl" style="margin-bottom:14px;">Consolidado \u2014 ${wl}</p><div class="mt2"><div class="mr mrh"><span>Funcion\u00e1rio</span><span>Sal\u00e1rio l\u00edquido</span><span style="text-align:right;">VT (${MP[calcs[0].vtM].slice(0,3)}) \u00b7 Envelope</span></div>`);
@@ -1738,7 +1739,7 @@ function renderFech() {
   const warnD={};c.holWarns.forEach(w=>{warnD[w.iso]=1;});
   const canAct=canWrite()&&!isPaid;
   const empHeader=`<div style="background:var(--text);border-radius:14px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">${avt(emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-family:'Cormorant',serif;font-size:22px;font-weight:300;color:#fff;word-break:break-word;">${emp.name}</div><div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:2px;">${emp.role}${emp.admissao?' &nbsp;&middot;&nbsp; Adm. '+fd(emp.admissao):''}${isPaid?' &nbsp;&middot;&nbsp; <span style="color:var(--sage);">&#10003; Pago</span>':' &nbsp;&middot;&nbsp; <span style="color:var(--warn);">Pendente</span>'}</div></div><div style="margin-left:auto;text-align:right;flex-shrink:0;"><div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;">Compet\u00eancia</div><div style="font-family:'Cormorant',serif;font-size:20px;color:var(--a2);">${wl}</div><div style="font-size:11px;color:rgba(255,255,255,.4);">Pgto em ${pl}</div></div></div>`;
-  const calParts=['<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:4px;"><span style="font-size:13px;font-weight:400;">'+wl+'</span><div class="fi" style="gap:8px;"><button class="btn btn-gh btn-sm" onclick="openReg()">&#128467; Feriados regionais</button>'+(canAct?`<button class="btn btn-gh btn-sm" onclick="openEvM(${emp.id},'${td}')">+ Di\u00e1ria avulsa</button>`:'')+`</div></div><div class="cg">`];
+  const calParts=['<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:4px;"><span style="font-size:13px;font-weight:400;">'+wl+'</span><div class="fi" style="gap:8px;"><button class="btn btn-gh btn-sm" onclick="openReg()">&#128467; Feriados regionais</button>'+(canAct?`<button class="btn btn-gh btn-sm" onclick="openEvM('${emp.id}','${td}')">+ Di\u00e1ria avulsa</button>`:'')+`</div></div><div class="cg">`];
   DP.forEach(d=>calParts.push(`<div class="ch">${d}</div>`));
   for(let z=0;z<fdow;z++)calParts.push('<div class="cd ce"></div>');
   days.forEach(d=>{
@@ -1747,24 +1748,24 @@ function renderFech() {
     let cls='cd';
     if(isWrn)cls+=' cwrn';else if(hasEv)cls+=' cav';else if(hasRec||isW)cls+=' cwd';
     if(hn)cls+=' chol';if(isTod)cls+=' ctod';
-    calParts.push(`<div class="${cls}" onclick="${canAct?`openEvM(${emp.id},'${d.iso}')`:''}" title="${d.iso}${hn?' \u2014 '+hn:''}${isWrn?' \u26a0':''}"><span>${d.d}</span>${hn?'<span style="font-size:7px;color:var(--warn);">&#127881;</span>':''}</div>`);
+    calParts.push(`<div class="${cls}" onclick="${canAct?`openEvM('${emp.id}','${d.iso}')`:''}" title="${d.iso}${hn?' \u2014 '+hn:''}${isWrn?' \u26a0':''}"><span>${d.d}</span>${hn?'<span style="font-size:7px;color:var(--warn);">&#127881;</span>':''}</div>`);
   });
   calParts.push('</div></div>');
-  const avL=['<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:10px;"><span style="font-size:13px;font-weight:400;">Di\u00e1rias Avulsas</span>'+(canAct?`<button class="btn btn-gh btn-sm" onclick="openEvM(${emp.id},'${td}')">+ Adicionar</button>`:'')+`</div>`];
+  const avL=['<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:10px;"><span style="font-size:13px;font-weight:400;">Di\u00e1rias Avulsas</span>'+(canAct?`<button class="btn btn-gh btn-sm" onclick="openEvM('${emp.id}','${td}')">+ Adicionar</button>`:'')+`</div>`];
   if(!c.avs.length)avL.push('<p class="tip">Nenhuma di\u00e1ria avulsa lan\u00e7ada.</p>');
-  else c.avs.forEach(e=>avL.push(`<div class="ep"><div><div style="font-size:13px;">${fd(e.date)}${e.duration?' \u00b7 '+e.duration:''}${e.hn?` <span class="badge" style="background:rgba(196,151,58,.15);color:var(--warn);">&#127881; ${e.hn}</span>`:''}</div>${e.notes?`<div class="tip">${e.notes}</div>`:''}</div><div class="fi" style="gap:8px;flex-shrink:0;"><span class="money" style="font-size:16px;color:var(--blue);">R$ ${fm(e.value)}</span>${canAct?`<button onclick="openEvM(${emp.id},'${e.date}',${e.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);">&#9998;</button><button onclick="delEv(${emp.id},${wy},${wm},${e.id})" style="background:none;border:none;cursor:pointer;color:var(--danger);">\xd7</button>`:''}</div></div>`));
+  else c.avs.forEach(e=>avL.push(`<div class="ep"><div><div style="font-size:13px;">${fd(e.date)}${e.duration?' \u00b7 '+e.duration:''}${e.hn?` <span class="badge" style="background:rgba(196,151,58,.15);color:var(--warn);">&#127881; ${e.hn}</span>`:''}</div>${e.notes?`<div class="tip">${e.notes}</div>`:''}</div><div class="fi" style="gap:8px;flex-shrink:0;"><span class="money" style="font-size:16px;color:var(--blue);">R$ ${fm(e.value)}</span>${canAct?`<button onclick="openEvM('${emp.id}','${e.date}','${e.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);">&#9998;</button><button onclick="delEv('${emp.id}',${wy},${wm},'${e.id}')" style="background:none;border:none;cursor:pointer;color:var(--danger);">\xd7</button>`:''}</div></div>`));
   avL.push('</div>');
-  const adjL=['<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:10px;"><span style="font-size:13px;font-weight:400;">Ajustes &amp; Descontos</span>'+(canAct?`<button class="btn btn-gh btn-sm" onclick="openAM(${emp.id},${wy},${wm})">+ Adicionar</button>`:'')+`</div>`];
+  const adjL=['<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:10px;"><span style="font-size:13px;font-weight:400;">Ajustes &amp; Descontos</span>'+(canAct?`<button class="btn btn-gh btn-sm" onclick="openAM('${emp.id}',${wy},${wm})">+ Adicionar</button>`:'')+`</div>`];
   if(!c.adjs.length)adjL.push('<p class="tip">Nenhum ajuste lan\u00e7ado.</p>');
-  else c.adjs.forEach(a=>{const isD=['advance','discount','loan','other'].includes(a.type);adjL.push(`<div class="ep"><div><div style="font-size:13px;">${AL[a.type]||a.type}${a.desc?' \u00b7 '+a.desc:''}</div><div class="tip">${fd(a.date)}</div></div><div class="fi" style="gap:8px;flex-shrink:0;"><span class="money" style="font-size:16px;color:${isD?'var(--danger)':'var(--sage)'};">${isD?'\u2212':'+'}R$ ${fm(a.value)}</span>${canAct?`<button onclick="delA(${emp.id},${wy},${wm},${a.id})" style="background:none;border:none;cursor:pointer;color:var(--danger);">\xd7</button>`:''}</div></div>`);});
+  else c.adjs.forEach(a=>{const isD=['advance','discount','loan','other'].includes(a.type);adjL.push(`<div class="ep"><div><div style="font-size:13px;">${AL[a.type]||a.type}${a.desc?' \u00b7 '+a.desc:''}</div><div class="tip">${fd(a.date)}</div></div><div class="fi" style="gap:8px;flex-shrink:0;"><span class="money" style="font-size:16px;color:${isD?'var(--danger)':'var(--sage)'};">${isD?'\u2212':'+'}R$ ${fm(a.value)}</span>${canAct?`<button onclick="delA('${emp.id}',${wy},${wm},'${a.id}')" style="background:none;border:none;cursor:pointer;color:var(--danger);">\xd7</button>`:''}</div></div>`);});
   adjL.push('</div>');
   const rescKey='resc_'+eid+'_'+MK(wy,wm), rescData=JSON.parse(localStorage.getItem(rescKey)||'null'), isResc=!!rescData;
   const rescBar=[`<div class="card" style="margin-bottom:12px;border:1px solid ${isResc?'rgba(184,92,92,.35)':'var(--border)'};">`];
-  rescBar.push(`<div class="fb"><div class="fi" style="gap:10px;"><span style="font-size:13px;font-weight:400;">Modo Rescis\u00e3o</span><span class="badge" style="background:rgba(184,92,92,.1);color:var(--danger);">experimental</span></div>${canAct?`<div class="fi" style="gap:8px;">${isResc?`<button class="btn btn-sm" style="border:1px solid rgba(184,92,92,.3);color:var(--danger);" onclick="clearResc(${eid},${wy},${wm})">Cancelar</button>`:`<button class="btn btn-gh btn-sm" onclick="openRescMode(${eid},${wy},${wm})">Configurar</button>`}</div>`:''}</div>`);
+  rescBar.push(`<div class="fb"><div class="fi" style="gap:10px;"><span style="font-size:13px;font-weight:400;">Modo Rescis\u00e3o</span><span class="badge" style="background:rgba(184,92,92,.1);color:var(--danger);">experimental</span></div>${canAct?`<div class="fi" style="gap:8px;">${isResc?`<button class="btn btn-sm" style="border:1px solid rgba(184,92,92,.3);color:var(--danger);" onclick="clearResc('${eid}',${wy},${wm})">Cancelar</button>`:`<button class="btn btn-gh btn-sm" onclick="openRescMode('${eid}',${wy},${wm})">Configurar</button>`}</div>`:''}</div>`);
   if(isResc){rescBar.push('<div class="div"></div><div class="mt2"><div class="mr mrh"><span>Verba</span><span></span><span style="text-align:right;">Valor</span></div>');rescData.itens.forEach(it=>rescBar.push(`<div class="mr"><span>${it.l}</span><span></span><span class="money" style="text-align:right;color:${it.pos?'var(--sage)':'var(--danger)'};">${it.pos?'+':'-'}R$ ${fm(it.v)}</span></div>`));rescBar.push(`</div><div class="fb" style="padding:12px 0 0;border-top:2px solid var(--border);"><span style="font-size:13px;font-weight:500;">Total l\u00edquido</span><span class="money" style="font-size:20px;color:var(--danger);">R$ ${fm(rescData.total)}</span></div>`);}
   rescBar.push('</div>');
   const paidB=isPaid?`<div class="alert as" style="margin-bottom:16px;"><div><div style="font-size:13px;font-weight:500;color:var(--sage);">&#10003; Pago em ${fd(c.payment.paidDate)} via ${c.payment.method}</div><div class="tip" style="margin-top:4px;">R$ ${fm(c.payment.netSal)} sal\u00e1rio + R$ ${fm(c.payment.vtNet)} VT = R$ ${fm(c.payment.total)}</div></div></div>`:'';
-  const cta=canAct?`<div class="fe" style="margin-top:16px;"><button class="btn btn-gh" onclick="openAM(${emp.id},${wy},${wm})">+ Ajuste</button><button class="btn btn-sg" onclick="openPayM(${emp.id},${wy},${wm})">Ver mem\u00f3ria &amp; confirmar</button></div>`:'';
+  const cta=canAct?`<div class="fe" style="margin-top:16px;"><button class="btn btn-gh" onclick="openAM('${emp.id}',${wy},${wm})">+ Ajuste</button><button class="btn btn-sg" onclick="openPayM('${emp.id}',${wy},${wm})">Ver mem\u00f3ria &amp; confirmar</button></div>`:'';
   document.getElementById('tab-fech').innerHTML=[selH,empHeader,paidB,rescBar.join(''),calParts.join(''),avL.join(''),adjL.join(''),memoHTML(c),cta].join('');
 }
 
@@ -1782,12 +1783,12 @@ function renderEmps() {
     if(inactive)c.push(`<div style="margin-top:4px;"><span class="badge" style="background:rgba(184,92,92,.1);color:var(--danger);">&#128683; Desligado</span>${emp.dataBaixa?' <span style="font-size:11px;color:var(--muted);">em '+fd(emp.dataBaixa)+'</span>':''}${emp.motivoBaixa?' <span style="font-size:11px;color:var(--muted);">\u2014 '+(MOTIVOS[emp.motivoBaixa]||emp.motivoBaixa)+'</span>':''}</div>`);
     c.push('</div></div><div class="fi" style="gap:8px;flex-shrink:0;">');
     if(inactive){
-      c.push(`<button class="btn btn-gh btn-sm" onclick="openEM(${emp.id})">Ver dados</button>`);
-      if(canWrite())c.push(`<button class="btn btn-gh btn-sm write-only" style="color:var(--sage);border-color:var(--sage);" onclick="reativar(${emp.id})">&#8635; Reativar</button>`);
+      c.push(`<button class="btn btn-gh btn-sm" onclick="openEM('${emp.id}')">Ver dados</button>`);
+      if(canWrite())c.push(`<button class="btn btn-gh btn-sm write-only" style="color:var(--sage);border-color:var(--sage);" onclick="reativar('${emp.id}')">&#8635; Reativar</button>`);
     }else{
-      c.push(`<button class="btn btn-gh btn-sm" onclick="openEM(${emp.id})">${canWrite()?'Editar':'Ver'}</button>`);
-      if(canWrite())c.push(`<button class="btn btn-gh btn-sm write-only" style="color:var(--danger);border-color:rgba(184,92,92,.3);" onclick="openBaixa(${emp.id})">&#128683; Dar baixa</button>`);
-      if(currentRole==='admin')c.push(`<button class="btn btn-dr btn-sm write-only" onclick="delE(${emp.id})">Excluir</button>`);
+      c.push(`<button class="btn btn-gh btn-sm" onclick="openEM('${emp.id}')">${canWrite()?'Editar':'Ver'}</button>`);
+      if(canWrite())c.push(`<button class="btn btn-gh btn-sm write-only" style="color:var(--danger);border-color:rgba(184,92,92,.3);" onclick="openBaixa('${emp.id}')">&#128683; Dar baixa</button>`);
+      if(currentRole==='admin')c.push(`<button class="btn btn-dr btn-sm write-only" onclick="delE('${emp.id}')">Excluir</button>`);
     }
     c.push('</div></div>');
     c.push(`<div class="g2" style="gap:10px;margin-bottom:12px;"><div class="cream"><div class="lbl">Sal\u00e1rio base</div><div class="money" style="font-size:20px;margin-top:4px;">R$ ${fm(emp.salary)}</div></div><div class="cream"><div class="lbl">VT di\u00e1rio</div><div class="money" style="font-size:20px;margin-top:4px;">R$ ${fm(emp.vtDaily)}</div><div style="font-size:10px;color:var(--muted);margin-top:3px;">${emp.vtDiscount==='none'?'Sem desconto':'Desconto 6%'}</div></div></div>`);
@@ -1820,7 +1821,7 @@ function renderHist() {
     byM[k].forEach(p=>{
       out.push(`<div class="card" style="margin-bottom:8px;"><div class="fb" style="margin-bottom:10px;"><div class="fi" style="gap:12px;min-width:0;">${avt(p.empName,40)}<div style="min-width:0;"><div style="font-size:14px;font-weight:400;word-break:break-word;">${p.empName}</div><div style="font-size:11px;color:var(--muted);">${p.empRole}</div></div></div><div style="text-align:right;flex-shrink:0;"><div class="money" style="font-size:22px;color:var(--accent);">R$ ${fm(p.total)}</div><div style="font-size:10px;color:var(--muted);">sal R$ ${fm(p.netSal)} + VT R$ ${fm(p.vtNet)}</div></div></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;">`);
       [['Base','R$ '+fm(p.salBase),'var(--text)'],['Di\u00e1rias','R$ '+fm(p.recTot+p.avTot),'var(--sage)'],['Descontos','R$ '+fm(p.deds+p.inssAmt),'var(--danger)'],['VT','R$ '+fm(p.vtNet),'var(--blue)']].forEach(k2=>out.push(`<div style="background:var(--cream);border-radius:8px;padding:8px;text-align:center;"><div class="lbl">${k2[0]}</div><div class="money" style="font-size:13px;margin-top:3px;color:${k2[2]};">${k2[1]}</div></div>`));
-      out.push(`</div><div class="fb"><span class="tip">Pago em ${fd(p.paidDate)} \u00b7 ${p.method}${p.notes?' \u00b7 '+p.notes:''}</span><button class="btn btn-gh btn-sm" onclick="printSlip(${p.id})">&#128216; Recibo</button></div></div>`);
+      out.push(`</div><div class="fb"><span class="tip">Pago em ${fd(p.paidDate)} \u00b7 ${p.method}${p.notes?' \u00b7 '+p.notes:''}</span><button class="btn btn-gh btn-sm" onclick="printSlip('${p.id}')">&#128216; Recibo</button></div></div>`);
     });
     out.push('</div>');
   });
@@ -2151,6 +2152,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
