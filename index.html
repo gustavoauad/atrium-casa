@@ -465,6 +465,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -497,6 +498,18 @@ const SUPA_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 // Inicializa o cliente Supabase usando o SDK (carregado via CDN)
 if (!window.supabase) { throw new Error('Supabase SDK not loaded'); }
 let supa = null; // inicializado no DOMContentLoaded após SDK carregar
+
+// ── SECURITY: HTML escape para prevenir XSS ──────────────────
+function r2(n) { return Math.round((+n || 0) * 100) / 100; }
+
+function escapeHTML(v) {
+  return String(v ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
 
 // ── MODO DESENVOLVEDOR ──────────────────────────────────────
 // Ativado por: URL com ?dev=1  ou  localStorage.atrium_dev = '1'
@@ -747,7 +760,8 @@ async function afterSignupSetup() {
   }
 }
 async function doLogout() {
-  await supa.auth.signOut();
+  try { await supa.auth.signOut(); } catch(e) { console.error('Logout error:', e); }
+  // Continua o logout local mesmo se Supabase falhar
   currentUser = null; currentHouseId = null; currentRole = null; currentHouseName = '';
   db = defDB();
   document.getElementById('app').style.display = 'none';
@@ -814,7 +828,7 @@ async function showHousePicker() {
   list.innerHTML = houses.map(h => `
     <div class="house-item" onclick="selectHouse('${h.id}','${h.name.replace(/'/g,"\\'")}','${h.role}')">
       <div>
-        <div class="house-item-name">${h.name}</div>
+        <div class="house-item-name">${escapeHTML(h.name)}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">Código: ${h.invite_code}</div>
       </div>
       <span class="house-item-role role-${h.role}">${h.role}</span>
@@ -1128,7 +1142,7 @@ async function sbUpsert(table, body, onConflict) {
 // ── OFFLINE QUEUE ─────────────────────────────────────────────
 let pendingQueue = JSON.parse(localStorage.getItem('atrium_pending') || '[]');
 function savePending() { localStorage.setItem('atrium_pending', JSON.stringify(pendingQueue)); }
-function enqueue(op) { pendingQueue.push(op); savePending(); }
+function enqueue(op) { pendingQueue.push({ ...op, _ts: Date.now(), _status: 'pending' }); savePending(); }
 async function syncAll() {
   if (!isOnline || !pendingQueue.length) { if (isOnline) showSyncBanner('online'); return; }
   showSyncBanner('syncing');
@@ -1154,11 +1168,11 @@ async function _sbSaveEmployee(emp) {
   if (_DEV_MODE) { return; } // dev mode: skip Supabase
   const payload = { data: emp, house_id: currentHouseId };
   if (emp._sbid) {
-    await supa.from('employees').update(payload).eq('id', emp._sbid);
+    await supa.from('employees').update(payload).eq('id', emp._sbid).eq('house_id', currentHouseId);
   } else {
     const existing = await supa.from('employees').select('id,data').eq('house_id', currentHouseId);
     const row = (existing.data || []).find(r => r.data?.id === emp.id);
-    if (row) { emp._sbid = row.id; await supa.from('employees').update(payload).eq('id', row.id); }
+    if (row) { emp._sbid = row.id; await supa.from('employees').update(payload).eq('id', row.id).eq('house_id', currentHouseId); }
     else { const { data } = await supa.from('employees').insert(payload).select(); if (data?.[0]) emp._sbid = data[0].id; }
   }
   await _sbSaveSettings();
@@ -1169,7 +1183,7 @@ async function _sbDeleteEmployee(sbid, empId) {
     await supa.from('adjustments').delete().eq('emp_id', empId).eq('house_id', currentHouseId);
     await supa.from('payments').delete().eq('emp_id', empId).eq('house_id', currentHouseId);
   }
-  if (sbid) await supa.from('employees').delete().eq('id', sbid);
+  if (sbid) await supa.from('employees').delete().eq('id', sbid).eq('house_id', currentHouseId);
   else if (empId && currentHouseId) {
     const { data } = await supa.from('employees').select('id,data').eq('house_id', currentHouseId);
     for (const row of (data || [])) {
@@ -1180,22 +1194,22 @@ async function _sbDeleteEmployee(sbid, empId) {
 async function _sbSaveEvent(empId, mk, ev) {
   if (_DEV_MODE) { return; }
   const payload = { emp_id: empId, month_key: mk, data: ev, house_id: currentHouseId };
-  if (ev._sbid) await supa.from('events').update(payload).eq('id', ev._sbid);
+  if (ev._sbid) await supa.from('events').update(payload).eq('id', ev._sbid).eq('house_id', currentHouseId);
   else { const { data } = await supa.from('events').insert(payload).select(); if (data?.[0]) ev._sbid = data[0].id; }
 }
-async function _sbDeleteEvent(sbid) { if (sbid) await supa.from('events').delete().eq('id', sbid); }
+async function _sbDeleteEvent(sbid) { if (sbid) await supa.from('events').delete().eq('id', sbid).eq('house_id', currentHouseId); }
 async function _sbSaveAdj(empId, mk, adj) {
   if (_DEV_MODE) { return; }
   const payload = { emp_id: empId, month_key: mk, data: adj, house_id: currentHouseId };
-  if (adj._sbid) await supa.from('adjustments').update(payload).eq('id', adj._sbid);
+  if (adj._sbid) await supa.from('adjustments').update(payload).eq('id', adj._sbid).eq('house_id', currentHouseId);
   else { const { data } = await supa.from('adjustments').insert(payload).select(); if (data?.[0]) adj._sbid = data[0].id; }
 }
-async function _sbDeleteAdj(sbid) { if (sbid) await supa.from('adjustments').delete().eq('id', sbid); }
+async function _sbDeleteAdj(sbid) { if (sbid) await supa.from('adjustments').delete().eq('id', sbid).eq('house_id', currentHouseId); }
 async function _sbSavePayment(pay) {
   if (_DEV_MODE) { return; }
   const payload = { emp_id: String(pay.empId), month_key: pay.monthKey, data: pay, house_id: currentHouseId };
   if (pay._sbid) {
-    await supa.from('payments').update(payload).eq('id', pay._sbid);
+    await supa.from('payments').update(payload).eq('id', pay._sbid).eq('house_id', currentHouseId);
   } else {
     const { data, error } = await supa.from('payments').insert(payload).select();
     if (error) throw new Error(error.message);
@@ -1403,7 +1417,7 @@ function openEvM(eid, dateStr, evId = null) {
   document.getElementById('evdate').value = dateStr;
   document.getElementById('evid').value   = evId || '';
   const parts = dateStr.split('-'), dt = new Date(+parts[0],+parts[1]-1,+parts[2]), hn = holName(dateStr);
-  document.getElementById('evinfo').innerHTML = `<strong>${DF[jd(dt.getDay())]}, ${parts[2]}/${parts[1]}/${parts[0]}</strong> \u2014 ${emp.name}` + (hn?` <span class="badge" style="background:rgba(196,151,58,.15);color:var(--warn);">&#127881; ${hn}</span>`:'');
+  document.getElementById('evinfo').innerHTML = `<strong>${DF[jd(dt.getDay())]}, ${parts[2]}/${parts[1]}/${parts[0]}</strong> \u2014 ${escapeHTML(emp.name)}` + (hn?` <span class="badge" style="background:rgba(196,151,58,.15);color:var(--warn);">&#127881; ${hn}</span>`:'');
   const banner = document.getElementById('evhb');
   if (hn) { banner.innerHTML=`&#127881; <strong>${hn}</strong> \u2014 Se trabalhou neste feriado, registre a di\u00e1ria avulsa.`; banner.classList.remove('hidden'); } else banner.classList.add('hidden');
   const sel = document.getElementById('evtype'); sel.innerHTML='';
@@ -1486,7 +1500,7 @@ function openReg() { renderRL(); document.getElementById('mod-reg').classList.re
 function renderRL() {
   const l=document.getElementById('regl');
   if (!db.regional?.length) { l.innerHTML='<p class="tip">Nenhum feriado regional cadastrado.</p>'; return; }
-  l.innerHTML=db.regional.map(h=>`<div class="fi" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);"><span style="font-size:13px;">${fd(h.date)} \u2014 ${h.name}</span><button onclick="rmReg('${h.date}')" class="write-only" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:14px;">\xd7</button></div>`).join('');
+  l.innerHTML=db.regional.map(h=>`<div class="fi" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);"><span style="font-size:13px;">${fd(h.date)} \u2014 ${escapeHTML(h.name)}</span><button onclick="rmReg('${h.date}')" class="write-only" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:14px;">\xd7</button></div>`).join('');
 }
 async function addReg() {
   if (!canWrite()) return;
@@ -1693,7 +1707,7 @@ const MOTIVOS_LABEL = { pedido:'Pedido de demiss\u00e3o', semjusta:'Demiss\u00e3
 function openRescMode(eid, ry, rm) {
   if (!canWrite()) return;
   const emp=db.employees.find(e=>e.id===eid); if(!emp) return;
-  document.getElementById('resc-emp').innerHTML=`<option value="${eid}">${emp.name}</option>`;
+  document.getElementById('resc-emp').innerHTML=`<option value="${eid}">${escapeHTML(emp.name)}</option>`;
   document.getElementById('resc-sal').value=emp.salary||'';
   document.getElementById('resc-admissao').value=emp.admissao||'';
   document.getElementById('resc-data').value=tod();
@@ -1833,7 +1847,7 @@ function openPayM(eid, ry, rm) {
   const c=calc(eid,ry,rm), md=document.getElementById('mod-pay');
   md.dataset.eid=eid; md.dataset.ry=ry; md.dataset.rm=rm;
   document.getElementById('paybody').innerHTML=[
-    `<div class="fi" style="gap:12px;margin-bottom:16px;">${avt(c.emp.name,44)}<div><div style="font-size:16px;font-weight:400;word-break:break-word;">${c.emp.name}</div><div class="tip">${c.emp.role} \u00b7 compet\u00eancia ${MP[rm]} ${ry}</div></div></div>`,
+    `<div class="fi" style="gap:12px;margin-bottom:16px;">${avt(c.emp.name,44)}<div><div style="font-size:16px;font-weight:400;word-break:break-word;">${escapeHTML(c.emp.name)}</div><div class="tip">${escapeHTML(c.emp.role)} \u00b7 compet\u00eancia ${MP[rm]} ${ry}</div></div></div>`,
     memoHTML(c),
     '<div class="div"></div>',
     `<div class="g2" style="gap:12px;margin-bottom:14px;"><div class="field"><label>Data do pagamento</label><input id="pdate" type="date" value="${tod()}"></div><div class="field"><label>Forma</label><select id="pmeth"><option>PIX</option><option>Transfer\u00eancia</option><option>Dinheiro</option><option>Dep\u00f3sito</option><option>Quinzena (1ª parcela)</option><option>Quinzena (2ª parcela)</option></select></div></div>`,
@@ -1943,7 +1957,7 @@ function openBaixa(id) {
   if (!canWrite()) return;
   const emp=db.employees.find(e=>e.id===id); if(!emp)return;
   document.getElementById('baixa-eid').value=id;
-  document.getElementById('baixa-emp-info').innerHTML=`<strong>${emp.name}</strong> &nbsp;&middot;&nbsp; ${emp.role}<br><span class="tip">Sal\u00e1rio base: R$ ${fm(emp.salary)}</span>`;
+  document.getElementById('baixa-emp-info').innerHTML=`<strong>${escapeHTML(emp.name)}</strong> &nbsp;&middot;&nbsp; ${escapeHTML(emp.role)}<br><span class="tip">Sal\u00e1rio base: R$ ${fm(emp.salary)}</span>`;
   document.getElementById('baixa-motivo').value='semjusta';
   document.getElementById('baixa-admissao').value=emp.admissao||'';
   document.getElementById('baixa-data').value=tod();
@@ -1990,10 +2004,10 @@ function gerarTemplate() {
   ({aviso_previo:gerarAvisoPrevio,trct:gerarTRCT,quitacao:gerarQuitacao,acordo:gerarAcordo})[tipo]?.(emp,adm,data,empregador);
 }
 function docWindow(titulo,corpo){const w=window.open('','_blank','width:750,height:900');w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Cormorant:wght@300;400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet"><title>${titulo}</title><style>body{font-family:'Jost',sans-serif;font-weight:300;color:#2A2520;max-width:680px;margin:40px auto;padding:0 32px;line-height:1.7;}h1{font-family:'Cormorant',serif;font-weight:400;font-size:24px;text-align:center;}p{margin-bottom:12px;font-size:13px;text-align:justify;}.campo{display:inline-block;border-bottom:1px solid #2A2520;min-width:120px;text-align:center;font-weight:500;}.sig{display:grid;grid-template-columns:1fr 1fr;gap:60px;margin-top:60px;}.sig div{border-top:1px solid #2A2520;padding-top:8px;font-size:11px;text-align:center;}@media print{button{display:none!important;}}</style></head><body>${corpo}<div style="font-size:10px;color:#B8B0A4;text-align:center;margin-top:32px;">Atrium &middot; ${new Date().toLocaleDateString('pt-BR')}</div><br><div style="display:flex;gap:10px;align-items:center;justify-content:center;margin-top:16px;flex-wrap:wrap;"><button onclick="window.close()" style="padding:10px 20px;background:transparent;color:#9C9087;border:1px solid #E8E3DC;border-radius:8px;cursor:pointer;font-family:'Jost',sans-serif;font-weight:300;font-size:12px;">&#8592; Fechar janela</button><button onclick="window.print()" style="padding:10px 24px;background:#2A2520;color:#fff;border:none;border-radius:8px;cursor:pointer;">Imprimir / Salvar PDF</button></div></body></html>`);w.document.close();}
-function gerarAvisoPrevio(emp,adm,data,e){docWindow('Aviso Pr\u00e9vio',`<h1>AVISO PR\u00c9VIO</h1><p style="text-align:center;font-size:12px;color:#9C9087;">Lei Complementar n\u00ba 150/2015</p><br><p>Eu, <span class="campo">${e}</span>, empregador(a), comunico ao(a) <span class="campo">${emp.name}</span>, admitido(a) em <span class="campo">${fd(adm)}</span>, fun\u00e7\u00e3o <span class="campo">${emp.role}</span>, a rescis\u00e3o do contrato com in\u00edcio em <span class="campo">${fd(data)}</span>.</p><p>Por ser express\u00e3o da verdade, firmamos o presente.</p><p style="text-align:center;"><span class="campo">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, <span class="campo">${fd(data)}</span></p><div class="sig"><div>${e}<br><span style="color:#9C9087;font-size:10px;">Empregador(a)</span></div><div>${emp.name}<br><span style="color:#9C9087;font-size:10px;">Empregado(a) \u2014 ciente</span></div></div>`);}
-function gerarTRCT(emp,adm,data,e){docWindow('TRCT',`<h1>TERMO DE RESCIS\u00c3O DO CONTRATO DE TRABALHO</h1><p style="text-align:center;font-size:12px;color:#9C9087;">Lei Complementar n\u00ba 150/2015 \u2014 Empregado Dom\u00e9stico</p><br><p><strong>EMPREGADOR(A):</strong> <span class="campo">${e}</span></p><p><strong>EMPREGADO(A):</strong> <span class="campo">${emp.name}</span> &nbsp;&nbsp; <strong>FUN\u00c7\u00c3O:</strong> <span class="campo">${emp.role}</span></p><p><strong>SAL\u00c1RIO:</strong> <span class="campo">R$ ${fm(emp.salary)}</span> &nbsp;&nbsp; <strong>ADMISS\u00c3O:</strong> <span class="campo">${fd(adm)}</span> &nbsp;&nbsp; <strong>DESLIGAMENTO:</strong> <span class="campo">${fd(data)}</span></p><p>As partes declaram que o contrato de trabalho dom\u00e9stico fica rescindido nesta data, tendo sido pagas todas as verbas trabalhistas devidas.</p><div class="sig"><div>${e}<br><span style="color:#9C9087;font-size:10px;">Empregador(a)</span></div><div>${emp.name}<br><span style="color:#9C9087;font-size:10px;">Empregado(a)</span></div></div>`);}
-function gerarQuitacao(emp,adm,data,e){docWindow('Recibo de Quita\u00e7\u00e3o',`<h1>RECIBO DE QUITA\u00c7\u00c3O DE VERBAS RESCIS\u00d3RIAS</h1><p style="text-align:center;font-size:12px;color:#9C9087;">Lei Complementar n\u00ba 150/2015</p><br><p>Eu, <span class="campo">${emp.name}</span>, declaro ter recebido de <span class="campo">${e}</span> as verbas rescis\u00f3rias devidas, dando plena quita\u00e7\u00e3o para nada mais reclamar.</p><table style="width:100%;border-collapse:collapse;margin:16px 0;"><tr style="background:#F0EBE0;"><th style="padding:8px;text-align:left;font-size:11px;text-transform:uppercase;color:#9C9087;">Verba</th><th style="padding:8px;text-align:right;font-size:11px;text-transform:uppercase;color:#9C9087;">Valor</th></tr><tr><td style="padding:8px;font-size:13px;border-bottom:1px solid #E8E3DC;">Saldo de sal\u00e1rio</td><td style="padding:8px;text-align:right;">R$ ___________</td></tr><tr><td style="padding:8px;font-size:13px;border-bottom:1px solid #E8E3DC;">13\u00ba proporcional</td><td style="padding:8px;text-align:right;">R$ ___________</td></tr><tr><td style="padding:8px;font-size:13px;border-bottom:1px solid #E8E3DC;">F\u00e9rias proporcionais + 1/3</td><td style="padding:8px;text-align:right;">R$ ___________</td></tr><tr><td style="padding:8px;font-size:13px;border-bottom:2px solid #2A2520;">Multa FGTS (se aplic\u00e1vel)</td><td style="padding:8px;text-align:right;">R$ ___________</td></tr><tr><td style="padding:10px 8px;font-size:14px;font-weight:600;">TOTAL L\u00cdQUIDO</td><td style="padding:10px 8px;text-align:right;font-family:'Cormorant',serif;font-size:20px;color:#8B7355;">R$ ___________</td></tr></table><div class="sig"><div>${e}<br><span style="color:#9C9087;font-size:10px;">Empregador(a)</span></div><div>${emp.name}<br><span style="color:#9C9087;font-size:10px;">Empregado(a)</span></div></div>`);}
-function gerarAcordo(emp,adm,data,e){docWindow('Acordo M\u00fatuo',`<h1>TERMO DE ACORDO M\u00daTUO DE RESCIS\u00c3O</h1><p style="text-align:center;font-size:12px;color:#9C9087;">Artigo 484-A da CLT</p><br><p>De um lado, <span class="campo">${e}</span>, empregador(a), e de outro, <span class="campo">${emp.name}</span>, fun\u00e7\u00e3o <span class="campo">${emp.role}</span>, sal\u00e1rio <span class="campo">R$ ${fm(emp.salary)}</span>, admitido(a) em <span class="campo">${fd(adm)}</span>;</p><p>Resolvem, de comum acordo, rescindir o contrato com base no art. 484-A da CLT a partir de <span class="campo">${fd(data)}</span>, fazendo jus a 50% do aviso pr\u00e9vio e 50% da multa FGTS.</p><div class="sig"><div>${e}<br><span style="color:#9C9087;font-size:10px;">Empregador(a)</span></div><div>${emp.name}<br><span style="color:#9C9087;font-size:10px;">Empregado(a)</span></div></div>`);}
+function gerarAvisoPrevio(emp,adm,data,e){docWindow('Aviso Pr\u00e9vio',`<h1>AVISO PR\u00c9VIO</h1><p style="text-align:center;font-size:12px;color:#9C9087;">Lei Complementar n\u00ba 150/2015</p><br><p>Eu, <span class="campo">${e}</span>, empregador(a), comunico ao(a) <span class="campo">${escapeHTML(emp.name)}</span>, admitido(a) em <span class="campo">${fd(adm)}</span>, fun\u00e7\u00e3o <span class="campo">${escapeHTML(emp.role)}</span>, a rescis\u00e3o do contrato com in\u00edcio em <span class="campo">${fd(data)}</span>.</p><p>Por ser express\u00e3o da verdade, firmamos o presente.</p><p style="text-align:center;"><span class="campo">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, <span class="campo">${fd(data)}</span></p><div class="sig"><div>${e}<br><span style="color:#9C9087;font-size:10px;">Empregador(a)</span></div><div>${escapeHTML(emp.name)}<br><span style="color:#9C9087;font-size:10px;">Empregado(a) \u2014 ciente</span></div></div>`);}
+function gerarTRCT(emp,adm,data,e){docWindow('TRCT',`<h1>TERMO DE RESCIS\u00c3O DO CONTRATO DE TRABALHO</h1><p style="text-align:center;font-size:12px;color:#9C9087;">Lei Complementar n\u00ba 150/2015 \u2014 Empregado Dom\u00e9stico</p><br><p><strong>EMPREGADOR(A):</strong> <span class="campo">${e}</span></p><p><strong>EMPREGADO(A):</strong> <span class="campo">${escapeHTML(emp.name)}</span> &nbsp;&nbsp; <strong>FUN\u00c7\u00c3O:</strong> <span class="campo">${escapeHTML(emp.role)}</span></p><p><strong>SAL\u00c1RIO:</strong> <span class="campo">R$ ${fm(emp.salary)}</span> &nbsp;&nbsp; <strong>ADMISS\u00c3O:</strong> <span class="campo">${fd(adm)}</span> &nbsp;&nbsp; <strong>DESLIGAMENTO:</strong> <span class="campo">${fd(data)}</span></p><p>As partes declaram que o contrato de trabalho dom\u00e9stico fica rescindido nesta data, tendo sido pagas todas as verbas trabalhistas devidas.</p><div class="sig"><div>${e}<br><span style="color:#9C9087;font-size:10px;">Empregador(a)</span></div><div>${escapeHTML(emp.name)}<br><span style="color:#9C9087;font-size:10px;">Empregado(a)</span></div></div>`);}
+function gerarQuitacao(emp,adm,data,e){docWindow('Recibo de Quita\u00e7\u00e3o',`<h1>RECIBO DE QUITA\u00c7\u00c3O DE VERBAS RESCIS\u00d3RIAS</h1><p style="text-align:center;font-size:12px;color:#9C9087;">Lei Complementar n\u00ba 150/2015</p><br><p>Eu, <span class="campo">${escapeHTML(emp.name)}</span>, declaro ter recebido de <span class="campo">${e}</span> as verbas rescis\u00f3rias devidas, dando plena quita\u00e7\u00e3o para nada mais reclamar.</p><table style="width:100%;border-collapse:collapse;margin:16px 0;"><tr style="background:#F0EBE0;"><th style="padding:8px;text-align:left;font-size:11px;text-transform:uppercase;color:#9C9087;">Verba</th><th style="padding:8px;text-align:right;font-size:11px;text-transform:uppercase;color:#9C9087;">Valor</th></tr><tr><td style="padding:8px;font-size:13px;border-bottom:1px solid #E8E3DC;">Saldo de sal\u00e1rio</td><td style="padding:8px;text-align:right;">R$ ___________</td></tr><tr><td style="padding:8px;font-size:13px;border-bottom:1px solid #E8E3DC;">13\u00ba proporcional</td><td style="padding:8px;text-align:right;">R$ ___________</td></tr><tr><td style="padding:8px;font-size:13px;border-bottom:1px solid #E8E3DC;">F\u00e9rias proporcionais + 1/3</td><td style="padding:8px;text-align:right;">R$ ___________</td></tr><tr><td style="padding:8px;font-size:13px;border-bottom:2px solid #2A2520;">Multa FGTS (se aplic\u00e1vel)</td><td style="padding:8px;text-align:right;">R$ ___________</td></tr><tr><td style="padding:10px 8px;font-size:14px;font-weight:600;">TOTAL L\u00cdQUIDO</td><td style="padding:10px 8px;text-align:right;font-family:'Cormorant',serif;font-size:20px;color:#8B7355;">R$ ___________</td></tr></table><div class="sig"><div>${e}<br><span style="color:#9C9087;font-size:10px;">Empregador(a)</span></div><div>${escapeHTML(emp.name)}<br><span style="color:#9C9087;font-size:10px;">Empregado(a)</span></div></div>`);}
+function gerarAcordo(emp,adm,data,e){docWindow('Acordo M\u00fatuo',`<h1>TERMO DE ACORDO M\u00daTUO DE RESCIS\u00c3O</h1><p style="text-align:center;font-size:12px;color:#9C9087;">Artigo 484-A da CLT</p><br><p>De um lado, <span class="campo">${e}</span>, empregador(a), e de outro, <span class="campo">${escapeHTML(emp.name)}</span>, fun\u00e7\u00e3o <span class="campo">${escapeHTML(emp.role)}</span>, sal\u00e1rio <span class="campo">R$ ${fm(emp.salary)}</span>, admitido(a) em <span class="campo">${fd(adm)}</span>;</p><p>Resolvem, de comum acordo, rescindir o contrato com base no art. 484-A da CLT a partir de <span class="campo">${fd(data)}</span>, fazendo jus a 50% do aviso pr\u00e9vio e 50% da multa FGTS.</p><div class="sig"><div>${e}<br><span style="color:#9C9087;font-size:10px;">Empregador(a)</span></div><div>${escapeHTML(emp.name)}<br><span style="color:#9C9087;font-size:10px;">Empregado(a)</span></div></div>`);}
 
 // ── [D] RENDER DASHBOARD ──────────────────────────────────────
 function renderDash() {
@@ -2011,7 +2025,7 @@ function renderDash() {
   calcs.forEach(c=>{
     const isPaid=!!c.payment, hw=c.holWarns.length>0;
     out.push(`<div class="card" style="border:1px solid ${isPaid?'rgba(138,155,138,.4)':hw?'rgba(196,151,58,.4)':'var(--border)'};">`);
-    out.push(`<div class="fb" style="margin-bottom:14px;"><div class="fi" style="gap:12px;">${avt(c.emp.name,44)}<div><div style="font-size:15px;font-weight:400;word-break:break-word;">${c.emp.name}</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">${c.emp.role}</div></div></div><div style="text-align:right;flex-shrink:0;"><div class="money" style="font-size:24px;color:var(--accent);">R$ ${fm(c.total)}</div><div style="font-size:10px;color:var(--muted);">sal. R$ ${fm(c.netSal)} + VT R$ ${fm(c.vtNet)}</div></div></div>`);
+    out.push(`<div class="fb" style="margin-bottom:14px;"><div class="fi" style="gap:12px;">${avt(c.emp.name,44)}<div><div style="font-size:15px;font-weight:400;word-break:break-word;">${escapeHTML(c.emp.name)}</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">${escapeHTML(c.emp.role)}</div></div></div><div style="text-align:right;flex-shrink:0;"><div class="money" style="font-size:24px;color:var(--accent);">R$ ${fm(c.total)}</div><div style="font-size:10px;color:var(--muted);">sal. R$ ${fm(c.netSal)} + VT R$ ${fm(c.vtNet)}</div></div></div>`);
     if(hw)out.push(`<div class="alert aw" style="margin-bottom:12px;"><span style="font-size:11px;color:var(--warn);">&#9888;&#65039; ${c.holWarns.length} feriado(s) sem di\u00e1ria &nbsp;<button onclick="goFech('${c.emp.id}')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;text-decoration:underline;">ver detalhes</button></span></div>`);
     out.push('<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">');
     [['Base','R$ '+fm(c.salBase),'var(--text)'],['Di\u00e1rias','R$ '+fm(c.recTot+c.avTot),'var(--sage)'],['Descontos','R$ '+fm(c.deds+c.inssAmt),'var(--danger)'],[MP[c.vtM].slice(0,3)+' VT','R$ '+fm(c.vtNet),'var(--blue)']].forEach(k=>out.push(`<div style="background:var(--cream);border-radius:9px;padding:10px;text-align:center;"><div class="lbl" style="margin-bottom:4px;">${k[0]}</div><div class="money" style="font-size:14px;color:${k[2]};">${k[1]}</div></div>`));
@@ -2020,7 +2034,7 @@ function renderDash() {
     out.push('</div></div>');
   });
   out.push(`<div class="card" style="margin-top:8px;"><p class="lbl" style="margin-bottom:14px;">Consolidado \u2014 ${wl}</p><div class="mt2"><div class="mr mrh"><span>Funcion\u00e1rio</span><span>Sal\u00e1rio l\u00edquido</span><span style="text-align:right;">VT (${MP[calcs[0].vtM].slice(0,3)}) \u00b7 Envelope</span></div>`);
-  calcs.forEach(c=>out.push(`<div class="mr"><span style="word-break:break-word;">${c.emp.name}</span><span class="money">R$ ${fm(c.finalNetSal)}</span><span class="money" style="text-align:right;">R$ ${fm(c.vtNet)} \u00b7 <strong>R$ ${fm(c.total)}</strong></span></div>`));
+  calcs.forEach(c=>out.push(`<div class="mr"><span style="word-break:break-word;">${escapeHTML(c.emp.name)}</span><span class="money">R$ ${fm(c.finalNetSal)}</span><span class="money" style="text-align:right;">R$ ${fm(c.vtNet)} \u00b7 <strong>R$ ${fm(c.total)}</strong></span></div>`));
   out.push(`<div class="mr" style="background:var(--cream);font-weight:500;"><span>TOTAL</span><span class="money">R$ ${fm(totSal)}</span><span class="money" style="text-align:right;">R$ ${fm(totVT)} \u00b7 <strong>R$ ${fm(totAll)}</strong></span></div></div></div>`);
   document.getElementById('tab-dash').innerHTML=out.join('');
 }
@@ -2043,7 +2057,7 @@ function renderFech() {
   const recByD={};c.recs.forEach(r=>{if(!recByD[r.iso])recByD[r.iso]=[];recByD[r.iso].push(r);});
   const warnD={};c.holWarns.forEach(w=>{warnD[w.iso]=1;});
   const canAct=canWrite()&&!isPaid;
-  const empHeader=`<div style="background:var(--text);border-radius:14px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">${avt(emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-family:'Cormorant',serif;font-size:22px;font-weight:300;color:#fff;word-break:break-word;">${emp.name}</div><div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:2px;">${emp.role}${emp.admissao?' &nbsp;&middot;&nbsp; Adm. '+fd(emp.admissao):''}${isPaid?' &nbsp;&middot;&nbsp; <span style="color:var(--sage);">&#10003; Pago</span>':' &nbsp;&middot;&nbsp; <span style="color:var(--warn);">Pendente</span>'}</div></div><div style="margin-left:auto;text-align:right;flex-shrink:0;"><div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;">Compet\u00eancia</div><div style="font-family:'Cormorant',serif;font-size:20px;color:var(--a2);">${wl}</div><div style="font-size:11px;color:rgba(255,255,255,.4);">Pgto em ${pl}</div></div></div>`;
+  const empHeader=`<div style="background:var(--text);border-radius:14px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">${avt(emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-family:'Cormorant',serif;font-size:22px;font-weight:300;color:#fff;word-break:break-word;">${escapeHTML(emp.name)}</div><div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:2px;">${escapeHTML(emp.role)}${emp.admissao?' &nbsp;&middot;&nbsp; Adm. '+fd(emp.admissao):''}${isPaid?' &nbsp;&middot;&nbsp; <span style="color:var(--sage);">&#10003; Pago</span>':' &nbsp;&middot;&nbsp; <span style="color:var(--warn);">Pendente</span>'}</div></div><div style="margin-left:auto;text-align:right;flex-shrink:0;"><div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;">Compet\u00eancia</div><div style="font-family:'Cormorant',serif;font-size:20px;color:var(--a2);">${wl}</div><div style="font-size:11px;color:rgba(255,255,255,.4);">Pgto em ${pl}</div></div></div>`;
   const calParts=['<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:4px;"><span style="font-size:13px;font-weight:400;">'+wl+'</span><div class="fi" style="gap:8px;"><button class="btn btn-gh btn-sm" onclick="openReg()">&#128467; Feriados regionais</button>'+(canAct?`<button class="btn btn-gh btn-sm" onclick="openEvM('${emp.id}','${td}')">+ Di\u00e1ria avulsa</button>`:'')+`</div></div><div class="cg">`];
   DP.forEach(d=>calParts.push(`<div class="ch">${d}</div>`));
   for(let z=0;z<fdow;z++)calParts.push('<div class="cd ce"></div>');
@@ -2154,7 +2168,7 @@ function renderEmps() {
   function empCard(emp,inactive){
     const c=[];
     c.push(`<div class="card" style="border:1px solid ${inactive?'rgba(184,92,92,.2)':'var(--border)'};">`);
-    c.push(`<div class="fb" style="margin-bottom:14px;"><div class="fi" style="gap:12px;min-width:0;">${avt(emp.name,48)}<div style="min-width:0;"><div style="font-size:16px;font-weight:400;word-break:break-word;">${emp.name}</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">${emp.role} \u00b7 ${emp.contract}${emp.admissao?' \u00b7 Adm. '+fd(emp.admissao):''}</div>`);
+    c.push(`<div class="fb" style="margin-bottom:14px;"><div class="fi" style="gap:12px;min-width:0;">${avt(emp.name,48)}<div style="min-width:0;"><div style="font-size:16px;font-weight:400;word-break:break-word;">${escapeHTML(emp.name)}</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">${escapeHTML(emp.role)} \u00b7 ${emp.contract}${emp.admissao?' \u00b7 Adm. '+fd(emp.admissao):''}</div>`);
     if(inactive)c.push(`<div style="margin-top:4px;"><span class="badge" style="background:rgba(184,92,92,.1);color:var(--danger);">&#128683; Desligado</span>${emp.dataBaixa?' <span style="font-size:11px;color:var(--muted);">em '+fd(emp.dataBaixa)+'</span>':''}${emp.motivoBaixa?' <span style="font-size:11px;color:var(--muted);">\u2014 '+(MOTIVOS[emp.motivoBaixa]||emp.motivoBaixa)+'</span>':''}</div>`);
     c.push('</div></div><div class="fi" style="gap:8px;flex-shrink:0;">');
     if(inactive){
@@ -2172,7 +2186,7 @@ function renderEmps() {
     c.push('</div></div>');
     if(emp.recurring?.length){c.push('<div style="margin-bottom:12px;"><div class="lbl" style="margin-bottom:8px;">Di\u00e1rias recorrentes</div>');emp.recurring.forEach(r=>c.push(`<div class="fb" style="padding:5px 0;border-bottom:1px solid var(--border);"><span style="font-size:12px;">${DP[r.dow]} \u2014 ${r.desc||''}${r.countHolidays?' <span class="badge" style="background:rgba(196,151,58,.12);color:var(--warn);">&#127881; conta feriados</span>':''}</span><span class="money" style="font-size:14px;color:var(--sage);">R$ ${fm(r.value)}</span></div>`));c.push('</div>');}
     if(emp.extraTypes?.length){c.push('<div><div class="lbl" style="margin-bottom:8px;">Tipos de di\u00e1ria avulsa</div><div class="fi" style="gap:8px;flex-wrap:wrap;">');emp.extraTypes.forEach(t=>c.push(`<span style="padding:4px 10px;border-radius:6px;font-size:11px;background:var(--cream);color:var(--muted);">${t.name} \u00b7 R$ ${fm(t.value)}</span>`));c.push('</div></div>');}
-    if(emp.notes)c.push(`<div style="margin-top:12px;padding:10px;background:var(--cream);border-radius:8px;font-size:12px;color:var(--muted);">${emp.notes}</div>`);
+    if(emp.notes)c.push(`<div style="margin-top:12px;padding:10px;background:var(--cream);border-radius:8px;font-size:12px;color:var(--muted);">${escapeHTML(emp.notes || "")}</div>`);
     c.push('</div>');
     return c.join('');
   }
@@ -2194,7 +2208,7 @@ function renderHist() {
     const [ry,rm]=[+k.split('-')[0],+k.split('-')[1]-1], gt=byM[k].reduce((a,p)=>a+p.total,0);
     out.push(`<div style="margin-bottom:28px;"><div class="fb" style="margin-bottom:12px;"><div style="font-family:'Cormorant',serif;font-size:20px;font-weight:300;">${MP[rm]} ${ry}</div><div class="money" style="font-size:20px;color:var(--accent);">R$ ${fm(gt)}</div></div>`);
     byM[k].forEach(p=>{
-      out.push(`<div class="card" style="margin-bottom:8px;"><div class="fb" style="margin-bottom:10px;"><div class="fi" style="gap:12px;min-width:0;">${avt(p.empName,40)}<div style="min-width:0;"><div style="font-size:14px;font-weight:400;word-break:break-word;">${p.empName}</div><div style="font-size:11px;color:var(--muted);">${p.empRole}</div></div></div><div style="text-align:right;flex-shrink:0;"><div class="money" style="font-size:22px;color:var(--accent);">R$ ${fm(p.total)}</div><div style="font-size:10px;color:var(--muted);">sal R$ ${fm(p.netSal)} + VT R$ ${fm(p.vtNet)}</div></div></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;">`);
+      out.push(`<div class="card" style="margin-bottom:8px;"><div class="fb" style="margin-bottom:10px;"><div class="fi" style="gap:12px;min-width:0;">${avt(p.empName,40)}<div style="min-width:0;"><div style="font-size:14px;font-weight:400;word-break:break-word;">${escapeHTML(p.empName)}</div><div style="font-size:11px;color:var(--muted);">${p.empRole}</div></div></div><div style="text-align:right;flex-shrink:0;"><div class="money" style="font-size:22px;color:var(--accent);">R$ ${fm(p.total)}</div><div style="font-size:10px;color:var(--muted);">sal R$ ${fm(p.netSal)} + VT R$ ${fm(p.vtNet)}</div></div></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;">`);
       [['Base','R$ '+fm(p.salBase),'var(--text)'],['Di\u00e1rias','R$ '+fm(p.recTot+p.avTot),'var(--sage)'],['Descontos','R$ '+fm(p.deds+p.inssAmt),'var(--danger)'],['VT','R$ '+fm(p.vtNet),'var(--blue)']].forEach(k2=>out.push(`<div style="background:var(--cream);border-radius:8px;padding:8px;text-align:center;"><div class="lbl">${k2[0]}</div><div class="money" style="font-size:13px;margin-top:3px;color:${k2[2]};">${k2[1]}</div></div>`));
       out.push(`</div><div class="fb"><span class="tip">Pago em ${fd(p.paidDate)} \u00b7 ${p.method}${p.notes?' \u00b7 '+p.notes:''}</span><button class="btn btn-gh btn-sm" onclick="printSlip('${p.id}')">&#128216; Recibo</button></div></div>`);
     });
@@ -2221,16 +2235,16 @@ function renderRel() {
   [{l:'Total sal\u00e1rios',v:'R$ '+fm(totSal),c:'var(--sage)'},{l:'Total VT',v:'R$ '+fm(totVT),c:'var(--blue)'},{l:'Envelope total',v:'R$ '+fm(totAll),c:'var(--accent)'},{l:'Total INSS',v:'R$ '+fm(totInss),c:'var(--muted)'}].forEach(k=>out.push(`<div class="card"><div class="lbl" style="margin-bottom:8px;">${k.l}</div><div class="money" style="font-size:20px;color:${k.c};">${k.v}</div></div>`));
   out.push('</div>');
   out.push(`<div class="card" style="margin-bottom:16px;"><p style="font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;">Resumo Consolidado \u2014 ${refLabel}</p><div class="mt2"><div class="mr mrh" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr;"><span>Funcion\u00e1rio</span><span style="text-align:right;">Base</span><span style="text-align:right;">Di\u00e1rias</span><span style="text-align:right;">Descontos</span><span style="text-align:right;">Sal. L\u00edq.</span><span style="text-align:right;">VT</span><span style="text-align:right;">Envelope</span></div>`);
-  calcs.forEach(c=>{const isPaid=!!c.payment;out.push(`<div class="mr" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr;"><span style="word-break:break-word;">${c.emp.name}${isPaid?' <span class="badge" style="background:rgba(138,155,138,.15);color:var(--sage);">&#10003;</span>':''}</span><span class="money" style="text-align:right;">R$ ${fm(c.salBase)}</span><span class="money" style="text-align:right;color:var(--sage);">R$ ${fm(c.recTot+c.avTot)}</span><span class="money" style="text-align:right;color:var(--danger);">R$ ${fm(c.deds+c.inssAmt)}</span><span class="money" style="text-align:right;font-weight:500;">R$ ${fm(c.netSal)}</span><span class="money" style="text-align:right;color:var(--blue);">R$ ${fm(c.vtNet)}</span><span class="money" style="text-align:right;color:var(--accent);font-weight:500;">R$ ${fm(c.total)}</span></div>`);});
+  calcs.forEach(c=>{const isPaid=!!c.payment;out.push(`<div class="mr" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr;"><span style="word-break:break-word;">${escapeHTML(c.emp.name)}${isPaid?' <span class="badge" style="background:rgba(138,155,138,.15);color:var(--sage);">&#10003;</span>':''}</span><span class="money" style="text-align:right;">R$ ${fm(c.salBase)}</span><span class="money" style="text-align:right;color:var(--sage);">R$ ${fm(c.recTot+c.avTot)}</span><span class="money" style="text-align:right;color:var(--danger);">R$ ${fm(c.deds+c.inssAmt)}</span><span class="money" style="text-align:right;font-weight:500;">R$ ${fm(c.netSal)}</span><span class="money" style="text-align:right;color:var(--blue);">R$ ${fm(c.vtNet)}</span><span class="money" style="text-align:right;color:var(--accent);font-weight:500;">R$ ${fm(c.total)}</span></div>`);});
   out.push(`<div class="mr" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr;background:var(--cream);font-weight:500;"><span>TOTAL</span><span class="money" style="text-align:right;">R$ ${fm(calcs.reduce((a,c)=>a+c.salBase,0))}</span><span class="money" style="text-align:right;color:var(--sage);">R$ ${fm(calcs.reduce((a,c)=>a+c.recTot+c.avTot,0))}</span><span class="money" style="text-align:right;color:var(--danger);">R$ ${fm(calcs.reduce((a,c)=>a+c.deds+c.inssAmt,0))}</span><span class="money" style="text-align:right;font-weight:600;">R$ ${fm(totSal)}</span><span class="money" style="text-align:right;color:var(--blue);">R$ ${fm(totVT)}</span><span class="money" style="text-align:right;color:var(--accent);font-weight:600;font-size:15px;">R$ ${fm(totAll)}</span></div></div></div>`);
-  calcs.forEach(c=>{out.push(`<div class="card" style="margin-bottom:16px;"><div class="fi" style="gap:12px;margin-bottom:16px;">${avt(c.emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-size:15px;font-weight:400;word-break:break-word;">${c.emp.name}</div><div style="font-size:11px;color:var(--muted);">${c.emp.role}</div></div><div style="margin-left:auto;text-align:right;flex-shrink:0;"><div class="money" style="font-size:24px;color:var(--accent);">R$ ${fm(c.total)}</div>${c.payment?`<div style="font-size:11px;color:var(--sage);">&#10003; Pago em ${fd(c.payment.paidDate)}</div>`:`<div style="font-size:11px;color:var(--warn);">&#9679; Pendente</div>`}</div></div>${memoHTML(c)}</div>`);});
+  calcs.forEach(c=>{out.push(`<div class="card" style="margin-bottom:16px;"><div class="fi" style="gap:12px;margin-bottom:16px;">${avt(c.emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-size:15px;font-weight:400;word-break:break-word;">${escapeHTML(c.emp.name)}</div><div style="font-size:11px;color:var(--muted);">${escapeHTML(c.emp.role)}</div></div><div style="margin-left:auto;text-align:right;flex-shrink:0;"><div class="money" style="font-size:24px;color:var(--accent);">R$ ${fm(c.total)}</div>${c.payment?`<div style="font-size:11px;color:var(--sage);">&#10003; Pago em ${fd(c.payment.paidDate)}</div>`:`<div style="font-size:11px;color:var(--warn);">&#9679; Pendente</div>`}</div></div>${memoHTML(c)}</div>`);});
   document.getElementById('tab-rel').innerHTML=out.join('');
 }
 
 // ── RENDER CONFIG (Casa) ──────────────────────────────────────
 async function renderConfig() {
   const out=[];
-  out.push(`<div style="font-family:'Cormorant',serif;font-size:26px;font-weight:300;margin-bottom:20px;">Casa: ${currentHouseName}</div>`);
+  out.push(`<div style="font-family:'Cormorant',serif;font-size:26px;font-weight:300;margin-bottom:20px;">Casa: ${escapeHTML(currentHouseName)}</div>`);
   const {data:houseData}=await supa.from('houses').select('invite_code').eq('id',currentHouseId).single();
   const code=houseData?.invite_code||'—';
   out.push(`<div class="card" style="margin-bottom:16px;"><p class="lbl" style="margin-bottom:14px;">C\u00f3digo de Convite &amp; QR Code</p><div class="fi" style="gap:20px;flex-wrap:wrap;align-items:flex-start;"><div style="flex:1;min-width:150px;"><div style="font-size:28px;font-family:'Cormorant',serif;letter-spacing:.25em;margin-bottom:8px;">${code}</div><div class="tip" style="margin-bottom:12px;">Compartilhe o c\u00f3digo ou QR Code. O QR abre o app com o convite pr\u00e9-preenchido.</div><div class="fi" style="gap:8px;"><button class="btn btn-gh btn-sm" onclick="navigator.clipboard.writeText('${code}').then(()=>alert('Copiado!'))">&#128203; Copiar</button><button class="btn btn-gh btn-sm" onclick="downloadQR('${currentHouseId}')">&#11015; QR</button></div></div><div id="qr-${currentHouseId}" style="width:128px;height:128px;flex-shrink:0;"></div></div></div>`);
@@ -2358,7 +2372,7 @@ function printSlip(payId){
   const vtL=MP[p.vtM]+' '+p.vtY,vtD=(db.employees.find(e=>e.id===p.empId)||{vtDaily:0}).vtDaily||0;
   const w=window.open('','_blank','width=640,height=800');
   const rows=[[p.recTot>0,`<tr><td>Di\u00e1rias recorrentes</td><td class="pos">+ R$ ${fm(p.recTot)}</td></tr>`],[p.avTot>0,`<tr><td>Di\u00e1rias avulsas</td><td class="pos">+ R$ ${fm(p.avTot)}</td></tr>`],[p.bons>0,`<tr><td>B\u00f4nus</td><td class="pos">+ R$ ${fm(p.bons)}</td></tr>`],[p.deds>0,`<tr><td>Descontos</td><td class="neg">\u2212 R$ ${fm(p.deds)}</td></tr>`],[p.inssAmt>0,`<tr><td>INSS</td><td class="neg">\u2212 R$ ${fm(p.inssAmt)}</td></tr>`]].filter(r=>r[0]).map(r=>r[1]).join('');
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Cormorant:wght@300;400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet"><title>Recibo</title><style>body{font-family:'Jost',sans-serif;font-weight:300;color:#2A2520;max-width:540px;margin:40px auto;padding:0 24px;}h1{font-family:'Cormorant',serif;font-weight:300;font-size:30px;}.sub{font-size:12px;color:#9C9087;margin-bottom:24px;}table{width:100%;border-collapse:collapse;margin-bottom:16px;}td{padding:8px 0;border-bottom:1px solid #E8E3DC;font-size:13px;}td:last-child{text-align:right;font-family:'Cormorant',serif;font-size:16px;}.tot td{font-size:18px;font-weight:500;border-bottom:none;padding-top:14px;}.neg{color:#B85C5C;}.pos{color:#8A9B8A;}.blue{color:#6B9FBF;}.box{background:#F0EBE0;border-radius:8px;padding:12px 16px;margin:10px 0;font-size:12px;color:#9C9087;}.sig{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:56px;}.sig div{border-top:1px solid #2A2520;padding-top:8px;font-size:11px;text-align:center;}@media print{button{display:none!important;}}</style></head><body><h1>Recibo de Pagamento</h1><div class="sub">${p.empName} &middot; ${p.empRole} &middot; Compet\u00eancia: ${MP[p.rm]} ${p.ry}</div><table><tr><td>Sal\u00e1rio base</td><td>R$ ${fm(p.salBase)}</td></tr>${rows}<tr class="tot"><td><strong>Sal\u00e1rio l\u00edquido</strong></td><td><strong>R$ ${fm(p.netSal)}</strong></td></tr></table><div class="box">Vale-Transporte <strong>${vtL}</strong>: ${p.vtWd} dias &times; R$ ${fm(vtD)} = R$ ${fm(p.vtGross)}${p.vtDisc>0?' &minus; 6% (R$ '+fm(p.vtDisc)+')':', sem desconto'} = <strong class="blue">R$ ${fm(p.vtNet)}</strong></div><table><tr class="tot"><td><strong>Total do pagamento</strong></td><td><strong>R$ ${fm(p.total)}</strong></td></tr></table><div class="box">Pago em ${fd(p.paidDate)} via ${p.method}${p.notes?' \u00b7 '+p.notes:''}</div><div style="border-top:1px solid #E8E3DC;padding-top:12px;font-size:11px;color:#B8B0A4;display:flex;justify-content:space-between;margin-top:24px;"><span>Atrium \u00b7 Gest\u00e3o Dom\u00e9stica</span><span>${new Date().toLocaleDateString('pt-BR')}</span></div><div class="sig"><div>Empregador</div><div>${p.empName}</div></div><br><div style="display:flex;gap:10px;align-items:center;justify-content:center;margin-top:16px;flex-wrap:wrap;"><button onclick="window.close()" style="padding:10px 20px;background:transparent;color:#9C9087;border:1px solid #E8E3DC;border-radius:8px;cursor:pointer;font-family:'Jost',sans-serif;font-weight:300;font-size:12px;">&#8592; Fechar janela</button><button onclick="window.print()" style="padding:10px 20px;background:#2A2520;color:#fff;border:none;border-radius:8px;cursor:pointer;">Imprimir / PDF</button></div></body></html>`);
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Cormorant:wght@300;400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet"><title>Recibo</title><style>body{font-family:'Jost',sans-serif;font-weight:300;color:#2A2520;max-width:540px;margin:40px auto;padding:0 24px;}h1{font-family:'Cormorant',serif;font-weight:300;font-size:30px;}.sub{font-size:12px;color:#9C9087;margin-bottom:24px;}table{width:100%;border-collapse:collapse;margin-bottom:16px;}td{padding:8px 0;border-bottom:1px solid #E8E3DC;font-size:13px;}td:last-child{text-align:right;font-family:'Cormorant',serif;font-size:16px;}.tot td{font-size:18px;font-weight:500;border-bottom:none;padding-top:14px;}.neg{color:#B85C5C;}.pos{color:#8A9B8A;}.blue{color:#6B9FBF;}.box{background:#F0EBE0;border-radius:8px;padding:12px 16px;margin:10px 0;font-size:12px;color:#9C9087;}.sig{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:56px;}.sig div{border-top:1px solid #2A2520;padding-top:8px;font-size:11px;text-align:center;}@media print{button{display:none!important;}}</style></head><body><h1>Recibo de Pagamento</h1><div class="sub">${escapeHTML(p.empName)} &middot; ${p.empRole} &middot; Compet\u00eancia: ${MP[p.rm]} ${p.ry}</div><table><tr><td>Sal\u00e1rio base</td><td>R$ ${fm(p.salBase)}</td></tr>${rows}<tr class="tot"><td><strong>Sal\u00e1rio l\u00edquido</strong></td><td><strong>R$ ${fm(p.netSal)}</strong></td></tr></table><div class="box">Vale-Transporte <strong>${vtL}</strong>: ${p.vtWd} dias &times; R$ ${fm(vtD)} = R$ ${fm(p.vtGross)}${p.vtDisc>0?' &minus; 6% (R$ '+fm(p.vtDisc)+')':', sem desconto'} = <strong class="blue">R$ ${fm(p.vtNet)}</strong></div><table><tr class="tot"><td><strong>Total do pagamento</strong></td><td><strong>R$ ${fm(p.total)}</strong></td></tr></table><div class="box">Pago em ${fd(p.paidDate)} via ${p.method}${p.notes?' \u00b7 '+p.notes:''}</div><div style="border-top:1px solid #E8E3DC;padding-top:12px;font-size:11px;color:#B8B0A4;display:flex;justify-content:space-between;margin-top:24px;"><span>Atrium \u00b7 Gest\u00e3o Dom\u00e9stica</span><span>${new Date().toLocaleDateString('pt-BR')}</span></div><div class="sig"><div>Empregador</div><div>${escapeHTML(p.empName)}</div></div><br><div style="display:flex;gap:10px;align-items:center;justify-content:center;margin-top:16px;flex-wrap:wrap;"><button onclick="window.close()" style="padding:10px 20px;background:transparent;color:#9C9087;border:1px solid #E8E3DC;border-radius:8px;cursor:pointer;font-family:'Jost',sans-serif;font-weight:300;font-size:12px;">&#8592; Fechar janela</button><button onclick="window.print()" style="padding:10px 20px;background:#2A2520;color:#fff;border:none;border-radius:8px;cursor:pointer;">Imprimir / PDF</button></div></body></html>`);
   w.document.close();
 }
 
@@ -2376,7 +2390,7 @@ function printReport(){
   const calcs=db.employees.filter(e=>e.status!=='desligado').map(e=>calc(e.id,ry,rm));
   const totAll=calcs.reduce((a,c)=>a+c.total,0);
   const w=window.open('','_blank','width=900,height=800');
-  const rows=calcs.map(c=>`<tr style="border-bottom:1px solid #E8E3DC;"><td style="padding:10px 12px;font-size:13px;word-break:break-word;">${c.emp.name}<br><span style="font-size:11px;color:#9C9087;">${c.emp.role}</span></td><td style="padding:10px 12px;text-align:right;font-family:'Cormorant',serif;">R$ ${fm(c.salBase)}</td><td style="padding:10px 12px;text-align:right;font-family:'Cormorant',serif;color:#8A9B8A;">R$ ${fm(c.recTot+c.avTot)}</td><td style="padding:10px 12px;text-align:right;font-family:'Cormorant',serif;color:#B85C5C;">R$ ${fm(c.deds+c.inssAmt)}</td><td style="padding:10px 12px;text-align:right;font-family:'Cormorant',serif;font-weight:500;">R$ ${fm(c.netSal)}</td><td style="padding:10px 12px;text-align:right;font-family:'Cormorant',serif;color:#6B9FBF;">R$ ${fm(c.vtNet)}</td><td style="padding:10px 12px;text-align:right;font-family:'Cormorant',serif;font-size:18px;color:#8B7355;font-weight:500;">R$ ${fm(c.total)}</td><td style="padding:10px 12px;text-align:center;font-size:12px;color:${c.payment?'#8A9B8A':'#C4973A'}">${c.payment?'\u2713 Pago':'\u23f3 Pendente'}</td></tr>`).join('');
+  const rows=calcs.map(c=>`<tr style="border-bottom:1px solid #E8E3DC;"><td style="padding:10px 12px;font-size:13px;word-break:break-word;">${escapeHTML(c.emp.name)}<br><span style="font-size:11px;color:#9C9087;">${escapeHTML(c.emp.role)}</span></td><td style="padding:10px 12px;text-align:right;font-family:'Cormorant',serif;">R$ ${fm(c.salBase)}</td><td style="padding:10px 12px;text-align:right;font-family:'Cormorant',serif;color:#8A9B8A;">R$ ${fm(c.recTot+c.avTot)}</td><td style="padding:10px 12px;text-align:right;font-family:'Cormorant',serif;color:#B85C5C;">R$ ${fm(c.deds+c.inssAmt)}</td><td style="padding:10px 12px;text-align:right;font-family:'Cormorant',serif;font-weight:500;">R$ ${fm(c.netSal)}</td><td style="padding:10px 12px;text-align:right;font-family:'Cormorant',serif;color:#6B9FBF;">R$ ${fm(c.vtNet)}</td><td style="padding:10px 12px;text-align:right;font-family:'Cormorant',serif;font-size:18px;color:#8B7355;font-weight:500;">R$ ${fm(c.total)}</td><td style="padding:10px 12px;text-align:center;font-size:12px;color:${c.payment?'#8A9B8A':'#C4973A'}">${c.payment?'\u2713 Pago':'\u23f3 Pendente'}</td></tr>`).join('');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Cormorant:wght@300;400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"><title>Relat\u00f3rio ${refLabel}</title><style>body{font-family:'Jost',sans-serif;font-weight:300;color:#2A2520;max-width:900px;margin:32px auto;padding:0 24px;}h1{font-family:'Cormorant',serif;font-weight:300;font-size:32px;}.sub{font-size:13px;color:#9C9087;margin-bottom:28px;}table{width:100%;border-collapse:collapse;}th{padding:8px 12px;text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#9C9087;background:#F0EBE0;}@media print{button{display:none!important;}}</style></head><body><h1>Relat\u00f3rio de Pagamentos</h1><div class="sub">Compet\u00eancia: <strong>${refLabel}</strong> &middot; Pagamento: <strong>${payLabel}</strong></div><table><tr><th>Funcion\u00e1rio</th><th style="text-align:right;">Sal. Base</th><th style="text-align:right;">Di\u00e1rias</th><th style="text-align:right;">Descontos</th><th style="text-align:right;">Sal. L\u00edq.</th><th style="text-align:right;">VT</th><th style="text-align:right;">Total</th><th style="text-align:center;">Status</th></tr>${rows}<tr style="background:#F0EBE0;font-weight:600;"><td style="padding:12px;">TOTAL</td><td colspan="4"></td><td style="padding:12px;text-align:right;font-family:'Cormorant',serif;color:#6B9FBF;">R$ ${fm(calcs.reduce((a,c)=>a+c.vtNet,0))}</td><td style="padding:12px;text-align:right;font-family:'Cormorant',serif;font-size:20px;color:#8B7355;">R$ ${fm(totAll)}</td><td></td></tr></table><br><div style="display:flex;gap:10px;align-items:center;justify-content:center;margin-top:16px;flex-wrap:wrap;"><button onclick="window.close()" style="padding:10px 20px;background:transparent;color:#9C9087;border:1px solid #E8E3DC;border-radius:8px;cursor:pointer;font-family:'Jost',sans-serif;font-weight:300;font-size:12px;">&#8592; Fechar janela</button><button onclick="window.print()" style="padding:10px 24px;background:#2A2520;color:#fff;border:none;border-radius:8px;cursor:pointer;">Imprimir / Salvar PDF</button></div></body></html>`);
   w.document.close();
 }
@@ -2598,6 +2612,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
