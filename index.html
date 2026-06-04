@@ -481,6 +481,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -1657,6 +1658,21 @@ function editPayment(eid, ry, rm) {
       </select></div>
     </div>`,
     `<div class="field"><label>Observações</label><input id="pnotes" value="${escapeHTML(p.notes||'')}" placeholder="Opcional"></div>`,
+    // VT days override
+    `<div class="g2" style="gap:12px;margin-bottom:14px;">
+      <div class="field"><label>Dias VT considerados</label>
+        <div class="fi" style="gap:8px;">
+          <input id="edit-vt-days" type="number" min="0" max="31" value="${p.vtWd}" style="width:80px;">
+          <span class="tip" style="margin-top:0;">Automático: ${p.vtWdAuto||p.vtWd} dias</span>
+        </div>
+      </div>
+      <div class="field" style="align-self:flex-end;padding-bottom:4px;">
+        <div class="fi" style="gap:10px;align-items:center;">
+          <input type="checkbox" id="edit-pay-resc" style="width:16px;height:16px;"${p.isRescisao?' checked':''}>
+          <label for="edit-pay-resc" style="font-size:12px;color:var(--danger);cursor:pointer;">&#128197; Rescisão contratual</label>
+        </div>
+      </div>
+    </div>`,
     '<div class="div"></div>',
     `<div class="fi" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
       <button class="btn btn-gh" style="color:var(--danger);border-color:rgba(184,92,92,.3);" onclick="cancelPayment('${eid}',${ry},${rm})">&#128465; Desfazer pagamento</button>
@@ -1678,21 +1694,32 @@ async function savePaymentEdit() {
   const c   = calc(eid, ry, rm);
   if (!c?.payment) return;
 
-  c.payment.paidDate = document.getElementById('pdate')?.value || tod();
-  c.payment.method   = document.getElementById('pmeth')?.value || 'PIX';
-  c.payment.notes    = document.getElementById('pnotes')?.value || '';
-  // Recalculate totals with current data (respects proRata toggle)
-  c.payment.netSal   = c.finalNetSal;
-  c.payment.total    = c.total;
-  c.payment.proRataActive = c.proRataActive||false;
+  c.payment.paidDate    = document.getElementById('pdate')?.value || tod();
+  c.payment.method      = document.getElementById('pmeth')?.value || 'PIX';
+  c.payment.notes       = document.getElementById('pnotes')?.value || '';
+  c.payment.isRescisao  = document.getElementById('edit-pay-resc')?.checked || false;
+  // VT days override
+  const newVtWd = parseInt(document.getElementById('edit-vt-days')?.value, 10);
+  if (!isNaN(newVtWd) && newVtWd !== c.payment.vtWdAuto) {
+    const vtKey = c.payment.vtOK || ('vt_' + String(eid) + '_' + MK(ry, rm));
+    localStorage.setItem(vtKey, String(newVtWd));
+    _sbSaveOverride('ls:' + vtKey, newVtWd);
+  }
+  // Recalcula com dados atuais (respeita pro-rata e VT ajustado)
+  const cRecalc = calc(eid, ry, rm);
+  c.payment.netSal      = cRecalc.finalNetSal;
+  c.payment.vtNet       = cRecalc.vtNet;
+  c.payment.vtGross     = cRecalc.vtGross;
+  c.payment.vtDisc      = cRecalc.vtDisc;
+  c.payment.vtWd        = cRecalc.vtWd;
+  c.payment.total       = cRecalc.total;
+  c.payment.proRataActive = cRecalc.proRataActive || false;
 
   saveDB();
   try { await _sbSavePayment(c.payment); } catch(e) { console.error('savePaymentEdit:', e); }
   cm('mod-pay');
   md.dataset.editing = '';
-  renderFech();
-  const histBtn = [...document.querySelectorAll('.tab')].find(b=>b.textContent.includes('Hist'));
-  swTab('hist', histBtn);
+  renderFech(); // permanece na aba fechamento para ver o resultado
 }
 
 // Cancela/desfaz um pagamento registrado
@@ -2162,7 +2189,7 @@ function renderDash() {
     out.push('<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">');
     [['Base','R$ '+fm(c.proRataActive?c.proRataSalBase:c.salBase)+(c.proRataActive?' (PR)':''),'var(--text)'],['Di\u00e1rias','R$ '+fm(c.recTot+c.avTot),'var(--sage)'],['Descontos','R$ '+fm(c.deds+c.inssAmt),'var(--danger)'],[MP[c.vtM].slice(0,3)+' VT','R$ '+fm(c.vtNet),'var(--blue)']].forEach(k=>out.push(`<div style="background:var(--cream);border-radius:9px;padding:10px;text-align:center;"><div class="lbl" style="margin-bottom:4px;">${k[0]}</div><div class="money" style="font-size:14px;color:${k[2]};">${k[1]}</div></div>`));
         out.push(`</div><div class="fi" style="gap:8px;flex-wrap:wrap;"><button class="btn btn-gh btn-sm" onclick="goFech('${c.emp.id}')">Ver memória</button><button class=\"btn btn-gh btn-sm\" onclick=\"editPayment(\'${c.emp.id}\',${c.ry},${c.rm})\">&#9998; Editar pgto</button>`);
-    out.push(isPaid?`<span style="margin-left:auto;font-size:11px;color:var(--sage);">&#10003; Pago em ${fd(c.payment.paidDate)} via ${c.payment.method}</span>`:canWrite()?`<button class="btn btn-sg btn-sm write-only" style="margin-left:auto;" onclick="openPayM('${c.emp.id}',${wy},${wm})">Confirmar pagamento</button>`:'');
+    out.push(isPaid?`<span style="margin-left:auto;font-size:11px;color:var(--sage);">&#10003; Pago em ${fd(c.payment.paidDate)} via ${c.payment.method}${c.payment?.isRescisao?'<span style=\"margin-left:6px;color:var(--danger);font-size:10px;\">&#128197; Rescis\u00e3o</span>':''}</span>`:canWrite()?`<button class="btn btn-sg btn-sm write-only" style="margin-left:auto;" onclick="openPayM('${c.emp.id}',${wy},${wm})">Confirmar pagamento</button>`:'');
     out.push('</div></div>');
   });
   out.push(`<div class="card" style="margin-top:8px;"><p class="lbl" style="margin-bottom:14px;">Consolidado \u2014 ${wl}</p><div class="mt2"><div class="mr mrh"><span>Funcion\u00e1rio</span><span>Sal\u00e1rio l\u00edquido</span><span style="text-align:right;">VT (${MP[calcs[0].vtM].slice(0,3)}) \u00b7 Envelope</span></div>`);
@@ -2330,7 +2357,11 @@ function renderFech() {
   const isRescPaid=isPaid&&c.payment?.isRescisao;
   const paidB=isPaid?buildPaidSummary(c.payment,eid,wy,wm,canEdit,isRescPaid):'';
   const cta=canAct?`<div class="fe" style="margin-top:16px;"><button class="btn btn-gh" onclick="openAM('${emp.id}',${wy},${wm})">+ Ajuste</button><button class="btn btn-sg" onclick="openPayM('${emp.id}',${wy},${wm})">Ver mem\u00f3ria &amp; confirmar</button></div>`:'';
-  document.getElementById('tab-fech').innerHTML=[selH,empHeader,paidB,rescBar.join(''),calParts.join(''),avL.join(''),adjL.join(''),memoHTML(c),cta].join('');
+  // Após pagamento: mostra apenas o resumo do pagamento
+  const fechContent = isPaid
+    ? [selH, empHeader, paidB].join('')
+    : [selH, empHeader, rescBar.join(''), calParts.join(''), avL.join(''), adjL.join(''), memoHTML(c), cta].join('');
+  document.getElementById('tab-fech').innerHTML = fechContent;
 }
 
 // ── [D] RENDER EMPLOYEES ──────────────────────────────────────
@@ -2785,6 +2816,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
