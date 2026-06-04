@@ -485,6 +485,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -667,18 +668,23 @@ async function doSignup() {
     if (mode === 'join') {
       setBtn('Verificando código…');
       const code = invCode.toLowerCase().trim();
-      // NOTE: requires Supabase policy allowing anon to SELECT invite_code
-      // SQL: create policy "anon_read_invite" on houses for select to anon using (true);
-      const { data: hv, error: hvErr } = await supa
-        .from('houses').select('id, name').eq('invite_code', code).single();
-      if (hvErr) console.error('invite lookup error:', hvErr.message, 'code:', code);
-      if (hvErr || !hv) {
-        _signingUp = false;
-        btn.disabled = false; setBtn('Criar conta');
-        showAuthErr('❌ Código \''+code+'\' não encontrado. Verifique se copiou corretamente (letras minúsculas).');
-        return; // não cria o usuário
+      // Tenta validar antes do signUp (requer policy anon no Supabase)
+      // SQL necessário: create policy "anon_read_invite" on houses
+      //   for select to anon using (true);
+      let earlyCheck = null;
+      try {
+        const { data: hv } = await supa
+          .from('houses').select('id, name').eq('invite_code', code).single();
+        earlyCheck = hv || null;
+      } catch(_) {}
+      // Se a query anon retornou resultado, pré-valida
+      if (earlyCheck) {
+        preValidatedHouse = earlyCheck;
+      } else {
+        // Sem policy anon — não é possível validar antes do signUp.
+        // Validação ocorrerá após autenticação (passo 2).
+        console.warn('Invite pre-validation skipped (anon RLS). Will validate after signUp.');
       }
-      preValidatedHouse = hv; // casa encontrada — prossegue
     }
 
     // PASSO 1 — cria o usuário Auth
@@ -718,7 +724,19 @@ async function doSignup() {
       houseId = houseRows.id; houseName = casaNome; houseRole = 'admin';
 
     } else {
-      // Usa a casa já validada no passo 0
+      // Se não validou antes (sem policy anon), valida agora com user autenticado
+      const joinCode = invCode.toLowerCase().trim();
+      if (!preValidatedHouse) {
+        const { data: hv2, error: hErr2 } = await supa
+          .from('houses').select('id, name').eq('invite_code', joinCode).single();
+        if (hErr2 || !hv2) {
+          // Código inválido — tenta deletar o usuário recém criado
+          try { await supa.auth.admin?.deleteUser(userId); } catch(_) {}
+          try { await supa.auth.signOut(); } catch(_) {}
+          throw new Error('❌ Código \'' + joinCode + '\' não encontrado. Conta não criada.');
+        }
+        preValidatedHouse = hv2;
+      }
       const { error: mErr } = await supa
         .from('house_members')
         .insert({ house_id: preValidatedHouse.id, user_id: userId, role: 'viewer' });
@@ -2425,9 +2443,9 @@ function renderEmps() {
 function renderHist() {
   const ef=document.getElementById('histsel')?document.getElementById('histsel').value:'';
   let ps=db.payments.slice().sort((a,b)=>b.ry-a.ry||b.rm-a.rm);
-  if(ef)ps=ps.filter(p=>p.empId===+ef);
+  if(ef)ps=ps.filter(p=>String(p.empId)===String(ef));
   const out=[];
-  out.push(`<div class="fb" style="margin-bottom:20px;flex-wrap:wrap;gap:12px;"><div><div style="font-family:'Cormorant',serif;font-size:26px;font-weight:300;margin-bottom:4px;">Hist\u00f3rico</div><div class="tip">Pagamentos confirmados</div></div><select id="histsel" onchange="renderHist()" class="ssel" style="padding:8px 28px 8px 12px;border-radius:9px;border:1px solid var(--border);background:var(--cream);font-size:13px;cursor:pointer;"><option value="">Todos</option>${db.employees.map(e=>`<option value="${e.id}"${ef==e.id?' selected':''}>${e.name}</option>`).join('')}</select></div>`);
+  out.push(`<div class="fb" style="margin-bottom:20px;flex-wrap:wrap;gap:12px;"><div><div style="font-family:'Cormorant',serif;font-size:26px;font-weight:300;margin-bottom:4px;">Hist\u00f3rico</div><div class="tip">Pagamentos confirmados</div></div><select id="histsel" onchange="renderHist()" class="ssel" style="padding:8px 28px 8px 12px;border-radius:9px;border:1px solid var(--border);background:var(--cream);font-size:13px;cursor:pointer;"><option value="">Todos</option>${db.employees.map(e=>`<option value="${e.id}"${String(ef)===String(e.id)?' selected':''}>${e.name}</option>`).join('')}</select></div>`);
   if(!ps.length){out.push('<div class="empty"><div class="ei">&#128209;</div><div class="et">Nenhum pagamento registrado.</div></div>');document.getElementById('tab-hist').innerHTML=out.join('');return;}
   const byM={};ps.forEach(p=>{const k=p.ry+'-'+String(p.rm+1).padStart(2,'0');if(!byM[k])byM[k]=[];byM[k].push(p);});
   Object.keys(byM).sort((a,b)=>b.localeCompare(a)).forEach(k=>{
@@ -2846,6 +2864,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
