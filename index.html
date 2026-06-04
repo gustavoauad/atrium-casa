@@ -486,6 +486,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -521,6 +522,11 @@ let supa = null; // inicializado no DOMContentLoaded após SDK carregar
 let _sessionProcessed = false; // módulo — persiste entre eventos de auth
 
 // ── SECURITY: HTML escape para prevenir XSS ──────────────────
+// Ordena funcionários por nome (case-insensitive)
+function sortEmps(arr) {
+  return arr.slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR',{sensitivity:'base'}));
+}
+
 function r2(n) { return Math.round((+n || 0) * 100) / 100; }
 
 function escapeHTML(v) {
@@ -668,23 +674,26 @@ async function doSignup() {
     if (mode === 'join') {
       setBtn('Verificando código…');
       const code = invCode.toLowerCase().trim();
-      // Tenta validar antes do signUp (requer policy anon no Supabase)
-      // SQL necessário: create policy "anon_read_invite" on houses
+      // Usa maybeSingle() — retorna null (sem erro) se código não encontrado
+      // Requer policy: create policy "anon_read_invite" on houses
       //   for select to anon using (true);
-      let earlyCheck = null;
-      try {
-        const { data: hv } = await supa
-          .from('houses').select('id, name').eq('invite_code', code).single();
-        earlyCheck = hv || null;
-      } catch(_) {}
-      // Se a query anon retornou resultado, pré-valida
-      if (earlyCheck) {
-        preValidatedHouse = earlyCheck;
-      } else {
-        // Sem policy anon — não é possível validar antes do signUp.
-        // Validação ocorrerá após autenticação (passo 2).
-        console.warn('Invite pre-validation skipped (anon RLS). Will validate after signUp.');
+      const { data: hv, error: hvErr } = await supa
+        .from('houses').select('id, name').eq('invite_code', code).maybeSingle();
+      if (hvErr) {
+        // Erro real de RLS ou rede — aborta
+        _signingUp = false;
+        btn.disabled = false; setBtn('Criar conta');
+        showAuthErr('Erro ao verificar código: ' + hvErr.message);
+        return;
       }
+      if (!hv) {
+        // Código não existe no banco
+        _signingUp = false;
+        btn.disabled = false; setBtn('Criar conta');
+        showAuthErr('❌ Código \'' + code + '\' não encontrado. Verifique se copiou corretamente.');
+        return;
+      }
+      preValidatedHouse = hv;
     }
 
     // PASSO 1 — cria o usuário Auth
@@ -724,19 +733,7 @@ async function doSignup() {
       houseId = houseRows.id; houseName = casaNome; houseRole = 'admin';
 
     } else {
-      // Se não validou antes (sem policy anon), valida agora com user autenticado
-      const joinCode = invCode.toLowerCase().trim();
-      if (!preValidatedHouse) {
-        const { data: hv2, error: hErr2 } = await supa
-          .from('houses').select('id, name').eq('invite_code', joinCode).single();
-        if (hErr2 || !hv2) {
-          // Código inválido — tenta deletar o usuário recém criado
-          try { await supa.auth.admin?.deleteUser(userId); } catch(_) {}
-          try { await supa.auth.signOut(); } catch(_) {}
-          throw new Error('❌ Código \'' + joinCode + '\' não encontrado. Conta não criada.');
-        }
-        preValidatedHouse = hv2;
-      }
+      // preValidatedHouse garantido pelo passo 0
       const { error: mErr } = await supa
         .from('house_members')
         .insert({ house_id: preValidatedHouse.id, user_id: userId, role: 'viewer' });
@@ -2209,7 +2206,7 @@ function gerarAcordo(emp,adm,data,e){docWindow('Acordo M\u00fatuo',`<h1>TERMO DE
 // ── [D] RENDER DASHBOARD ──────────────────────────────────────
 function renderDash() {
   const wy=SM===0?SY-1:SY, wm=SM===0?11:SM-1, wl=MP[wm]+' '+wy;
-  const calcs=db.employees.filter(e=>e.status!=='desligado').map(e=>calc(e.id,wy,wm));
+  const calcs=sortEmps(db.employees.filter(e=>e.status!=='desligado')).map(e=>calc(e.id,wy,wm));
   const totSal=calcs.reduce((a,c)=>a+c.finalNetSal,0), totVT=calcs.reduce((a,c)=>a+c.vtNet,0), totAll=calcs.reduce((a,c)=>a+c.total,0);
   const p5=bday5(SY,SM), out=[];
   const tp=tod().split('-').map(Number);
@@ -2281,7 +2278,7 @@ function buildPaidSummary(p, eid, wy, wm, canEdit, isRescPaid) {
 
 function renderFech() {
   const wy=SM===0?SY-1:SY, wm=SM===0?11:SM-1, wl=MP[wm]+' '+wy, pl=MP[SM]+' '+SY;
-  const activeEmps=db.employees.filter(e=>e.status!=='desligado');
+  const activeEmps=sortEmps(db.employees.filter(e=>e.status!=='desligado'));
   // Preserva o funcionário selecionado sem coerção numérica (IDs são strings)
   const prevSel=document.getElementById('fechsel');
   const prevEid=prevSel?.value || (activeEmps[0]?.id || '');
@@ -2404,7 +2401,7 @@ function renderFech() {
 
 // ── [D] RENDER EMPLOYEES ──────────────────────────────────────
 function renderEmps() {
-  const ativos=db.employees.filter(e=>e.status!=='desligado'), inativos=db.employees.filter(e=>e.status==='desligado');
+  const ativos=sortEmps(db.employees.filter(e=>e.status!=='desligado')), inativos=sortEmps(db.employees.filter(e=>e.status==='desligado'));
   const MOTIVOS={pedido:'Pedido de demiss\u00e3o',semjusta:'Demiss\u00e3o s/ justa causa',comjusta:'Demiss\u00e3o c/ justa causa',acordo:'Acordo m\u00fatuo',termino:'T\u00e9rmino de contrato',falecimento:'Falecimento'};
   const out=[];
   out.push(`<div class="fb" style="margin-bottom:20px;flex-wrap:wrap;gap:8px;"><div><div style="font-family:'Cormorant',serif;font-size:26px;font-weight:300;margin-bottom:4px;">Funcion\u00e1rios</div><div class="tip">${ativos.length} ativo(s) &nbsp;&middot;&nbsp; ${inativos.length} inativo(s)</div></div><div class="fi" style="gap:8px;"><button class="btn btn-gh btn-sm" onclick="openRescisao()" style="color:var(--blue);border-color:var(--blue);">&#128290; Calculadora</button><button class="btn btn-gh btn-sm" onclick="openTemplates()" style="color:var(--accent);border-color:var(--accent);">&#128196; Templates</button>${canWrite()?'<button class="btn btn-dk write-only" onclick="openEM()">+ Novo funcion\u00e1rio</button>':''}</div></div>`);
@@ -2472,7 +2469,7 @@ function renderRel() {
   const inclDes=document.getElementById('rel-incl-des')?.checked||false;
   const relEmpSel=document.getElementById('rel-emp-filter'), relEmpId=relEmpSel?.value||'';
   const refLabel=MP[rm]+' '+ry, pyY=rm===11?ry+1:ry, pyM=rm===11?0:rm+1, payLabel=MP[pyM]+' '+pyY;
-  const allEmps=inclDes?db.employees:db.employees.filter(e=>e.status!=='desligado');
+  const allEmps=sortEmps(inclDes?db.employees:db.employees.filter(e=>e.status!=='desligado'));
   const filtEmps=relEmpId?allEmps.filter(e=>String(e.id)===String(relEmpId)):allEmps;
   const calcs=filtEmps.map(e=>calc(e.id,ry,rm));
   const totSal=calcs.reduce((a,c)=>a+c.finalNetSal,0), totVT=calcs.reduce((a,c)=>a+c.vtNet,0), totAll=calcs.reduce((a,c)=>a+c.total,0), totInss=calcs.reduce((a,c)=>a+c.inssAmt,0), paidCount=calcs.filter(c=>c.payment).length;
@@ -2864,6 +2861,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
