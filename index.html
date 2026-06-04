@@ -474,6 +474,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -2027,7 +2028,7 @@ function gerarAcordo(emp,adm,data,e){docWindow('Acordo M\u00fatuo',`<h1>TERMO DE
 function renderDash() {
   const wy=SM===0?SY-1:SY, wm=SM===0?11:SM-1, wl=MP[wm]+' '+wy;
   const calcs=db.employees.filter(e=>e.status!=='desligado').map(e=>calc(e.id,wy,wm));
-  const totSal=calcs.reduce((a,c)=>a+c.netSal,0), totVT=calcs.reduce((a,c)=>a+c.vtNet,0), totAll=calcs.reduce((a,c)=>a+c.total,0);
+  const totSal=calcs.reduce((a,c)=>a+c.finalNetSal,0), totVT=calcs.reduce((a,c)=>a+c.vtNet,0), totAll=calcs.reduce((a,c)=>a+c.total,0);
   const p5=bday5(SY,SM), out=[];
   const tp=tod().split('-').map(Number);
   if(tp[0]===SY&&tp[1]-1===SM&&p5&&tp[2]<=p5.d)out.push(`<div class="banner"><p style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:6px;">Per\u00edodo de pagamento ativo</p><p style="font-family:'Cormorant',serif;font-size:26px;font-weight:300;color:#fff;">Pagamentos de <em style="color:var(--a2);">${wl}</em></p><p style="font-size:12px;color:rgba(255,255,255,.6);margin-top:6px;">Prazo legal: at\u00e9 ${p5.d}/${String(SM+1).padStart(2,'0')}/${SY} (5\u00ba dia \u00fatil)</p></div>`);
@@ -2042,7 +2043,7 @@ function renderDash() {
     out.push(`<div class="fb" style="margin-bottom:14px;"><div class="fi" style="gap:12px;">${avt(c.emp.name,44)}<div><div style="font-size:15px;font-weight:400;word-break:break-word;">${escapeHTML(c.emp.name)}</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">${escapeHTML(c.emp.role)}</div></div></div><div style="text-align:right;flex-shrink:0;"><div class="money" style="font-size:24px;color:var(--accent);">R$ ${fm(c.total)}</div><div style="font-size:10px;color:var(--muted);">sal. R$ ${fm(c.netSal)} + VT R$ ${fm(c.vtNet)}</div></div></div>`);
     if(hw)out.push(`<div class="alert aw" style="margin-bottom:12px;"><span style="font-size:11px;color:var(--warn);">&#9888;&#65039; ${c.holWarns.length} feriado(s) sem di\u00e1ria &nbsp;<button onclick="goFech('${c.emp.id}')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;text-decoration:underline;">ver detalhes</button></span></div>`);
     out.push('<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">');
-    [['Base','R$ '+fm(c.salBase),'var(--text)'],['Di\u00e1rias','R$ '+fm(c.recTot+c.avTot),'var(--sage)'],['Descontos','R$ '+fm(c.deds+c.inssAmt),'var(--danger)'],[MP[c.vtM].slice(0,3)+' VT','R$ '+fm(c.vtNet),'var(--blue)']].forEach(k=>out.push(`<div style="background:var(--cream);border-radius:9px;padding:10px;text-align:center;"><div class="lbl" style="margin-bottom:4px;">${k[0]}</div><div class="money" style="font-size:14px;color:${k[2]};">${k[1]}</div></div>`));
+    [['Base','R$ '+fm(c.proRataActive?c.proRataSalBase:c.salBase)+(c.proRataActive?' (PR)':''),'var(--text)'],['Di\u00e1rias','R$ '+fm(c.recTot+c.avTot),'var(--sage)'],['Descontos','R$ '+fm(c.deds+c.inssAmt),'var(--danger)'],[MP[c.vtM].slice(0,3)+' VT','R$ '+fm(c.vtNet),'var(--blue)']].forEach(k=>out.push(`<div style="background:var(--cream);border-radius:9px;padding:10px;text-align:center;"><div class="lbl" style="margin-bottom:4px;">${k[0]}</div><div class="money" style="font-size:14px;color:${k[2]};">${k[1]}</div></div>`));
         out.push(`</div><div class="fi" style="gap:8px;flex-wrap:wrap;"><button class="btn btn-gh btn-sm" onclick="goFech('${c.emp.id}')">Ver memória</button>`);
     out.push(isPaid?`<span style="margin-left:auto;font-size:11px;color:var(--sage);">&#10003; Pago em ${fd(c.payment.paidDate)} via ${c.payment.method}</span>`:canWrite()?`<button class="btn btn-sg btn-sm write-only" style="margin-left:auto;" onclick="openPayM('${c.emp.id}',${wy},${wm})">Confirmar pagamento</button>`:'');
     out.push('</div></div>');
@@ -2626,6 +2627,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
