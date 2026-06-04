@@ -427,7 +427,9 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 <!-- SDK Supabase hospedado localmente — sem dependência de CDN externo -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
 <script>
+
 
 
 
@@ -664,7 +666,7 @@ async function doSignup() {
       const { data: houseRows, error: hErr } = await supa
         .from('houses')
         .select('id')
-        .eq('invite_code', invCode.toUpperCase())
+        .eq('invite_code', invCode.toLowerCase().trim())
         .single();
       if (hErr || !houseRows) throw new Error('Código de convite inválido.');
 
@@ -717,7 +719,7 @@ async function afterSignupSetup() {
         .insert({ house_id: houseRows.id, user_id: userId, role: 'admin' });
       if (mErr) throw new Error('Erro ao associar membro: ' + mErr.message);
     } else {
-      const invite = (sessionStorage.getItem('atrium_signup_invite') || '').toUpperCase();
+      const invite = (sessionStorage.getItem('atrium_signup_invite') || '').toLowerCase().trim();
       const { data: houseRows, error: hErr } = await supa
         .from('houses').select('id').eq('invite_code', invite).single();
       if (hErr || !houseRows) throw new Error('Código de convite inválido.');
@@ -1480,6 +1482,13 @@ async function rmReg(date) {
 
 // ── Rescisão inline no fechamento ────────────────────────────
 
+function downloadQR(houseId) {
+  const el=document.getElementById('qr-'+houseId);
+  const canvas=el&&el.querySelector('canvas');
+  if(!canvas){alert('Abra a aba Config para gerar o QR Code.');return;}
+  const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download='atrium-convite.png'; a.click();
+}
+
 function toggleRescCalc(eid, wy, wm) {
   const el = document.getElementById('resc-inline-' + eid);
   if (!el) return;
@@ -1699,8 +1708,8 @@ function memoHTML(c) {
   const canEditVT=canWrite()&&!c.payment;
   out.push(`<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:10px;"><p class="lbl">&#9317; Vale-Transporte \u2014 ${vl}</p><div class="fi" style="gap:6px;">${isMan?'<span class="badge" style="background:rgba(196,151,58,.15);color:var(--warn);">ajustado</span>':'<span class="badge" style="background:rgba(107,159,191,.15);color:var(--blue);">autom\u00e1tico</span>'}<span class="badge" style="background:rgba(107,159,191,.1);color:var(--blue);">m\u00eas seguinte</span></div></div><div class="mt2"><div class="mr mrh"><span>Item</span><span>Mem\u00f3ria</span><span style="text-align:right;">Valor</span></div><div class="mr"><span>Dias em ${vl}</span><span style="color:var(--muted);">Sugerido: ${c.vtWdAuto}${isMan?' \u2192 Ajustado: '+c.vtWd:''} dias \u00fateis</span><span class="money" style="text-align:right;">${c.vtWd}${isMan?' <span style="color:var(--warn);font-size:9px;">&#9998;</span>':''}</span></div><div class="mr"><span>VT bruto</span><span style="color:var(--muted);">${c.vtWd} \u00d7 R$ ${fm(c.emp.vtDaily||0)}</span><span class="money" style="text-align:right;">R$ ${fm(c.vtGross)}</span></div><div class="mr"><span>Desconto</span><span style="color:var(--muted);">${vtDL}</span><span class="money" style="text-align:right;color:${c.vtDisc>0?'var(--danger)':'var(--sage)'};">${c.vtDisc>0?'\u2212 R$ '+fm(c.vtDisc):'R$ 0,00 \u2014 integral'}</span></div></div>${c.payment?`<div class="fb" style="padding-top:10px;"><span>VT pago</span><span class="money" style="font-size:18px;color:var(--blue);">R$ ${fm(c.vtNet)}</span></div>`:canEditVT?`<div class="fi" style="gap:8px;padding-top:12px;flex-wrap:wrap;"><span style="font-size:11px;color:var(--muted);">Ajustar dias VT:</span><input type="number" min="0" max="31" value="${c.vtWd}" oninput="setVTDays('${c.vtOK}',this.value)" style="width:60px;padding:5px 8px;border-radius:7px;border:1px solid var(--border);font-size:12px;text-align:center;">${isMan?`<button onclick="resetVTDays('${c.vtOK}')" class="btn btn-gh btn-sm" style="padding:5px 10px;font-size:10px;">&#8634; Usar sugerido (${c.vtWdAuto})</button>`:''}<span class="money" style="font-size:18px;color:var(--blue);margin-left:auto;">R$ ${fm(c.vtNet)}</span></div>`:`<div class="fb" style="padding-top:10px;"><span>VT (somente leitura)</span><span class="money" style="font-size:18px;color:var(--blue);">R$ ${fm(c.vtNet)}</span></div>`}</div>`);
   out.push(`<div class="dark" style="border-radius:16px;"><p style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.12em;text-transform:uppercase;margin-bottom:16px;">Resumo \u2014 ${rl}</p>`);
-  [[rl+' \u2014 Sal\u00e1rio base',c.salBase,false,false],['+ Di\u00e1rias recorrentes',c.recTot,false,c.recTot===0],['+ Di\u00e1rias avulsas',c.avTot,false,c.avTot===0],['+ B\u00f4nus',c.bons,false,c.bons===0],['\u2212 Descontos',c.deds,true,c.deds===0],['\u2212 INSS',c.inssAmt,true,c.inssAmt===0]].filter(r=>!r[3]).forEach(r=>out.push(`<div class="fb" style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,.07);"><span style="font-size:12px;color:rgba(255,255,255,.5);">${r[0]}</span><span class="money" style="font-size:16px;color:${r[2]?'#e99':'rgba(255,255,255,.8)'};">${r[2]?'\u2212':''}R$ ${fm(r[1])}</span></div>`));
-  out.push(`<div class="fb" style="padding:14px 0 8px;border-top:1px solid rgba(255,255,255,.15);margin-top:6px;"><span style="font-size:14px;font-weight:500;color:#fff;">&#127974; Sal\u00e1rio l\u00edquido</span><span class="money" style="font-size:28px;color:var(--a2);">R$ ${fm(c.netSal)}</span></div><div class="fb" style="padding:8px 0;border-top:1px solid rgba(255,255,255,.08);"><span style="font-size:12px;color:rgba(255,255,255,.5);">+ VT ${vl}</span><span class="money" style="font-size:18px;color:var(--blue);">R$ ${fm(c.vtNet)}</span></div><div class="fb" style="padding:12px 0 0;border-top:2px solid rgba(255,255,255,.18);margin-top:4px;"><span style="font-size:15px;font-weight:500;color:#fff;">&#128179; Total do envelope</span><span class="money" style="font-size:28px;color:#fff;font-weight:300;">R$ ${fm(c.total)}</span></div></div>`);
+  [[rl+' \u2014 Sal\u00e1rio base'+(c.proRataActive?' (Pro Rata)':''),c.proRataActive?c.proRataSal:c.salBase,false,false],['+ Di\u00e1rias recorrentes',c.recTot,false,c.recTot===0],['+ Di\u00e1rias avulsas',c.avTot,false,c.avTot===0],['+ B\u00f4nus',c.bons,false,c.bons===0],['\u2212 Descontos',c.deds,true,c.deds===0],['\u2212 INSS',c.inssAmt,true,c.inssAmt===0]].filter(r=>!r[3]).forEach(r=>out.push(`<div class="fb" style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,.07);"><span style="font-size:12px;color:rgba(255,255,255,.5);">${r[0]}</span><span class="money" style="font-size:16px;color:${r[2]?'#e99':'rgba(255,255,255,.8)'};">${r[2]?'\u2212':''}R$ ${fm(r[1])}</span></div>`));
+  out.push(`<div class="fb" style="padding:14px 0 8px;border-top:1px solid rgba(255,255,255,.15);margin-top:6px;"><span style="font-size:14px;font-weight:500;color:#fff;">&#127974; Sal\u00e1rio l\u00edquido</span><span class="money" style="font-size:28px;color:var(--a2);">R$ ${fm(c.finalNetSal)}</span></div><div class="fb" style="padding:8px 0;border-top:1px solid rgba(255,255,255,.08);"><span style="font-size:12px;color:rgba(255,255,255,.5);">+ VT ${vl}</span><span class="money" style="font-size:18px;color:var(--blue);">R$ ${fm(c.vtNet)}</span></div><div class="fb" style="padding:12px 0 0;border-top:2px solid rgba(255,255,255,.18);margin-top:4px;"><span style="font-size:15px;font-weight:500;color:#fff;">&#128179; Total do envelope</span><span class="money" style="font-size:28px;color:#fff;font-weight:300;">R$ ${fm(c.total)}</span></div></div>`);
   return out.join('');
 }
 
@@ -2124,7 +2133,7 @@ async function renderConfig() {
   out.push(`<div style="font-family:'Cormorant',serif;font-size:26px;font-weight:300;margin-bottom:20px;">Casa: ${currentHouseName}</div>`);
   const {data:houseData}=await supa.from('houses').select('invite_code').eq('id',currentHouseId).single();
   const code=houseData?.invite_code||'—';
-  out.push(`<div class="card" style="margin-bottom:16px;"><p class="lbl" style="margin-bottom:12px;">Código de Convite</p><div class="fb"><div><div style="font-size:24px;font-family:'Cormorant',serif;letter-spacing:.2em;font-weight:400;">${code}</div><div class="tip" style="margin-top:4px;">Compartilhe este código para convidar outras pessoas</div></div><button class="btn btn-gh btn-sm" onclick="navigator.clipboard.writeText('${code}').then(()=>alert('Código copiado!'))">&#128203; Copiar</button></div></div>`);
+  out.push(`<div class="card" style="margin-bottom:16px;"><p class="lbl" style="margin-bottom:14px;">C\u00f3digo de Convite &amp; QR Code</p><div class="fi" style="gap:20px;flex-wrap:wrap;align-items:flex-start;"><div style="flex:1;min-width:150px;"><div style="font-size:28px;font-family:'Cormorant',serif;letter-spacing:.25em;margin-bottom:8px;">${code}</div><div class="tip" style="margin-bottom:12px;">Compartilhe o c\u00f3digo ou QR Code. O QR abre o app com o convite pr\u00e9-preenchido.</div><div class="fi" style="gap:8px;"><button class="btn btn-gh btn-sm" onclick="navigator.clipboard.writeText('${code}').then(()=>alert('Copiado!'))">&#128203; Copiar</button><button class="btn btn-gh btn-sm" onclick="downloadQR('${currentHouseId}')">&#11015; QR</button></div></div><div id="qr-${currentHouseId}" style="width:128px;height:128px;flex-shrink:0;"></div></div></div>`);
   const {data:members}=await supa.from('house_members').select('user_id,role').eq('house_id',currentHouseId);
   out.push(`<div class="card" style="margin-bottom:16px;"><p class="lbl" style="margin-bottom:12px;">Membros (${(members||[]).length})</p>`);
   (members||[]).forEach(m=>{
@@ -2136,6 +2145,11 @@ async function renderConfig() {
   out.push(`<div class="card" style="margin-bottom:16px;"><p class="lbl" style="margin-bottom:4px;">&#128190; Backup &amp; Restauração</p><p class="tip" style="margin-bottom:16px;">Exporte todos os dados da sua Casa. Importe para restaurar ou migrar para outra Casa.</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;"><div style="background:var(--cream);border:1px solid var(--border);border-radius:12px;padding:16px;"><p style="font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Exportar</p><p class="tip" style="margin-bottom:12px;">Arquivo <code style="background:var(--border);padding:1px 5px;border-radius:4px;font-size:10px;">.json</code> com todos os dados da Casa.</p><button class="btn btn-dk" style="width:100%;" onclick="exportBackup()">&#8659; Backup JSON</button><button class="btn btn-gh" style="width:100%;margin-top:8px;" onclick="exportBackupCSV()">&#8659; Tabelas CSV</button></div><div style="background:var(--cream);border:1px solid var(--border);border-radius:12px;padding:16px;"><p style="font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Importar / Restaurar</p><p class="tip" style="margin-bottom:12px;">Selecione um <code style="background:var(--border);padding:1px 5px;border-radius:4px;font-size:10px;">.json</code> exportado pelo Atrium. Registros existentes são preservados.</p><label style="display:block;width:100%;padding:10px 20px;border-radius:9px;border:1px solid var(--border);background:var(--card);font-size:12px;font-weight:500;cursor:pointer;text-align:center;">&#8657; Selecionar arquivo JSON<input type="file" accept=".json" onchange="importBackup(event)" style="display:none;"></label></div></div><div id="backup-status" style="display:none;"></div><div style="background:rgba(196,151,58,.07);border:1px solid rgba(196,151,58,.25);border-radius:10px;padding:12px 14px;"><p style="font-size:11px;color:var(--warn);font-weight:500;margin-bottom:4px;">&#9888;&#65039; Merge, não sobrescrita</p><p class="tip" style="color:var(--warn);opacity:.85;">Registros com o mesmo ID são ignorados. Para restauração completa em uma Casa vazia, não há risco de conflito.</p></div></div>`);
   out.push(`<div class="div"></div><button class="btn btn-gh" style="width:100%;margin-top:8px;" onclick="doLogout()">Sair da conta</button>`);
   document.getElementById('tab-config').innerHTML=out.join('');
+  requestAnimationFrame(()=>{
+    const qrEl=document.getElementById('qr-'+currentHouseId);
+    if(qrEl&&window.QRCode&&!qrEl.querySelector('canvas'))
+      new window.QRCode(qrEl,{text:window.location.origin+window.location.pathname+'?invite='+code,width:128,height:128,colorDark:'#2A2520',colorLight:'#FDFCFA',correctLevel:window.QRCode.CorrectLevel.M});
+  });
 }
 
 // ── BACKUP & RESTORE ──────────────────────────────────────────────
@@ -2295,6 +2309,9 @@ function renderAll(){render(CT);}
 document.addEventListener('DOMContentLoaded', () => {
   // supabase.js é carregado localmente (mesmo repositório)
   // Se não estiver disponível, mostra erro claro
+  const _urlInvite=new URLSearchParams(window.location.search).get('invite');
+  if(_urlInvite)sessionStorage.setItem('atrium_qr_invite',_urlInvite.toLowerCase().trim());
+
   if (!window.supabase) {
     const ls = document.getElementById('loading-screen');
     if (ls) ls.innerHTML =
@@ -2402,6 +2419,8 @@ function initApp() {
       if (sessionProcessed) return;
       sessionProcessed = true;
       hideLoading();
+      const _qrInv=sessionStorage.getItem('atrium_qr_invite');
+      if(_qrInv){sessionStorage.removeItem('atrium_qr_invite');sessionStorage.setItem('atrium_signup_mode','join');sessionStorage.setItem('atrium_signup_invite',_qrInv);}
       await afterLogin(user);
     }
 
@@ -2479,6 +2498,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
