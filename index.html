@@ -471,6 +471,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -1757,13 +1758,13 @@ function calc(eid, ry, rm) {
   const pyY=rm===11?ry+1:ry, pyM=rm===11?0:rm+1;
   const admissao=emp.admissao?new Date(emp.admissao):null;
   const isFirstMonth=admissao&&admissao.getFullYear()===ry&&admissao.getMonth()===rm;
-  let proRataDias=0, proRataSal=netSal, proRataActive=false;
+  let proRataDias=0, proRataSal=netSal, proRataActive=false, proRataSalBase=0;
   if(isFirstMonth){
     // CLT Art.64: base 30 dias fixo; dias = 31 - diaAdmissao
     // Ex: admitido dia 24 → 31-24=7 dias → 7/30=23.3%
     proRataDias = 31 - admissao.getDate();
     const fator = proRataDias / 30;
-    const proRataSalBase = Math.round(salBase * fator * 100) / 100;
+    proRataSalBase = Math.round(salBase * fator * 100) / 100;
     proRataSal=Math.round((proRataSalBase+recTot+avTot+bons-deds-inssAmt)*100)/100;
     const prKey='prorata_'+String(eid)+'_'+key;
     proRataActive=localStorage.getItem(prKey)==='1';
@@ -1771,7 +1772,7 @@ function calc(eid, ry, rm) {
   // Se pro-rata ativo, sobrepõe o total e netSal com o valor proporcional
   const finalNetSal = proRataActive ? proRataSal : netSal;
   const finalTotal  = proRataActive ? proRataSal + vtNet : netSal + vtNet;
-  return { emp,ry,rm,key,payment,salBase,recs,recTot,avs,avTot,holWarns,gross,adjs,deds,bons,inssAmt,netSal,finalNetSal,vtY,vtM,vtWd,vtWdAuto,vtManualDays,vtOK,vtGross,vtDisc,vtNet,pay1:bday1(pyY,pyM),pay5:bday5(pyY,pyM),pyY,pyM,total:finalTotal,isFirstMonth,proRataDias,proRataSal,proRataSalBase:(typeof proRataSalBase!=='undefined'?proRataSalBase:0),proRataActive };
+  return { emp,ry,rm,key,payment,salBase,recs,recTot,avs,avTot,holWarns,gross,adjs,deds,bons,inssAmt,netSal,finalNetSal,vtY,vtM,vtWd,vtWdAuto,vtManualDays,vtOK,vtGross,vtDisc,vtNet,pay1:bday1(pyY,pyM),pay5:bday5(pyY,pyM),pyY,pyM,total:finalTotal,isFirstMonth,proRataDias,proRataSal,proRataSalBase,proRataActive };
 }
 
 // ── MEMO HTML ─────────────────────────────────────────────────
@@ -2618,6 +2619,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
