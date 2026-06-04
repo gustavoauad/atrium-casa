@@ -464,6 +464,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -627,7 +628,25 @@ async function doSignup() {
   _signingUp = true;
 
   try {
-    // 1. Cria o usuário
+    // PASSO 0 — se modo join, valida o código de convite ANTES de criar o usuário
+    // Isso evita criar um usuário órfão caso o código seja inválido
+    let preValidatedHouse = null;
+    if (mode === 'join') {
+      setBtn('Verificando código…');
+      const code = invCode.toLowerCase().trim();
+      const { data: hv, error: hvErr } = await supa
+        .from('houses').select('id, name').eq('invite_code', code).single();
+      if (hvErr || !hv) {
+        _signingUp = false;
+        btn.disabled = false; setBtn('Criar conta');
+        showAuthErr('❌ Código de convite inválido. Verifique o código e tente novamente.');
+        return; // não cria o usuário
+      }
+      preValidatedHouse = hv; // casa encontrada — prossegue
+    }
+
+    // PASSO 1 — cria o usuário Auth
+    setBtn('Criando conta…');
     const { data: authData, error: authErr } = await supa.auth.signUp({ email, password: pass });
     if (authErr) throw new Error('Erro no cadastro: ' + authErr.message);
 
@@ -636,7 +655,7 @@ async function doSignup() {
       _signingUp = false;
       sessionStorage.setItem('atrium_signup_mode', mode);
       if (mode === 'new')  sessionStorage.setItem('atrium_signup_casa',   casaNome);
-      if (mode === 'join') sessionStorage.setItem('atrium_signup_invite', invCode);
+      if (mode === 'join') sessionStorage.setItem('atrium_signup_invite', invCode.toLowerCase().trim());
       showAuthErr('✉️ Conta criada! Verifique seu e-mail para confirmar antes de entrar.');
       const ae = document.getElementById('auth-err');
       ae.style.cssText += ';background:rgba(107,159,191,.08);border-color:rgba(107,159,191,.3);color:var(--blue)';
@@ -644,57 +663,44 @@ async function doSignup() {
       return;
     }
 
-    // 2. Cria ou entra na Casa diretamente via insert (sem depender de RPC)
+    // PASSO 2 — configura a Casa
     setBtn('Configurando Casa…');
     const userId = authData.session.user.id;
+    let houseId, houseName, houseRole;
 
     if (mode === 'new') {
-      // Insere a casa diretamente
       const { data: houseRows, error: hErr } = await supa
         .from('houses')
         .insert({ name: casaNome, created_by: userId })
         .select('id')
         .single();
       if (hErr) throw new Error('Erro ao criar Casa: ' + hErr.message);
-
-      // Associa o usuário como admin
       const { error: mErr } = await supa
         .from('house_members')
         .insert({ house_id: houseRows.id, user_id: userId, role: 'admin' });
       if (mErr) throw new Error('Erro ao associar membro: ' + mErr.message);
+      houseId = houseRows.id; houseName = casaNome; houseRole = 'admin';
 
     } else {
-      // Entra via código de convite
-      const { data: houseRows, error: hErr } = await supa
-        .from('houses')
-        .select('id')
-        .eq('invite_code', invCode.toLowerCase().trim())
-        .single();
-      if (hErr || !houseRows) throw new Error('Código de convite inválido.');
-
+      // Usa a casa já validada no passo 0
       const { error: mErr } = await supa
         .from('house_members')
-        .insert({ house_id: houseRows.id, user_id: userId, role: 'viewer' });
+        .insert({ house_id: preValidatedHouse.id, user_id: userId, role: 'viewer' });
       if (mErr && !mErr.message.includes('duplicate')) throw new Error('Erro ao entrar na Casa: ' + mErr.message);
+      houseId = preValidatedHouse.id; houseName = preValidatedHouse.name; houseRole = 'viewer';
     }
 
-    // 3. Tudo ok — entra direto na casa recém-criada
-    // Não depende de loadUserHouses (evita problema de propagação de RLS)
+    // PASSO 3 — sucesso: mostra mensagem e entra
     _signingUp = false;
     showAuthErr('✅ Conta criada com sucesso! Entrando no Atrium…');
-    const ae2=document.getElementById('auth-err');
-    if(ae2)ae2.style.cssText+=';background:rgba(138,155,138,.1);border-color:rgba(138,155,138,.3);color:var(--sage)';
+    const ae2 = document.getElementById('auth-err');
+    if (ae2) ae2.style.cssText += ';background:rgba(138,155,138,.1);border-color:rgba(138,155,138,.3);color:var(--sage)';
     setBtn('Entrando…');
-    await new Promise(r=>setTimeout(r,1200));
+    await new Promise(r => setTimeout(r, 1200));
     currentUser = authData.session.user;
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('loading-screen').style.display = 'none';
-    if (mode === 'new') {
-      await selectHouse(houseRows.id, casaNome, 'admin');
-    } else {
-      // Para join, ainda usamos afterLogin pois não temos o houseId em mãos facilmente
-      await afterLogin(authData.session.user);
-    }
+    await selectHouse(houseId, houseName, houseRole);
 
   } catch (e) {
     _signingUp = false;
@@ -1196,6 +1202,17 @@ async function _sbSavePayment(pay) {
     if (data?.[0]) { pay._sbid = data[0].id; saveDB(); }
   }
 }
+// Salva um override individual (VT, proRata, rescisão) no Supabase settings
+async function _sbSaveOverride(key, value) {
+  if (_DEV_MODE || !currentHouseId) return;
+  try {
+    await supa.from('settings').upsert(
+      { key, value: value !== null ? value : null, house_id: currentHouseId },
+      { onConflict: 'key,house_id' }
+    );
+  } catch(e) { console.warn('_sbSaveOverride error:', e.message); }
+}
+
 async function _sbSaveSettings() {
   if (_DEV_MODE) { return; }
   await supa.from('settings').upsert(
@@ -1234,6 +1251,15 @@ async function loadFromSupabase() {
     db.payments = (paysR.data || []).map(r => { const d = r.data; d._sbid = r.id; return d; });
     for (const r of (setsR.data || [])) {
       if (r.key === 'regional') db.regional = r.value;
+      // Restaura overrides (VT, proRata, rescisão) do Supabase para localStorage
+      if (r.key && r.key.startsWith('ls:')) {
+        const lsKey = r.key.slice(3);
+        if (r.value !== null && r.value !== undefined) {
+          localStorage.setItem(lsKey, typeof r.value === 'object' ? JSON.stringify(r.value) : String(r.value));
+        } else {
+          localStorage.removeItem(lsKey);
+        }
+      }
     }
     saveDB(); showSyncBanner('online'); renderAll();
   } catch (e) { console.error('Supabase load error:', e); showSyncBanner('error'); renderAll(); }
@@ -1595,7 +1621,9 @@ function applyRescInline(eid, wy, wm) {
   const res = document.getElementById('ri-result-' + eid);
   if (!res?.dataset.resc) { alert('Calcule as verbas primeiro.'); return; }
   const r = JSON.parse(res.dataset.resc);
-  localStorage.setItem('resc_' + String(eid) + '_' + MK(wy, wm), JSON.stringify(r));
+  const key = 'resc_' + String(eid) + '_' + MK(wy, wm);
+  localStorage.setItem(key, JSON.stringify(r));
+  _sbSaveOverride('ls:'+key, r);
   renderFech();
 }
 
@@ -1606,7 +1634,9 @@ function applyRescCustom(eid, wy, wm) {
   const res = document.getElementById('ri-result-' + eid);
   let r = res?.dataset.resc ? JSON.parse(res.dataset.resc) : { itens:[], total:val, motivo:'acordo' };
   r.customValue = val;
-  localStorage.setItem('resc_' + String(eid) + '_' + MK(wy, wm), JSON.stringify(r));
+  const key = 'resc_' + String(eid) + '_' + MK(wy, wm);
+  localStorage.setItem(key, JSON.stringify(r));
+  _sbSaveOverride('ls:'+key, r);
   renderFech();
 }
 
@@ -1623,6 +1653,7 @@ function saveRescEdit(eid, wy, wm) {
   const val = +document.getElementById('edit-resc-val-' + eid)?.value || 0;
   r.customValue = val > 0 ? val : null;
   localStorage.setItem(key, JSON.stringify(r));
+  _sbSaveOverride('ls:'+key, r);
   renderFech();
 }
 
@@ -1630,8 +1661,8 @@ function setProRata(key, active) {
   if (!canWrite()) return;
   if (active) localStorage.setItem(key, '1');
   else localStorage.removeItem(key);
+  _sbSaveOverride('ls:'+key, active ? 1 : null);
   if (CT==='fech') renderFech(); else renderAll();
-  // Atualiza modal se aberto
   const mp=document.getElementById('mod-pay');
   if (mp&&!mp.classList.contains('hidden')&&mp.dataset.eid)
     openPayM(mp.dataset.eid, +mp.dataset.ry, +mp.dataset.rm);
@@ -1641,8 +1672,8 @@ function setVTDays(key, val) {
   if (!canWrite()) return;
   const n=parseInt(val,10); if(isNaN(n)||n<0)return;
   localStorage.setItem(key,String(n));
+  _sbSaveOverride('ls:'+key, n);
   if (CT==='fech') renderFech(); else renderAll();
-  // Atualiza modal de pagamento se estiver aberto
   const mp=document.getElementById('mod-pay');
   if (mp&&!mp.classList.contains('hidden')&&mp.dataset.eid)
     openPayM(mp.dataset.eid, +mp.dataset.ry, +mp.dataset.rm);
@@ -1650,6 +1681,7 @@ function setVTDays(key, val) {
 function resetVTDays(key) {
   if (!canWrite()) return;
   localStorage.removeItem(key);
+  _sbSaveOverride('ls:'+key, null);
   if (CT==='fech') renderFech(); else renderAll();
   const mp=document.getElementById('mod-pay');
   if (mp&&!mp.classList.contains('hidden')&&mp.dataset.eid)
@@ -2566,6 +2598,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
