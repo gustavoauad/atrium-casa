@@ -413,7 +413,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
   <div class="modal cm" style="max-width:560px;">
     <div class="mh"><div class="mt">Templates Rescis&#243;rios</div><button class="xi" onclick="cm('mod-templates')">&#215;</button></div>
     <div class="mb">
-      <div class="field"><label>Funcion&#225;rio</label><select id="tmpl-emp"></select></div>
+      <div class="field"><label>Funcion&#225;rio</label><select id="tmpl-emp" onchange="onTmplEmpChange()"></select></div>
       <div class="field"><label>Documento</label><select id="tmpl-doc"><option value="aviso_previo">Aviso Pr&#233;vio</option><option value="trct">Termo de Rescis&#227;o (TRCT)</option><option value="quitacao">Recibo de Quita&#231;&#227;o</option><option value="acordo">Termo de Acordo M&#250;tuo</option></select></div>
       <div class="g2"><div class="field"><label>Data de admiss&#227;o</label><input id="tmpl-admissao" type="date"></div><div class="field"><label>Data do desligamento</label><input id="tmpl-data" type="date"></div></div>
       <div class="field"><label>Nome do empregador</label><input id="tmpl-empregador" placeholder="Seu nome completo"></div>
@@ -430,6 +430,9 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" crossorigin="anonymous"></script>
 <script>
+
+
+
 
 
 
@@ -664,12 +667,15 @@ async function doSignup() {
     if (mode === 'join') {
       setBtn('Verificando código…');
       const code = invCode.toLowerCase().trim();
+      // NOTE: requires Supabase policy allowing anon to SELECT invite_code
+      // SQL: create policy "anon_read_invite" on houses for select to anon using (true);
       const { data: hv, error: hvErr } = await supa
         .from('houses').select('id, name').eq('invite_code', code).single();
+      if (hvErr) console.error('invite lookup error:', hvErr.message, 'code:', code);
       if (hvErr || !hv) {
         _signingUp = false;
         btn.disabled = false; setBtn('Criar conta');
-        showAuthErr('❌ Código de convite inválido. Verifique o código e tente novamente.');
+        showAuthErr('❌ Código \''+code+'\' não encontrado. Verifique se copiou corretamente (letras minúsculas).');
         return; // não cria o usuário
       }
       preValidatedHouse = hv; // casa encontrada — prossegue
@@ -740,6 +746,7 @@ async function doSignup() {
   }
 }
 async function afterSignupSetup() {
+  if (!supa) { setTimeout(afterSignupSetup, 400); return; }
   const mode = sessionStorage.getItem('atrium_signup_mode');
   if (!mode) return;
   try {
@@ -2155,9 +2162,22 @@ function openTemplates() {
   if(db.employees[0])document.getElementById('tmpl-admissao').value=db.employees[0].admissao||'';
   document.getElementById('mod-templates').classList.remove('hidden');
 }
+function onTmplEmpChange() {
+  const eid = document.getElementById("tmpl-emp").value;
+  const emp = db.employees.find(e => String(e.id) === String(eid));
+  if (!emp) return;
+  const admEl = document.getElementById("tmpl-admissao");
+  const descEl = document.getElementById("tmpl-data");
+  if (admEl && emp.admissao) admEl.value = emp.admissao;
+  if (descEl && emp.desligamento) descEl.value = emp.desligamento;
+}
+
 function gerarTemplate() {
   const eid=document.getElementById('tmpl-emp').value, tipo=document.getElementById('tmpl-doc').value;
-  const adm=document.getElementById('tmpl-admissao').value, data=document.getElementById('tmpl-data').value;
+  const admInput=document.getElementById('tmpl-admissao').value;
+  const adm=admInput||emp?.admissao||'';
+  const dataInput=document.getElementById('tmpl-data').value;
+  const data=dataInput||emp?.desligamento||'';
   const empregador=document.getElementById('tmpl-empregador').value.trim()||'[Nome do Empregador]';
   const emp=db.employees.find(e=>e.id===eid); if(!emp)return;
   ({aviso_previo:gerarAvisoPrevio,trct:gerarTRCT,quitacao:gerarQuitacao,acordo:gerarAcordo})[tipo]?.(emp,adm,data,empregador);
@@ -2430,11 +2450,16 @@ function renderRel() {
   const months=Object.keys(monthSet).sort((a,b)=>{const[ay,am]=a.split('-').map(Number),[by,bm]=b.split('-').map(Number);return by-ay||bm-am;}).map(k=>{const[y,m]=k.split('-').map(Number);return{y,m};});
   const selSel=document.getElementById('rel-month-sel'), selMonth=selSel?selSel.value:(wy+'-'+wm);
   const[ry,rm]=selMonth.split('-').map(Number);
+  // Filtros: incluir desligados + funcionário individual
+  const inclDes=document.getElementById('rel-incl-des')?.checked||false;
+  const relEmpSel=document.getElementById('rel-emp-filter'), relEmpId=relEmpSel?.value||'';
   const refLabel=MP[rm]+' '+ry, pyY=rm===11?ry+1:ry, pyM=rm===11?0:rm+1, payLabel=MP[pyM]+' '+pyY;
-  const calcs=db.employees.filter(e=>e.status!=='desligado').map(e=>calc(e.id,ry,rm));
+  const allEmps=inclDes?db.employees:db.employees.filter(e=>e.status!=='desligado');
+  const filtEmps=relEmpId?allEmps.filter(e=>String(e.id)===String(relEmpId)):allEmps;
+  const calcs=filtEmps.map(e=>calc(e.id,ry,rm));
   const totSal=calcs.reduce((a,c)=>a+c.finalNetSal,0), totVT=calcs.reduce((a,c)=>a+c.vtNet,0), totAll=calcs.reduce((a,c)=>a+c.total,0), totInss=calcs.reduce((a,c)=>a+c.inssAmt,0), paidCount=calcs.filter(c=>c.payment).length;
   const out=[];
-  out.push(`<div class="fb" style="margin-bottom:20px;flex-wrap:wrap;gap:12px;"><div><div style="font-family:'Cormorant',serif;font-size:26px;font-weight:300;margin-bottom:4px;">Relat\u00f3rios</div><div class="tip">${refLabel} \u00b7 Pgto: ${payLabel}</div></div><div class="fi" style="gap:8px;"><select id="rel-month-sel" onchange="renderRel()" class="ssel" style="padding:8px 28px 8px 12px;border-radius:9px;border:1px solid var(--border);background:var(--cream);font-size:13px;">${months.map(mo=>`<option value="${mo.y+'-'+mo.m}"${(mo.y+'-'+mo.m)===selMonth?' selected':''}>${MP[mo.m]} ${mo.y}</option>`).join('')}</select><button class="btn btn-dk btn-sm" onclick="printReport()">&#128438; PDF</button><button class="btn btn-gh btn-sm" onclick="exportReportCSV()">&#8595; CSV</button></div></div>`);
+  out.push(`<div class="fb" style="margin-bottom:20px;flex-wrap:wrap;gap:12px;"><div><div style="font-family:'Cormorant',serif;font-size:26px;font-weight:300;margin-bottom:4px;">Relat\u00f3rios</div><div class="tip">${refLabel} \u00b7 Pgto: ${payLabel}</div></div><div class="fi" style="gap:8px;"><select id="rel-month-sel" onchange="renderRel()" class="ssel" style="padding:8px 28px 8px 12px;border-radius:9px;border:1px solid var(--border);background:var(--cream);font-size:13px;">${months.map(mo=>`<option value="${mo.y+'-'+mo.m}"${(mo.y+'-'+mo.m)===selMonth?' selected':''}>${MP[mo.m]} ${mo.y}</option>`).join('')}</select><select id="rel-emp-filter" onchange="renderRel()" class="ssel" style="padding:8px 12px;"><option value="">Todos</option>${db.employees.map(e=>`<option value="${e.id}"${String(e.id)===String(relEmpId)?' selected':''}>${escapeHTML(e.name)}${e.status==='desligado'?' (desligado)':''}</option>`).join('')}</select><label style="display:flex;gap:6px;align-items:center;font-size:13px;cursor:pointer;"><input type="checkbox" id="rel-incl-des" onchange="renderRel()"${inclDes?' checked':''}>Inc. desligados</label><button class="btn btn-dk btn-sm" onclick="printReport()">&#128438; PDF</button><button class="btn btn-gh btn-sm" onclick="exportReportCSV()">&#8595; CSV</button></div></div>`);
   out.push(`<div class="fi" style="gap:8px;margin-bottom:16px;flex-wrap:wrap;"><span class="badge" style="background:rgba(139,115,85,.12);color:var(--accent);font-size:11px;padding:5px 12px;">${refLabel}</span><span class="badge" style="background:rgba(107,159,191,.12);color:var(--blue);font-size:11px;padding:5px 12px;">Pgto: ${payLabel}</span><span class="badge" style="background:${paidCount===calcs.length&&calcs.length>0?'rgba(138,155,138,.15)':'rgba(196,151,58,.12)'};color:${paidCount===calcs.length&&calcs.length>0?'var(--sage)':'var(--warn)'};font-size:11px;padding:5px 12px;">${paidCount}/${calcs.length} pagos</span></div>`);
   if(!calcs.length){out.push('<div class="empty"><div class="ei">&#128196;</div><div class="et">Nenhum funcion\u00e1rio ativo.</div></div>');document.getElementById('tab-rel').innerHTML=out.join('');return;}
   out.push('<div class="g4" style="margin-bottom:20px;">');
@@ -2443,7 +2468,7 @@ function renderRel() {
   out.push(`<div class="card" style="margin-bottom:16px;"><p style="font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;">Resumo Consolidado \u2014 ${refLabel}</p><div class="mt2"><div class="mr mrh" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr;"><span>Funcion\u00e1rio</span><span style="text-align:right;">Base</span><span style="text-align:right;">Di\u00e1rias</span><span style="text-align:right;">Descontos</span><span style="text-align:right;">Sal. L\u00edq.</span><span style="text-align:right;">VT</span><span style="text-align:right;">Envelope</span></div>`);
   calcs.forEach(c=>{const isPaid=!!c.payment;out.push(`<div class="mr" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr;"><span style="word-break:break-word;">${escapeHTML(c.emp.name)}${isPaid?' <span class="badge" style="background:rgba(138,155,138,.15);color:var(--sage);">&#10003;</span>':''}</span><span class="money" style="text-align:right;">R$ ${fm(c.proRataActive?c.proRataSalBase:c.salBase)}${c.proRataActive?'<span style=\"font-size:9px;color:var(--warn);margin-left:3px;">PR</span>':''}</span><span class="money" style="text-align:right;color:var(--sage);">R$ ${fm(c.recTot+c.avTot)}</span><span class="money" style="text-align:right;color:var(--danger);">R$ ${fm(c.deds+c.inssAmt)}</span><span class="money" style="text-align:right;font-weight:500;">R$ ${fm(c.finalNetSal)}</span><span class="money" style="text-align:right;color:var(--blue);">R$ ${fm(c.vtNet)}</span><span class="money" style="text-align:right;color:var(--accent);font-weight:500;">R$ ${fm(c.total)}</span></div>`);});
   out.push(`<div class="mr" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr;background:var(--cream);font-weight:500;"><span>TOTAL</span><span class="money" style="text-align:right;">R$ ${fm(calcs.reduce((a,c)=>a+(c.proRataActive?c.proRataSalBase:c.salBase),0))}</span><span class="money" style="text-align:right;color:var(--sage);">R$ ${fm(calcs.reduce((a,c)=>a+c.recTot+c.avTot,0))}</span><span class="money" style="text-align:right;color:var(--danger);">R$ ${fm(calcs.reduce((a,c)=>a+c.deds+c.inssAmt,0))}</span><span class="money" style="text-align:right;font-weight:600;">R$ ${fm(totSal)}</span><span class="money" style="text-align:right;color:var(--blue);">R$ ${fm(totVT)}</span><span class="money" style="text-align:right;color:var(--accent);font-weight:600;font-size:15px;">R$ ${fm(totAll)}</span></div></div></div>`);
-  calcs.forEach(c=>{out.push(`<div class="card" style="margin-bottom:16px;"><div class="fi" style="gap:12px;margin-bottom:16px;">${avt(c.emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-size:15px;font-weight:400;word-break:break-word;">${escapeHTML(c.emp.name)}</div><div style="font-size:11px;color:var(--muted);">${escapeHTML(c.emp.role)}</div></div><div style="margin-left:auto;text-align:right;flex-shrink:0;"><div class="money" style="font-size:24px;color:var(--accent);">R$ ${fm(c.total)}</div>${c.payment?`<div style="font-size:11px;color:var(--sage);">&#10003; Pago em ${fd(c.payment.paidDate)}</div>`:`<div style="font-size:11px;color:var(--warn);">&#9679; Pendente</div>`}</div></div>${memoHTML(c)}</div>`);});
+  calcs.forEach(c=>{out.push(`<div class="card" style="margin-bottom:16px;"><div class="fi" style="gap:12px;margin-bottom:16px;">${avt(c.emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-size:15px;font-weight:400;word-break:break-word;">${escapeHTML(c.emp.name)}</div><div style="font-size:11px;color:var(--muted);">${escapeHTML(c.emp.role)}</div></div><div style="margin-left:auto;text-align:right;flex-shrink:0;"><div class="money" style="font-size:24px;color:var(--accent);">R$ ${fm(c.total)}</div>${c.payment?`<div style="font-size:11px;color:var(--sage);">&#10003; Pago${c.payment?.isRescisao?'<span style="color:var(--danger);margin-left:4px;font-size:10px;">Rescis\u00e3o</span>':''} em ${fd(c.payment.paidDate)}</div>`:`<div style="font-size:11px;color:var(--warn);">&#9679; &#9711; Pendente</div>`}</div></div>${memoHTML(c)}</div>`);});
   document.getElementById('tab-rel').innerHTML=out.join('');
 }
 
@@ -2603,7 +2628,11 @@ function printReport(){
 function exportReportCSV(){
   const selSel=document.getElementById('rel-month-sel');if(!selSel)return;
   const[ry,rm]=selSel.value.split('-').map(Number);
-  const calcs=db.employees.filter(e=>e.status!=='desligado').map(e=>calc(e.id,ry,rm));
+  const _cid=document.getElementById('rel-emp-filter')?.value||'';
+  const _des=document.getElementById('rel-incl-des')?.checked||false;
+  let _emps=_des?db.employees:db.employees.filter(e=>e.status!=='desligado');
+  if(_cid)_emps=_emps.filter(e=>String(e.id)===String(_cid));
+  const calcs=_emps.map(e=>calc(e.id,ry,rm));
   const rows=[['Funcion\u00e1rio','Fun\u00e7\u00e3o','Sal. Base','Di\u00e1rias Rec.','Di\u00e1rias Avulsas','B\u00f4nus','Descontos','INSS','Sal. L\u00edquido','VT Dias','VT','VT M\u00eas','Total Envelope','Pago em','Forma','Status']];
   calcs.forEach(c=>rows.push([c.emp.name,c.emp.role,c.salBase.toFixed(2),c.recTot.toFixed(2),c.avTot.toFixed(2),c.bons.toFixed(2),c.deds.toFixed(2),c.inssAmt.toFixed(2),c.netSal.toFixed(2),c.vtWd,c.vtNet.toFixed(2),MP[c.vtM]+' '+c.vtY,c.total.toFixed(2),c.payment?.paidDate||'',c.payment?.method||'',c.payment?'Pago':'Pendente']));
   const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
@@ -2702,6 +2731,7 @@ function initDevMode() {
 }
 
 function initApp() {
+  _sessionProcessed = false; // garante reset a cada reload
   // Dev mode: pula autenticação e entra direto com dados locais
   if (_DEV_MODE) {
     initDevMode();
@@ -2816,6 +2846,9 @@ function initApp() {
       + '</div>';
   }
 }
+
+
+
 
 
 
