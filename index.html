@@ -492,6 +492,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -570,7 +571,7 @@ let currentUser   = null;
 let _signingUp    = false; // impede onAuthStateChange durante setup do signup  // objeto auth.user do Supabase
 let currentHouseId = null; // UUID da casa ativa
 let currentHouseName = '';
-let currentRole   = null;  // 'admin' | 'editor' | 'viewer'
+let currentRole   = null;  // 'admin' | 'member' | 'viewer'
 
 // ── RBAC HELPERS ─────────────────────────────────────────────
 // [H] Guard functions — chamadas no início de toda operação de escrita
@@ -579,7 +580,7 @@ function canWrite() {
     alert('Acesso negado: sua permissão é somente visualização.');
     return false;
   }
-  return currentRole === 'admin' || currentRole === 'member';
+  return currentRole === 'admin' || currentRole === 'member' || currentRole === 'editor';
 }
 function canAdmin() { return currentRole === 'admin'; }
 function canDelete() {
@@ -607,7 +608,7 @@ function applyRoleToBody() {
   if (lbl) lbl.textContent = currentHouseName;
   const roleBadge = document.getElementById('role-badge');
   if (roleBadge) {
-    const labels = { admin:'Admin', member:'Membro', viewer:'Visitante' };
+    const labels = { admin:'Admin', member:'Membro', editor:'Editor', viewer:'Visitante' };
     const colors = { admin:'var(--accent)', member:'var(--sage)', viewer:'var(--muted)' };
     roleBadge.textContent = labels[currentRole] || currentRole;
     roleBadge.style.color = colors[currentRole] || 'var(--muted)';
@@ -1784,7 +1785,7 @@ async function cancelPayment(eid, ry, rm) {
 
 async function changeMemberRole(userId, newRole) {
   if (!canAdmin()) { alert('Apenas o Admin pode alterar permissões.'); return; }
-  if (!['viewer','member','admin'].includes(newRole)) return;
+  if (!['viewer','member','admin','editor'].includes(newRole)) return;
   try {
     const { data, error, count } = await supa.from('house_members')
       .update({ role: newRole })
@@ -2565,7 +2566,7 @@ async function renderConfig() {
     const disp=escapeHTML(m.email||m.display_name||(m.user_id.slice(0,8)+'…'));
     const initial=(m.email||m.display_name||'?')[0].toUpperCase();
     const rColor={admin:'var(--accent)',member:'var(--sage)',viewer:'var(--muted)'}[m.role]||'var(--muted)';
-    const rLabel={admin:'Admin',member:'Membro',viewer:'Visitante'}[m.role]||m.role;
+    const rLabel={admin:'Admin',member:'Membro',editor:'Editor',viewer:'Visitante'}[m.role]||m.role;
     out.push(`<div class="fb" style="padding:12px 0;border-bottom:1px solid var(--border);gap:8px;flex-wrap:wrap;">`);
     out.push(`<div class="fi" style="gap:10px;flex:1;min-width:0;"><div style="width:34px;height:34px;border-radius:50%;background:var(--cream);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">${initial}</div><div><div style="font-size:13px;">${disp}${isMe?' <strong style="color:var(--accent);">(você)</strong>':''}</div><div style="font-size:11px;color:${rColor};margin-top:2px;">${rLabel}</div></div></div>`);
     if(isAdmin&&!isMe){
@@ -2933,6 +2934,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
