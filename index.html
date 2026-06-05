@@ -491,6 +491,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -1785,9 +1786,15 @@ async function changeMemberRole(userId, newRole) {
   if (!canAdmin()) { alert('Apenas o Admin pode alterar permissões.'); return; }
   if (!['viewer','member','admin'].includes(newRole)) return;
   try {
-    const { error } = await supa.from('house_members')
-      .update({ role: newRole }).eq('house_id', currentHouseId).eq('user_id', userId);
+    const { data, error, count } = await supa.from('house_members')
+      .update({ role: newRole })
+      .eq('house_id', currentHouseId)
+      .eq('user_id', userId)
+      .select();
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error('Permissão negada pelo banco. Verifique se sua conta é Admin e se a policy RLS está configurada corretamente no Supabase.');
+    }
     renderConfig();
   } catch(e) { alert('Erro ao alterar permissão: ' + e.message); }
 }
@@ -2926,6 +2933,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
