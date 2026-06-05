@@ -487,6 +487,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -674,20 +675,28 @@ async function doSignup() {
     if (mode === 'join') {
       setBtn('Verificando código…');
       const code = invCode.toLowerCase().trim();
-      // Usa maybeSingle() — retorna null (sem erro) se código não encontrado
-      // Requer policy: create policy "anon_read_invite" on houses
-      //   for select to anon using (true);
+      // ── DEBUG: mostra exatamente o que está sendo enviado e recebido ──
+      console.log('[INVITE DEBUG] code being queried:', JSON.stringify(code));
+      console.log('[INVITE DEBUG] code length:', code.length);
+      console.log('[INVITE DEBUG] code charCodes:', [...code].map(ch=>ch.charCodeAt(0)));
       const { data: hv, error: hvErr } = await supa
-        .from('houses').select('id, name').eq('invite_code', code).maybeSingle();
+        .from('houses').select('id, name, invite_code').eq('invite_code', code).maybeSingle();
+      console.log('[INVITE DEBUG] data:', JSON.stringify(hv));
+      console.log('[INVITE DEBUG] error:', JSON.stringify(hvErr));
+      // Mostra na tela para diagnóstico
+      const dbgMsg = 'DEBUG — código: |' + code + '| len:' + code.length
+        + ' | data: ' + JSON.stringify(hv)
+        + ' | erro: ' + (hvErr ? hvErr.message : 'nenhum');
+      showAuthErr(dbgMsg);
+      await new Promise(r => setTimeout(r, 5000)); // pausa 5s para ler
+      clearAuthErr();
       if (hvErr) {
-        // Erro real de RLS ou rede — aborta
         _signingUp = false;
         btn.disabled = false; setBtn('Criar conta');
         showAuthErr('Erro ao verificar código: ' + hvErr.message);
         return;
       }
       if (!hv) {
-        // Código não existe no banco
         _signingUp = false;
         btn.disabled = false; setBtn('Criar conta');
         showAuthErr('❌ Código \'' + code + '\' não encontrado. Verifique se copiou corretamente.');
@@ -2861,6 +2870,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
