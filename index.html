@@ -490,6 +490,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -2534,8 +2535,20 @@ async function renderConfig() {
   const {data:houseData}=await supa.from('houses').select('invite_code').eq('id',currentHouseId).single();
   const code=houseData?.invite_code||'—';
   out.push(`<div class="card" style="margin-bottom:16px;"><p class="lbl" style="margin-bottom:14px;">C\u00f3digo de Convite &amp; QR Code</p><div class="fi" style="gap:20px;flex-wrap:wrap;align-items:flex-start;"><div style="flex:1;min-width:150px;"><div style="font-size:28px;font-family:'Cormorant',serif;letter-spacing:.25em;margin-bottom:8px;">${code}</div><div class="tip" style="margin-bottom:12px;">Compartilhe o c\u00f3digo ou QR Code. O QR abre o app com o convite pr\u00e9-preenchido.</div><div class="fi" style="gap:8px;"><button class="btn btn-gh btn-sm" onclick="navigator.clipboard.writeText('${code}').then(()=>alert('Copiado!'))">&#128203; Copiar</button><button class="btn btn-gh btn-sm" onclick="downloadQR('${currentHouseId}')">&#11015; QR</button></div></div><div id="qr-${currentHouseId}" style="width:128px;height:128px;flex-shrink:0;"></div></div></div>`);
-  const {data:members}=await supa.from('house_members')
-    .select('user_id,role,display_name,email').eq('house_id',currentHouseId);
+  // Usa RPC para buscar membros com email via auth.users (seguro, verifica membership)
+  let members = [];
+  try {
+    const { data: rpcData, error: rpcErr } = await supa
+      .rpc('get_house_members_with_email', { p_house_id: currentHouseId });
+    if (rpcErr) throw rpcErr;
+    members = rpcData || [];
+  } catch(e) {
+    // Fallback: query direta sem email
+    console.warn('RPC fallback:', e.message);
+    const { data: fb } = await supa.from('house_members')
+      .select('user_id,role,display_name,email').eq('house_id',currentHouseId);
+    members = fb || [];
+  }
   const isAdmin=currentRole==='admin';
   const ROLE_OPTS=[{v:'viewer',l:'Visitante'},{v:'member',l:'Membro'},{v:'admin',l:'Admin'}];
   out.push('<div class="card" style="margin-bottom:16px;">');
@@ -2913,6 +2926,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
