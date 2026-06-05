@@ -488,6 +488,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -683,13 +684,6 @@ async function doSignup() {
         .from('houses').select('id, name, invite_code').eq('invite_code', code).maybeSingle();
       console.log('[INVITE DEBUG] data:', JSON.stringify(hv));
       console.log('[INVITE DEBUG] error:', JSON.stringify(hvErr));
-      // Mostra na tela para diagnóstico
-      const dbgMsg = 'DEBUG — código: |' + code + '| len:' + code.length
-        + ' | data: ' + JSON.stringify(hv)
-        + ' | erro: ' + (hvErr ? hvErr.message : 'nenhum');
-      showAuthErr(dbgMsg);
-      await new Promise(r => setTimeout(r, 5000)); // pausa 5s para ler
-      clearAuthErr();
       if (hvErr) {
         _signingUp = false;
         btn.disabled = false; setBtn('Criar conta');
@@ -963,8 +957,10 @@ async function doJoinHouse() {
   if (btn) { btn.disabled = true; btn.textContent = 'Entrando…'; }
   try {
     const { data: houseRows, error: hErr } = await supa
-      .from('houses').select('id, name').eq('invite_code', code).single();
-    if (hErr || !houseRows) throw new Error('Código de convite inválido. Verifique e tente novamente.');
+      .from('houses').select('id, name').eq('invite_code', code).maybeSingle();
+    console.log('[doJoinHouse] code:', JSON.stringify(code), 'data:', JSON.stringify(houseRows), 'err:', JSON.stringify(hErr));
+    if (hErr) throw new Error('Erro ao buscar casa: ' + hErr.message);
+    if (!houseRows) throw new Error('Código \'' + code + '\' não encontrado. Verifique o código (letras minúsculas).');
     const { error: mErr } = await supa
       .from('house_members')
       .insert({ house_id: houseRows.id, user_id: currentUser.id, role: 'viewer' });
@@ -2870,6 +2866,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
