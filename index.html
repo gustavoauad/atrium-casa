@@ -284,7 +284,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
     <span class="logo-text">Atrium</span>
   </div>
   <div class="fi" style="gap:8px;">
-    <span id="house-label" style="font-size:11px;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><span id="role-badge" style="font-size:11px;margin-left:6px;padding:2px 8px;border-radius:20px;border:1px solid var(--border);"></span>
+    <span id="house-label" style="font-size:11px;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><span id="role-badge" style="font-size:11px;margin-left:6px;padding:2px 8px;border-radius:20px;border:1px solid var(--border);"></span><button onclick="cycletheme()" id="theme-btn" title="Alternar tema" style="margin-left:8px;background:none;border:1px solid var(--border);border-radius:20px;padding:3px 8px;cursor:pointer;font-size:14px;color:var(--muted);line-height:1;">&#9680;</button>
     <span class="viewer-badge">&#128274; Somente leitura</span>
     <select id="msel" onchange="onMC()" class="ssel" style="padding:7px 28px 7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--cream);color:var(--text);font-size:12px;cursor:pointer;"></select>
     <button id="topbar-sync" class="btn btn-gh btn-sm write-only" onclick="pushAllToSupabase()" title="For&ccedil;ar sincroniza&ccedil;&atilde;o">&#8645;</button>
@@ -536,6 +536,8 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -575,6 +577,15 @@ let _realtimePending = false;  // evita reloads em cascata
 
 // ── SECURITY: HTML escape para prevenir XSS ──────────────────
 // Ordena funcionários por nome (case-insensitive)
+function cycletheme() {
+  const order = ['system','light','dark'];
+  const icons = { system:'&#9680;', light:'&#9728;', dark:'&#9790;' };
+  const next = order[(order.indexOf(_theme)+1) % order.length];
+  applyTheme(next);
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.innerHTML = icons[next] || '&#9680;';
+}
+
 function applyTheme(theme) {
   _theme = theme;
   localStorage.setItem('atrium_theme', theme);
@@ -587,6 +598,10 @@ function applyTheme(theme) {
     btn.style.opacity = btn.dataset.theme === theme ? '1' : '0.4';
     btn.style.borderColor = btn.dataset.theme === theme ? 'var(--accent)' : 'var(--border)';
   });
+  // Update topbar button icon
+  const icons = { system:'&#9680;', light:'&#9728;', dark:'&#9790;' };
+  const tb = document.getElementById('theme-btn');
+  if (tb) tb.innerHTML = icons[theme] || '&#9680;';
 }
 
 function sortEmps(arr) {
@@ -3098,6 +3113,8 @@ function initApp() {
       + '</div>';
   }
 }
+
+
 
 
 
