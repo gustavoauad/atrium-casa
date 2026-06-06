@@ -538,6 +538,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -2451,7 +2452,7 @@ function buildPaidSummary(p, eid, wy, wm, canEdit, isRescPaid) {
   var rescActions = (isRescPaid && canEdit)
     ? '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);"><p style="font-size:12px;color:var(--danger);margin-bottom:8px;">&#128197; Rescis\u00e3o registrada</p><div class="fi" style="gap:8px;"><button class="btn btn-sm" style="border-color:rgba(184,92,92,.3);color:var(--danger);" onclick="darBaixa('+q+eid+q+')">Dar baixa</button><button class="btn btn-gh btn-sm" onclick="readmitir('+q+eid+q+')">Readmitir</button></div></div>'
     : '';
-  return '<div class="card" style="margin-bottom:16px;background:rgba(138,155,138,.06);border:2px solid rgba(138,155,138,.35);">'
+  return '<div class="card" style="margin-bottom:16px;background:var(--card);border:2px solid var(--sage);">'
     + '<div class="fb" style="margin-bottom:12px;">'
     + '<div class="fi" style="gap:10px;"><span style="font-size:24px;">&#10003;</span>'
     + '<div><div style="font-size:14px;font-weight:500;color:var(--sage);">Pagamento Registrado</div>'
@@ -3234,6 +3235,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
