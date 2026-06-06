@@ -16,47 +16,50 @@
 <!-- Supabase JS via CDN oficial -->
 
 <style>
-:root{--bg:#F5F2EE;--surface:#FDFCFA;--card:#FFFFFF;--border:#E8E3DC;--text:#1C1917;--muted:#9C9087;--stone:#B8B0A4;--accent:#8B7355;--a2:#C4A882;--cream:#F0EBE0;--sage:#8A9B8A;--warn:#C4973A;--danger:#B85C5C;--blue:#6B9FBF;}
-
-/* ── Dark Mode ───────────────────────────────────── */
+/* ── LIGHT MODE (default) ──────────────────────── */
+:root {
+  --bg:#F6F3EF;--surface:#FDFCFA;--card:#FFFFFF;--border:#E8E2D9;
+  --text:#1C1917;--muted:#8C8278;--stone:#B5ADA4;
+  --accent:#8B6F47;--a2:#C4A070;--cream:#F0E9DC;
+  --sage:#6B8F71;--warn:#C47A2A;--danger:#B04A4A;
+  --blue:#5B8FAF;--gold:#C4973A;
+  color-scheme: light;
+}
+/* ── DARK MODE — classe explícita (maior prioridade) ── */
 :root.dark {
-  --bg:#1A1612;
-  --surface:#211C18;
-  --card:#2A2420;
-  --border:#3A3430;
-  --text:#F0EBE3;
-  --muted:#8A8078;
-  --stone:#5A5450;
-  --accent:#C4A070;
-  --a2:#D4B890;
-  --cream:#2E2820;
-  --sage:#7EA882;
-  --warn:#D4923A;
-  --danger:#D06060;
-  --blue:#7AABCF;
-  --gold:#D4A840;
+  --bg:#1A1612;--surface:#211C18;--card:#2A2420;--border:#3A3430;
+  --text:#F0EBE3;--muted:#8A8078;--stone:#5A5450;
+  --accent:#C4A070;--a2:#D4B890;--cream:#2E2820;
+  --sage:#7EA882;--warn:#D4923A;--danger:#D06060;
+  --blue:#7AABCF;--gold:#D4A840;
   color-scheme: dark;
 }
+/* ── LIGHT MODE — classe explícita (sobrescreve @media) ── */
+:root.light {
+  --bg:#F6F3EF;--surface:#FDFCFA;--card:#FFFFFF;--border:#E8E2D9;
+  --text:#1C1917;--muted:#8C8278;--stone:#B5ADA4;
+  --accent:#8B6F47;--a2:#C4A070;--cream:#F0E9DC;
+  --sage:#6B8F71;--warn:#C47A2A;--danger:#B04A4A;
+  --blue:#5B8FAF;--gold:#C4973A;
+  color-scheme: light;
+}
+/* ── SYSTEM DARK — apenas quando sem classe manual ── */
 @media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    --bg:#1A1612;
-    --surface:#211C18;
-    --card:#2A2420;
-    --border:#3A3430;
-    --text:#F0EBE3;
-    --muted:#8A8078;
-    --stone:#5A5450;
-    --accent:#C4A070;
-    --a2:#D4B890;
-    --cream:#2E2820;
-    --sage:#7EA882;
-    --warn:#D4923A;
-    --danger:#D06060;
-    --blue:#7AABCF;
-    --gold:#D4A840;
+  :root:not(.dark):not(.light) {
+    --bg:#1A1612;--surface:#211C18;--card:#2A2420;--border:#3A3430;
+    --text:#F0EBE3;--muted:#8A8078;--stone:#5A5450;
+    --accent:#C4A070;--a2:#D4B890;--cream:#2E2820;
+    --sage:#7EA882;--warn:#D4923A;--danger:#D06060;
+    --blue:#7AABCF;--gold:#D4A840;
     color-scheme: dark;
   }
 }
+
+
+
+/* ── Dark Mode ───────────────────────────────────── */
+
+
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-weight:300;min-height:100vh;}
@@ -123,15 +126,15 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 .tab{padding:8px 18px;border-radius:20px;border:1px solid transparent;background:transparent;color:var(--muted);font-size:12px;font-weight:400;cursor:pointer;transition:all .2s;white-space:nowrap;}
 .tab.active{background:var(--text);color:var(--surface);}
 .tab:hover:not(.active){border-color:var(--border);color:var(--text);}
-.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 1px 4px rgba(42,37,32,.04);margin-bottom:12px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 1px 3px rgba(42,37,32,.04);margin-bottom:12px;}
 .cream{background:var(--cream);border:1px solid var(--border);border-radius:12px;padding:14px 16px;}
 .dark{background:var(--text);border-radius:16px;padding:20px;margin-bottom:12px;}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
-.fb{display:flex;align-items:center;justify-content:space-between;}
+.fb{display:flex;align-items:center;justify-content:space-between;min-width:0;}
 .fe{display:flex;justify-content:flex-end;gap:8px;}
-.fi{display:flex;align-items:center;}
-.money{font-family:'Playfair Display',serif;}
+.fi{display:flex;align-items:center;min-width:0;}
+.money{font-family:'Playfair Display',serif;white-space:nowrap;}
 .lbl{font-size:9px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
 .badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;}
 .field{margin-bottom:14px;}
@@ -195,8 +198,9 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
   var t=localStorage.getItem("atrium_theme")||"system";
   var r=document.documentElement;
   r.classList.remove("dark","light");
-  if(t==="dark") r.classList.add("dark");
+  if(t==="dark")       r.classList.add("dark");
   else if(t==="light") r.classList.add("light");
+  // "system": sem classe, @media :root:not(.dark):not(.light) cuida
 })();
 </script>
 </head>
@@ -280,7 +284,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
       <div style="display:flex;flex-direction:column;gap:1px;line-height:1;"><span class="logo-text">Atrium</span><span class="logo-sub">Casa</span></div>
   </div>
   <div class="fi" style="gap:8px;">
-    <span id="house-label" style="font-size:11px;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><span id="role-badge" style="font-size:11px;margin-left:6px;padding:2px 8px;border-radius:20px;border:1px solid var(--border);"></span><button onclick="cycletheme()" id="theme-btn" title="Alternar tema" style="margin-left:8px;background:none;border:1px solid var(--border);border-radius:20px;padding:3px 8px;cursor:pointer;font-size:14px;color:var(--muted);line-height:1;">&#9680;</button>
+    <span id="house-label" style="font-size:11px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><span id="role-badge" style="font-size:11px;margin-left:6px;padding:2px 8px;border-radius:20px;border:1px solid var(--border);"></span><button onclick="cycletheme()" id="theme-btn" title="Alternar tema" style="margin-left:8px;background:none;border:1px solid var(--border);border-radius:20px;padding:3px 8px;cursor:pointer;font-size:14px;color:var(--muted);line-height:1;">&#9680;</button>
     <span class="viewer-badge">&#128274; Somente leitura</span>
     <select id="msel" onchange="onMC()" class="ssel" style="padding:7px 28px 7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--cream);color:var(--text);font-size:12px;cursor:pointer;"></select>
     <button id="topbar-sync" class="btn btn-gh btn-sm write-only" onclick="pushAllToSupabase()" title="For&ccedil;ar sincroniza&ccedil;&atilde;o">&#8645;</button>
@@ -536,6 +540,8 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -591,9 +597,9 @@ function applyTheme(theme) {
   const root = document.documentElement;
   // Remove ambas as classes antes de aplicar
   root.classList.remove('dark', 'light');
-  if (theme === 'dark')  root.classList.add('dark');
-  if (theme === 'light') root.classList.add('light');
-  // 'system' não adiciona classe — o @media CSS cuida automaticamente
+  if (theme === 'dark')  root.classList.add('dark');   // dark vars always
+  if (theme === 'light') root.classList.add('light');  // light vars always (overrides @media)
+  // 'system': sem classe — @media :root:not(.dark):not(.light) decide
   // Atualiza botões no Config se abertos
   document.querySelectorAll('[data-theme]').forEach(function(btn) {
     btn.style.opacity     = btn.dataset.theme === theme ? '1' : '0.4';
@@ -2223,7 +2229,7 @@ function openPayM(eid, ry, rm) {
   c.rescData=rescRaw?JSON.parse(rescRaw):null;
   md.dataset.eid=eid; md.dataset.ry=ry; md.dataset.rm=rm;
   document.getElementById('paybody').innerHTML=[
-    `<div class="fi" style="gap:12px;margin-bottom:16px;">${avt(c.emp.name,44)}<div><div style="font-size:16px;font-weight:400;word-break:break-word;">${escapeHTML(c.emp.name)}</div><div class="tip">${escapeHTML(c.emp.role)} \u00b7 compet\u00eancia ${MP[rm]} ${ry}</div></div></div>`,
+    `<div class="fi" style="gap:12px;margin-bottom:16px;">${avt(c.emp.name,44)}<div><div style="font-size:16px;font-weight:400;word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(c.emp.name)}</div><div class="tip">${escapeHTML(c.emp.role)} \u00b7 compet\u00eancia ${MP[rm]} ${ry}</div></div></div>`,
     memoHTML(c),
     '<div class="div"></div>',
     `<div class="g2" style="gap:12px;margin-bottom:14px;"><div class="field"><label>Data do pagamento</label><input id="pdate" type="date" value="${tod()}"></div><div class="field"><label>Forma</label><select id="pmeth"><option>PIX</option><option>Transfer\u00eancia</option><option>Dinheiro</option><option>Dep\u00f3sito</option><option>Quinzena (1ª parcela)</option><option>Quinzena (2ª parcela)</option></select></div></div>`,
@@ -2415,7 +2421,7 @@ function renderDash() {
   calcs.forEach(c=>{
     const isPaid=!!c.payment, hw=c.holWarns.length>0;
     out.push(`<div class="card" style="border:1px solid ${isPaid?'rgba(138,155,138,.4)':hw?'rgba(196,151,58,.4)':'var(--border)'};">`);
-    out.push(`<div class="fb" style="margin-bottom:14px;"><div class="fi" style="gap:12px;">${avt(c.emp.name,44)}<div><div style="font-size:15px;font-weight:400;word-break:break-word;">${escapeHTML(c.emp.name)}</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">${escapeHTML(c.emp.role)}</div></div></div><div style="text-align:right;flex-shrink:0;"><div class="money" style="font-size:24px;color:var(--accent);">R$ ${fm(c.total)}</div><div style="font-size:10px;color:var(--muted);">sal. R$ ${fm(c.netSal)} + VT R$ ${fm(c.vtNet)}</div></div></div>`);
+    out.push(`<div class="fb" style="margin-bottom:14px;"><div class="fi" style="gap:12px;flex:1;min-width:0;">${avt(c.emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-size:15px;font-weight:400;word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(c.emp.name)}</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">${escapeHTML(c.emp.role)}</div></div></div><div style="text-align:right;flex-shrink:0;"><div class="money" style="font-size:24px;color:var(--accent);">R$ ${fm(c.total)}</div><div style="font-size:10px;color:var(--muted);">sal. R$ ${fm(c.netSal)} + VT R$ ${fm(c.vtNet)}</div></div></div>`);
     if(hw)out.push(`<div class="alert aw" style="margin-bottom:12px;"><span style="font-size:11px;color:var(--warn);">&#9888;&#65039; ${c.holWarns.length} feriado(s) sem di\u00e1ria &nbsp;<button onclick="goFech('${c.emp.id}')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;text-decoration:underline;">ver detalhes</button></span></div>`);
     out.push('<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">');
     [['Base','R$ '+fm(c.proRataActive?c.proRataSalBase:c.salBase)+(c.proRataActive?' (PR)':''),'var(--text)'],['Di\u00e1rias','R$ '+fm(c.recTot+c.avTot),'var(--sage)'],['Descontos','R$ '+fm(c.deds+c.inssAmt),'var(--danger)'],[MP[c.vtM].slice(0,3)+' VT','R$ '+fm(c.vtNet),'var(--blue)']].forEach(k=>out.push(`<div style="background:var(--cream);border-radius:9px;padding:10px;text-align:center;"><div class="lbl" style="margin-bottom:4px;">${k[0]}</div><div class="money" style="font-size:14px;color:${k[2]};">${k[1]}</div></div>`));
@@ -2489,7 +2495,7 @@ function renderFech() {
   const warnD={};c.holWarns.forEach(w=>{warnD[w.iso]=1;});
   const canAct=canWrite()&&!isPaid;
   const canEdit=canWrite();
-  const empHeader=`<div style="background:var(--text);border-radius:14px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">${avt(emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:300;color:#fff;word-break:break-word;">${escapeHTML(emp.name)}</div><div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:2px;">${escapeHTML(emp.role)}${emp.admissao?' &nbsp;&middot;&nbsp; Adm. '+fd(emp.admissao):''}${isPaid?' &nbsp;&middot;&nbsp; <span style="color:var(--sage);">&#10003; Pago</span>':' &nbsp;&middot;&nbsp; <span style="color:var(--warn);">Pendente</span>'}</div></div><div style="margin-left:auto;text-align:right;flex-shrink:0;"><div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;">Compet\u00eancia</div><div style="font-family:'Playfair Display',serif;font-size:20px;color:var(--a2);">${wl}</div><div style="font-size:11px;color:rgba(255,255,255,.4);">Pgto em ${pl}</div></div></div>`;
+  const empHeader=`<div style="background:var(--text);border-radius:14px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">${avt(emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:300;color:#fff;word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(emp.name)}</div><div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:2px;">${escapeHTML(emp.role)}${emp.admissao?' &nbsp;&middot;&nbsp; Adm. '+fd(emp.admissao):''}${isPaid?' &nbsp;&middot;&nbsp; <span style="color:var(--sage);">&#10003; Pago</span>':' &nbsp;&middot;&nbsp; <span style="color:var(--warn);">Pendente</span>'}</div></div><div style="margin-left:auto;text-align:right;flex-shrink:0;"><div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;">Compet\u00eancia</div><div style="font-family:'Playfair Display',serif;font-size:20px;color:var(--a2);">${wl}</div><div style="font-size:11px;color:rgba(255,255,255,.4);">Pgto em ${pl}</div></div></div>`;
   const calParts=['<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:4px;"><span style="font-size:13px;font-weight:400;">'+wl+'</span><div class="fi" style="gap:8px;"><button class="btn btn-gh btn-sm" onclick="openReg()">&#128467; Feriados regionais</button>'+(canAct?`<button class="btn btn-gh btn-sm" onclick="openEvM('${emp.id}','${td}')">+ Di\u00e1ria avulsa</button>`:'')+`</div></div><div class="cg">`];
   DP.forEach(d=>calParts.push(`<div class="ch">${d}</div>`));
   for(let z=0;z<fdow;z++)calParts.push('<div class="cd ce"></div>');
@@ -2605,7 +2611,7 @@ function renderEmps() {
   function empCard(emp,inactive){
     const c=[];
     c.push(`<div class="card" style="border:1px solid ${inactive?'rgba(184,92,92,.2)':'var(--border)'};">`);
-    c.push(`<div class="fb" style="margin-bottom:14px;"><div class="fi" style="gap:12px;min-width:0;">${avt(emp.name,48)}<div style="min-width:0;"><div style="font-size:16px;font-weight:400;word-break:break-word;">${escapeHTML(emp.name)}</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">${escapeHTML(emp.role)} \u00b7 ${emp.contract}${emp.admissao?' \u00b7 Adm. '+fd(emp.admissao):''}</div>`);
+    c.push(`<div class="fb" style="margin-bottom:14px;"><div class="fi" style="gap:12px;min-width:0;">${avt(emp.name,48)}<div style="min-width:0;"><div style="font-size:16px;font-weight:400;word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(emp.name)}</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">${escapeHTML(emp.role)} \u00b7 ${emp.contract}${emp.admissao?' \u00b7 Adm. '+fd(emp.admissao):''}</div>`);
     if(inactive)c.push(`<div style="margin-top:4px;"><span class="badge" style="background:rgba(184,92,92,.1);color:var(--danger);">&#128683; Desligado</span>${emp.dataBaixa?' <span style="font-size:11px;color:var(--muted);">em '+fd(emp.dataBaixa)+'</span>':''}${emp.motivoBaixa?' <span style="font-size:11px;color:var(--muted);">\u2014 '+(MOTIVOS[emp.motivoBaixa]||emp.motivoBaixa)+'</span>':''}</div>`);
     c.push('</div></div><div class="fi" style="gap:8px;flex-shrink:0;">');
     if(inactive){
@@ -2645,7 +2651,7 @@ function renderHist() {
     const [ry,rm]=[+k.split('-')[0],+k.split('-')[1]-1], gt=byM[k].reduce((a,p)=>a+p.total,0);
     out.push(`<div style="margin-bottom:28px;"><div class="fb" style="margin-bottom:12px;"><div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:300;">${MP[rm]} ${ry}</div><div class="money" style="font-size:20px;color:var(--accent);">R$ ${fm(gt)}</div></div>`);
     byM[k].forEach(p=>{
-      out.push(`<div class="card" style="margin-bottom:8px;"><div class="fb" style="margin-bottom:10px;"><div class="fi" style="gap:12px;min-width:0;">${avt(p.empName,40)}<div style="min-width:0;"><div style="font-size:14px;font-weight:400;word-break:break-word;">${escapeHTML(p.empName)}</div><div style="font-size:11px;color:var(--muted);">${p.empRole}</div></div></div><div style="text-align:right;flex-shrink:0;"><div class="money" style="font-size:22px;color:var(--accent);">R$ ${fm(p.total)}</div><div style="font-size:10px;color:var(--muted);">sal R$ ${fm(p.netSal)} + VT R$ ${fm(p.vtNet)}</div></div></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;">`);
+      out.push(`<div class="card" style="margin-bottom:8px;"><div class="fb" style="margin-bottom:10px;"><div class="fi" style="gap:12px;min-width:0;">${avt(p.empName,40)}<div style="min-width:0;"><div style="font-size:14px;font-weight:400;word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(p.empName)}</div><div style="font-size:11px;color:var(--muted);">${p.empRole}</div></div></div><div style="text-align:right;flex-shrink:0;"><div class="money" style="font-size:22px;color:var(--accent);">R$ ${fm(p.total)}</div><div style="font-size:10px;color:var(--muted);">sal R$ ${fm(p.netSal)} + VT R$ ${fm(p.vtNet)}</div></div></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;">`);
       [['Base','R$ '+fm(p.salBase),'var(--text)'],['Di\u00e1rias','R$ '+fm(p.recTot+p.avTot),'var(--sage)'],['Descontos','R$ '+fm(p.deds+p.inssAmt),'var(--danger)'],['VT','R$ '+fm(p.vtNet),'var(--blue)']].forEach(k2=>out.push(`<div style="background:var(--cream);border-radius:8px;padding:8px;text-align:center;"><div class="lbl">${k2[0]}</div><div class="money" style="font-size:13px;margin-top:3px;color:${k2[2]};">${k2[1]}</div></div>`));
       out.push(`</div><div class="fb"><span class="tip">Pago em ${fd(p.paidDate)} \u00b7 ${p.method}${p.notes?' \u00b7 '+p.notes:''}</span><button class="btn btn-gh btn-sm" onclick="printSlip('${p.id}')">&#128216; Recibo</button></div></div>`);
     });
@@ -2679,7 +2685,7 @@ function renderRel() {
   out.push(`<div class="card" style="margin-bottom:16px;"><p style="font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;">Resumo Consolidado \u2014 ${refLabel}</p><div class="mt2"><div class="mr mrh" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr;"><span>Funcion\u00e1rio</span><span style="text-align:right;">Base</span><span style="text-align:right;">Di\u00e1rias</span><span style="text-align:right;">Descontos</span><span style="text-align:right;">Sal. L\u00edq.</span><span style="text-align:right;">VT</span><span style="text-align:right;">Envelope</span></div>`);
   calcs.forEach(c=>{const isPaid=!!c.payment;out.push(`<div class="mr" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr;"><span style="word-break:break-word;">${escapeHTML(c.emp.name)}${isPaid?' <span class="badge" style="background:rgba(138,155,138,.15);color:var(--sage);">&#10003;</span>':''}</span><span class="money" style="text-align:right;">R$ ${fm(c.proRataActive?c.proRataSalBase:c.salBase)}${c.proRataActive?'<span style=\"font-size:9px;color:var(--warn);margin-left:3px;">PR</span>':''}</span><span class="money" style="text-align:right;color:var(--sage);">R$ ${fm(c.recTot+c.avTot)}</span><span class="money" style="text-align:right;color:var(--danger);">R$ ${fm(c.deds+c.inssAmt)}</span><span class="money" style="text-align:right;font-weight:500;">R$ ${fm(c.finalNetSal)}</span><span class="money" style="text-align:right;color:var(--blue);">R$ ${fm(c.vtNet)}</span><span class="money" style="text-align:right;color:var(--accent);font-weight:500;">R$ ${fm(c.total)}</span></div>`);});
   out.push(`<div class="mr" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr;background:var(--cream);font-weight:500;"><span>TOTAL</span><span class="money" style="text-align:right;">R$ ${fm(calcs.reduce((a,c)=>a+(c.proRataActive?c.proRataSalBase:c.salBase),0))}</span><span class="money" style="text-align:right;color:var(--sage);">R$ ${fm(calcs.reduce((a,c)=>a+c.recTot+c.avTot,0))}</span><span class="money" style="text-align:right;color:var(--danger);">R$ ${fm(calcs.reduce((a,c)=>a+c.deds+c.inssAmt,0))}</span><span class="money" style="text-align:right;font-weight:600;">R$ ${fm(totSal)}</span><span class="money" style="text-align:right;color:var(--blue);">R$ ${fm(totVT)}</span><span class="money" style="text-align:right;color:var(--accent);font-weight:600;font-size:15px;">R$ ${fm(totAll)}</span></div></div></div>`);
-  calcs.forEach(c=>{out.push(`<div class="card" style="margin-bottom:16px;"><div class="fi" style="gap:12px;margin-bottom:16px;">${avt(c.emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-size:15px;font-weight:400;word-break:break-word;">${escapeHTML(c.emp.name)}</div><div style="font-size:11px;color:var(--muted);">${escapeHTML(c.emp.role)}</div></div><div style="margin-left:auto;text-align:right;flex-shrink:0;"><div class="money" style="font-size:24px;color:var(--accent);">R$ ${fm(c.total)}</div>${c.payment?`<div style="font-size:11px;color:var(--sage);">&#10003; Pago${c.payment?.isRescisao?'<span style="color:var(--danger);margin-left:4px;font-size:10px;">Rescis\u00e3o</span>':''} em ${fd(c.payment.paidDate)}</div>`:`<div style="font-size:11px;color:var(--warn);">&#9679; &#9711; Pendente</div>`}</div></div>${memoHTML(c)}</div>`);});
+  calcs.forEach(c=>{out.push(`<div class="card" style="margin-bottom:16px;"><div class="fi" style="gap:12px;margin-bottom:16px;">${avt(c.emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-size:15px;font-weight:400;word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(c.emp.name)}</div><div style="font-size:11px;color:var(--muted);">${escapeHTML(c.emp.role)}</div></div><div style="margin-left:auto;text-align:right;flex-shrink:0;"><div class="money" style="font-size:24px;color:var(--accent);">R$ ${fm(c.total)}</div>${c.payment?`<div style="font-size:11px;color:var(--sage);">&#10003; Pago${c.payment?.isRescisao?'<span style="color:var(--danger);margin-left:4px;font-size:10px;">Rescis\u00e3o</span>':''} em ${fd(c.payment.paidDate)}</div>`:`<div style="font-size:11px;color:var(--warn);">&#9679; &#9711; Pendente</div>`}</div></div>${memoHTML(c)}</div>`);});
   document.getElementById('tab-rel').innerHTML=out.join('');
 }
 
@@ -3114,6 +3120,8 @@ function initApp() {
       + '</div>';
   }
 }
+
+
 
 
 
