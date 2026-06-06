@@ -542,6 +542,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -2664,28 +2665,147 @@ function renderHist() {
 function renderRel() {
   const wy=SM===0?SY-1:SY, wm=SM===0?11:SM-1;
   const monthSet={};db.payments.forEach(p=>{monthSet[p.ry+'-'+p.rm]=1;});monthSet[wy+'-'+wm]=1;
-  const months=Object.keys(monthSet).sort((a,b)=>{const[ay,am]=a.split('-').map(Number),[by,bm]=b.split('-').map(Number);return by-ay||bm-am;}).map(k=>{const[y,m]=k.split('-').map(Number);return{y,m};});
-  const selSel=document.getElementById('rel-month-sel'), selMonth=selSel?selSel.value:(wy+'-'+wm);
+  const months=Object.keys(monthSet).sort((a,b)=>{
+    const[ay,am]=a.split('-').map(Number),[by,bm]=b.split('-').map(Number);
+    return by-ay||bm-am;
+  }).map(k=>{const[y,m]=k.split('-').map(Number);return{y,m};});
+  const selSel=document.getElementById('rel-month-sel');
+  const selMonth=selSel?selSel.value:(wy+'-'+wm);
   const[ry,rm]=selMonth.split('-').map(Number);
-  // Filtros: incluir desligados + funcionário individual
   const inclDes=document.getElementById('rel-incl-des')?.checked||false;
-  const relEmpSel=document.getElementById('rel-emp-filter'), relEmpId=relEmpSel?.value||'';
-  const refLabel=MP[rm]+' '+ry, pyY=rm===11?ry+1:ry, pyM=rm===11?0:rm+1, payLabel=MP[pyM]+' '+pyY;
+  const relEmpId=document.getElementById('rel-emp-filter')?.value||'';
+  const refLabel=MP[rm]+' '+ry;
+  const pyY=rm===11?ry+1:ry, pyM=rm===11?0:rm+1;
+  const payLabel=MP[pyM]+' '+pyY;
   const allEmps=sortEmps(inclDes?db.employees:db.employees.filter(e=>e.status!=='desligado'));
   const filtEmps=relEmpId?allEmps.filter(e=>String(e.id)===String(relEmpId)):allEmps;
   const calcs=filtEmps.map(e=>calc(e.id,ry,rm));
-  const totSal=calcs.reduce((a,c)=>a+c.finalNetSal,0), totVT=calcs.reduce((a,c)=>a+c.vtNet,0), totAll=calcs.reduce((a,c)=>a+c.total,0), totInss=calcs.reduce((a,c)=>a+c.inssAmt,0), paidCount=calcs.filter(c=>c.payment).length;
+  const totSal=calcs.reduce((a,c)=>a+c.finalNetSal,0);
+  const totVT=calcs.reduce((a,c)=>a+c.vtNet,0);
+  const totAll=calcs.reduce((a,c)=>a+c.total,0);
+  const totInss=calcs.reduce((a,c)=>a+c.inssAmt,0);
+  const paidCount=calcs.filter(c=>c.payment).length;
+  const empOpts=db.employees.map(e=>`<option value="${e.id}"${String(e.id)===String(relEmpId)?' selected':''}>${escapeHTML(e.name)}${e.status==='desligado'?' (deslig.)':''}</option>`).join('');
   const out=[];
-  out.push(`<div class="fb" style="margin-bottom:20px;flex-wrap:wrap;gap:12px;"><div><div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:300;margin-bottom:4px;">Relat\u00f3rios</div><div class="tip">${refLabel} \u00b7 Pgto: ${payLabel}</div></div><div class="fi" style="gap:8px;"><select id="rel-month-sel" onchange="renderRel()" class="ssel" style="padding:8px 28px 8px 12px;border-radius:9px;border:1px solid var(--border);background:var(--cream);font-size:13px;">${months.map(mo=>`<option value="${mo.y+'-'+mo.m}"${(mo.y+'-'+mo.m)===selMonth?' selected':''}>${MP[mo.m]} ${mo.y}</option>`).join('')}</select><select id="rel-emp-filter" onchange="renderRel()" class="ssel" style="padding:8px 12px;"><option value="">Todos</option>${db.employees.map(e=>`<option value="${e.id}"${String(e.id)===String(relEmpId)?' selected':''}>${escapeHTML(e.name)}${e.status==='desligado'?' (desligado)':''}</option>`).join('')}</select><label style="display:flex;gap:6px;align-items:center;font-size:13px;cursor:pointer;"><input type="checkbox" id="rel-incl-des" onchange="renderRel()"${inclDes?' checked':''}>Inc. desligados</label><button class="btn btn-dk btn-sm" onclick="printReport()">&#128438; PDF</button><button class="btn btn-gh btn-sm" onclick="exportReportCSV()">&#8595; CSV</button></div></div>`);
-  out.push(`<div class="fi" style="gap:8px;margin-bottom:16px;flex-wrap:wrap;"><span class="badge" style="background:rgba(139,115,85,.12);color:var(--accent);font-size:11px;padding:5px 12px;">${refLabel}</span><span class="badge" style="background:rgba(107,159,191,.12);color:var(--blue);font-size:11px;padding:5px 12px;">Pgto: ${payLabel}</span><span class="badge" style="background:${paidCount===calcs.length&&calcs.length>0?'rgba(138,155,138,.15)':'rgba(196,151,58,.12)'};color:${paidCount===calcs.length&&calcs.length>0?'var(--sage)':'var(--warn)'};font-size:11px;padding:5px 12px;">${paidCount}/${calcs.length} pagos</span></div>`);
-  if(!calcs.length){out.push('<div class="empty"><div class="ei">&#128196;</div><div class="et">Nenhum funcion\u00e1rio ativo.</div></div>');document.getElementById('tab-rel').innerHTML=out.join('');return;}
+
+  // ── Header ─────────────────────────────────────────────────
+  out.push(`<div style="margin-bottom:20px;">
+    <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:300;margin-bottom:12px;">Relatórios</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <select id="rel-month-sel" onchange="renderRel()" class="ssel">${months.map(mo=>`<option value="${mo.y+'-'+mo.m}"${(mo.y+'-'+mo.m)===selMonth?' selected':''}>${MP[mo.m]} ${mo.y}</option>`).join('')}</select>
+      <select id="rel-emp-filter" onchange="renderRel()" class="ssel"><option value="">Todos os func.</option>${empOpts}</select>
+      <label style="display:flex;gap:6px;align-items:center;font-size:13px;cursor:pointer;white-space:nowrap;">
+        <input type="checkbox" id="rel-incl-des" onchange="renderRel()"${inclDes?' checked':''}>Desligados
+      </label>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button class="btn btn-dk btn-sm" onclick="printReport()">&#128438; PDF</button>
+        <button class="btn btn-gh btn-sm" onclick="exportReportCSV()">&#8595; CSV</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center;">
+      <span class="tip">${refLabel} · pago em ${payLabel}</span>
+      <span class="badge" style="background:${paidCount===calcs.length&&calcs.length>0?'rgba(138,155,138,.15)':'rgba(196,151,58,.12)'};color:${paidCount===calcs.length&&calcs.length>0?'var(--sage)':'var(--warn)'};">${paidCount}/${calcs.length} pagos</span>
+    </div>
+  </div>`);
+
+  if(!calcs.length){
+    out.push('<div class="empty"><div class="ei">&#128196;</div><div class="et">Nenhum funcionário encontrado.</div></div>');
+    document.getElementById('tab-rel').innerHTML=out.join('');
+    return;
+  }
+
+  // ── Totais ─────────────────────────────────────────────────
   out.push('<div class="g4" style="margin-bottom:20px;">');
-  [{l:'Total sal\u00e1rios',v:'R$ '+fm(totSal),c:'var(--sage)'},{l:'Total VT',v:'R$ '+fm(totVT),c:'var(--blue)'},{l:'Envelope total',v:'R$ '+fm(totAll),c:'var(--accent)'},{l:'Total INSS',v:'R$ '+fm(totInss),c:'var(--muted)'}].forEach(k=>out.push(`<div class="card"><div class="lbl" style="margin-bottom:8px;">${k.l}</div><div class="money" style="font-size:20px;color:${k.c};">${k.v}</div></div>`));
+  [{l:'Total salários',v:'R$ '+fm(totSal),col:'var(--sage)'},
+   {l:'Total VT',v:'R$ '+fm(totVT),col:'var(--blue)'},
+   {l:'Envelope total',v:'R$ '+fm(totAll),col:'var(--accent)'},
+   {l:'Total INSS',v:'R$ '+fm(totInss),col:'var(--muted)'}
+  ].forEach(k=>out.push(`<div class="card"><div class="lbl" style="margin-bottom:6px;">${k.l}</div><div class="money" style="font-size:18px;color:${k.col};">${k.v}</div></div>`));
   out.push('</div>');
-  out.push(`<div class="card" style="margin-bottom:16px;"><p style="font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;">Resumo Consolidado \u2014 ${refLabel}</p><div class="mt2"><div class="mr mrh" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr;"><span>Funcion\u00e1rio</span><span style="text-align:right;">Base</span><span style="text-align:right;">Di\u00e1rias</span><span style="text-align:right;">Descontos</span><span style="text-align:right;">Sal. L\u00edq.</span><span style="text-align:right;">VT</span><span style="text-align:right;">Envelope</span></div>`);
-  calcs.forEach(c=>{const isPaid=!!c.payment;out.push(`<div class="mr" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr;"><span style="word-break:break-word;">${escapeHTML(c.emp.name)}${isPaid?' <span class="badge" style="background:rgba(138,155,138,.15);color:var(--sage);">&#10003;</span>':''}</span><span class="money" style="text-align:right;">R$ ${fm(c.proRataActive?c.proRataSalBase:c.salBase)}${c.proRataActive?'<span style=\"font-size:9px;color:var(--warn);margin-left:3px;">PR</span>':''}</span><span class="money" style="text-align:right;color:var(--sage);">R$ ${fm(c.recTot+c.avTot)}</span><span class="money" style="text-align:right;color:var(--danger);">R$ ${fm(c.deds+c.inssAmt)}</span><span class="money" style="text-align:right;font-weight:500;">R$ ${fm(c.finalNetSal)}</span><span class="money" style="text-align:right;color:var(--blue);">R$ ${fm(c.vtNet)}</span><span class="money" style="text-align:right;color:var(--accent);font-weight:500;">R$ ${fm(c.total)}</span></div>`);});
-  out.push(`<div class="mr" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr;background:var(--cream);font-weight:500;"><span>TOTAL</span><span class="money" style="text-align:right;">R$ ${fm(calcs.reduce((a,c)=>a+(c.proRataActive?c.proRataSalBase:c.salBase),0))}</span><span class="money" style="text-align:right;color:var(--sage);">R$ ${fm(calcs.reduce((a,c)=>a+c.recTot+c.avTot,0))}</span><span class="money" style="text-align:right;color:var(--danger);">R$ ${fm(calcs.reduce((a,c)=>a+c.deds+c.inssAmt,0))}</span><span class="money" style="text-align:right;font-weight:600;">R$ ${fm(totSal)}</span><span class="money" style="text-align:right;color:var(--blue);">R$ ${fm(totVT)}</span><span class="money" style="text-align:right;color:var(--accent);font-weight:600;font-size:15px;">R$ ${fm(totAll)}</span></div></div></div>`);
-  calcs.forEach(c=>{out.push(`<div class="card" style="margin-bottom:16px;"><div class="fi" style="gap:12px;margin-bottom:16px;">${avt(c.emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-size:15px;font-weight:400;word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(c.emp.name)}</div><div style="font-size:11px;color:var(--muted);">${escapeHTML(c.emp.role)}</div></div><div style="margin-left:auto;text-align:right;flex-shrink:0;"><div class="money" style="font-size:24px;color:var(--accent);">R$ ${fm(c.total)}</div>${c.payment?`<div style="font-size:11px;color:var(--sage);">&#10003; Pago${c.payment?.isRescisao?'<span style="color:var(--danger);margin-left:4px;font-size:10px;">Rescis\u00e3o</span>':''} em ${fd(c.payment.paidDate)}</div>`:`<div style="font-size:11px;color:var(--warn);">&#9679; &#9711; Pendente</div>`}</div></div>${memoHTML(c)}</div>`);});
+
+  // ── Tabela resumo — mobile-friendly ────────────────────────
+  // Usa layout de cards em vez de grid de 7 colunas
+  out.push(`<div class="card" style="margin-bottom:16px;overflow-x:auto;">
+    <p style="font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;">Resumo — ${refLabel}</p>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:480px;">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border);">
+          <th style="text-align:left;padding:6px 8px;font-weight:500;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase;">Funcionário</th>
+          <th style="text-align:right;padding:6px 8px;font-weight:500;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase;">Sal. líq.</th>
+          <th style="text-align:right;padding:6px 8px;font-weight:500;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase;">VT</th>
+          <th style="text-align:right;padding:6px 8px;font-weight:500;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase;">Total</th>
+          <th style="text-align:center;padding:6px 8px;font-weight:500;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase;">Status</th>
+        </tr>
+      </thead>
+      <tbody>`);
+
+  calcs.forEach(c=>{
+    const isPaid=!!c.payment;
+    out.push(`<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:10px 8px;">
+        <div style="font-size:13px;font-weight:400;word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(c.emp.name)}</div>
+        <div style="font-size:11px;color:var(--muted);">${escapeHTML(c.emp.role)}${c.proRataActive?' · <span style="color:var(--warn);">PR</span>':''}</div>
+      </td>
+      <td class="money" style="text-align:right;padding:10px 8px;font-size:13px;">R$ ${fm(c.finalNetSal)}</td>
+      <td class="money" style="text-align:right;padding:10px 8px;font-size:13px;color:var(--blue);">R$ ${fm(c.vtNet)}</td>
+      <td class="money" style="text-align:right;padding:10px 8px;font-size:14px;font-weight:500;color:var(--accent);">R$ ${fm(c.total)}</td>
+      <td style="text-align:center;padding:10px 8px;">
+        ${isPaid
+          ? `<span style="font-size:11px;color:var(--sage);">&#10003; Pago${c.payment?.isRescisao?' <span style="color:var(--danger);font-size:10px;">Rescisão</span>':''}</span>`
+          : `<span style="font-size:11px;color:var(--warn);">&#9711; Pendente</span>`}
+      </td>
+    </tr>`);
+  });
+
+  // Linha de total
+  out.push(`<tr style="background:var(--cream);font-weight:500;">
+    <td style="padding:10px 8px;font-size:13px;">TOTAL (${calcs.length})</td>
+    <td class="money" style="text-align:right;padding:10px 8px;font-size:13px;">R$ ${fm(totSal)}</td>
+    <td class="money" style="text-align:right;padding:10px 8px;font-size:13px;color:var(--blue);">R$ ${fm(totVT)}</td>
+    <td class="money" style="text-align:right;padding:10px 8px;font-size:15px;color:var(--accent);">R$ ${fm(totAll)}</td>
+    <td></td>
+  </tr>`);
+  out.push('</tbody></table></div>');
+
+  // ── Cards individuais — compactos (sem memoHTML completo) ──
+  calcs.forEach(c=>{
+    const isPaid=!!c.payment;
+    out.push(`<div class="card" style="margin-bottom:12px;">
+      <div class="fb" style="gap:12px;margin-bottom:12px;">
+        <div class="fi" style="gap:10px;flex:1;min-width:0;">
+          ${avt(c.emp.name,40)}
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:14px;font-weight:400;word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(c.emp.name)}</div>
+            <div style="font-size:11px;color:var(--muted);">${escapeHTML(c.emp.role)}</div>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div class="money" style="font-size:20px;color:var(--accent);">R$ ${fm(c.total)}</div>
+          <div style="font-size:11px;margin-top:2px;">
+            ${isPaid
+              ? `<span style="color:var(--sage);">&#10003; Pago em ${fd(c.payment.paidDate)}${c.payment?.isRescisao?' · <span style="color:var(--danger);">Rescisão</span>':''}</span>`
+              : `<span style="color:var(--warn);">&#9711; Pendente</span>`}
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+        <div style="background:var(--cream);border-radius:10px;padding:10px;text-align:center;">
+          <div class="lbl" style="margin-bottom:4px;">Sal. líquido</div>
+          <div class="money" style="font-size:14px;">R$ ${fm(c.finalNetSal)}</div>
+        </div>
+        <div style="background:var(--cream);border-radius:10px;padding:10px;text-align:center;">
+          <div class="lbl" style="margin-bottom:4px;">VT ${MP[c.vtM].slice(0,3)}</div>
+          <div class="money" style="font-size:14px;color:var(--blue);">R$ ${fm(c.vtNet)}</div>
+        </div>
+        <div style="background:var(--cream);border-radius:10px;padding:10px;text-align:center;">
+          <div class="lbl" style="margin-bottom:4px;">INSS</div>
+          <div class="money" style="font-size:14px;color:var(--muted);">R$ ${fm(c.inssAmt)}</div>
+        </div>
+      </div>
+      ${isPaid&&c.payment.paidDate?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);">Pago em ${fd(c.payment.paidDate)} · ${c.payment.method||'—'}${c.payment.notes?' · '+c.payment.notes:''}</div>`:''}
+    </div>`);
+  });
+
   document.getElementById('tab-rel').innerHTML=out.join('');
 }
 
@@ -3120,6 +3240,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
