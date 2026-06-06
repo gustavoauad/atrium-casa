@@ -27,30 +27,22 @@
 }
 /* ── DARK MODE — classe explícita (maior prioridade) ── */
 :root.dark {
-  --bg:#1A1612;--surface:#211C18;--card:#2A2420;--border:#3A3430;
-  --text:#F0EBE3;--muted:#8A8078;--stone:#5A5450;
+  --bg:#1A1612;--surface:#211C18;--card:#2A2420;--border:#3D3830;
+  --text:#F0EBE3;--muted:#B0A898;--stone:#706860;
   --accent:#C4A070;--a2:#D4B890;--cream:#2E2820;
-  --sage:#7EA882;--warn:#D4923A;--danger:#D06060;
-  --blue:#7AABCF;--gold:#D4A840;
+  --sage:#8FBB95;--warn:#E0A84A;--danger:#E07070;
+  --blue:#8ABDD8;--gold:#D4A840;
   color-scheme: dark;
 }
-/* ── LIGHT MODE — classe explícita (sobrescreve @media) ── */
-:root.light {
-  --bg:#F6F3EF;--surface:#FDFCFA;--card:#FFFFFF;--border:#E8E2D9;
-  --text:#1C1917;--muted:#8C8278;--stone:#B5ADA4;
-  --accent:#8B6F47;--a2:#C4A070;--cream:#F0E9DC;
-  --sage:#6B8F71;--warn:#C47A2A;--danger:#B04A4A;
-  --blue:#5B8FAF;--gold:#C4973A;
-  color-scheme: light;
-}
+/* :root.light handled by :root (default) */
 /* ── SYSTEM DARK — apenas quando sem classe manual ── */
 @media (prefers-color-scheme: dark) {
   :root:not(.dark):not(.light) {
-    --bg:#1A1612;--surface:#211C18;--card:#2A2420;--border:#3A3430;
-    --text:#F0EBE3;--muted:#8A8078;--stone:#5A5450;
+    --bg:#1A1612;--surface:#211C18;--card:#2A2420;--border:#3D3830;
+    --text:#F0EBE3;--muted:#B0A898;--stone:#706860;
     --accent:#C4A070;--a2:#D4B890;--cream:#2E2820;
-    --sage:#7EA882;--warn:#D4923A;--danger:#D06060;
-    --blue:#7AABCF;--gold:#D4A840;
+    --sage:#8FBB95;--warn:#E0A84A;--danger:#E07070;
+    --blue:#8ABDD8;--gold:#D4A840;
     color-scheme: dark;
   }
 }
@@ -119,7 +111,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 #app{display:none;}
 #app.visible{display:block;}
 .wrap{max-width:960px;margin:0 auto;padding:0 20px 80px;}
-.topbar{position:sticky;top:0;z-index:100;background:rgba(245,242,238,.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;margin:0 -20px;}
+.topbar{position:sticky;top:0;z-index:100;background:var(--surface);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;margin:0 -20px;}
 .logo{display:flex;align-items:center;gap:9px;}
 .logo-text{font-family:'Inter',sans-serif;font-size:14px;font-weight:400;letter-spacing:.22em;text-transform:uppercase;color:var(--text);line-height:1.1;}.logo-sub{font-family:'Inter',sans-serif;font-size:6px;font-weight:400;letter-spacing:.3em;text-transform:uppercase;color:var(--accent);}
 .tabs{display:flex;gap:6px;padding:18px 0 4px;border-bottom:1px solid var(--border);margin-bottom:28px;overflow-x:auto;}
@@ -128,7 +120,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 .tab:hover:not(.active){border-color:var(--border);color:var(--text);}
 .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 1px 3px rgba(42,37,32,.04);margin-bottom:12px;}
 .cream{background:var(--cream);border:1px solid var(--border);border-radius:12px;padding:14px 16px;}
-.dark{background:var(--text);border-radius:16px;padding:20px;margin-bottom:12px;}
+.banner-dk{background:var(--text);border-radius:16px;padding:20px;margin-bottom:12px;}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
 .fb{display:flex;align-items:center;justify-content:space-between;min-width:0;}
@@ -187,7 +179,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 .empty{text-align:center;padding:48px 20px;}
 .ei{font-size:32px;margin-bottom:12px;opacity:.4;}
 .et{font-size:14px;color:var(--muted);font-weight:300;}
-.banner{background:linear-gradient(135deg,#2A2520,#3d3028);border-radius:16px;padding:20px;color:var(--surface);margin-bottom:20px;}
+.banner{background:linear-gradient(135deg,var(--text),#3d3028);border-radius:16px;padding:20px;color:var(--bg);margin-bottom:20px;}
 .viewer-badge{display:none;background:rgba(138,155,138,.15);color:var(--sage);padding:4px 10px;border-radius:6px;font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;}
 @media(max-width:600px){.g4{grid-template-columns:1fr 1fr;}}
 </style>
@@ -195,12 +187,12 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 <script>
 // Aplica tema antes do primeiro paint — elimina flash
 (function(){
-  var t=localStorage.getItem("atrium_theme")||"system";
+  var t=localStorage.getItem("atrium_theme");
   var r=document.documentElement;
   r.classList.remove("dark","light");
-  if(t==="dark")       r.classList.add("dark");
-  else if(t==="light") r.classList.add("light");
-  // "system": sem classe, @media :root:not(.dark):not(.light) cuida
+  if(t==="dark")  r.classList.add("dark");
+  if(t==="light") r.classList.add("light");
+  // sem preferência salva: sem classe → @media decide (system)
 })();
 </script>
 </head>
@@ -543,6 +535,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -583,10 +576,8 @@ let _realtimePending = false;  // evita reloads em cascata
 // ── SECURITY: HTML escape para prevenir XSS ──────────────────
 // Ordena funcionários por nome (case-insensitive)
 function cycletheme() {
-  var order = ['system','light','dark'];
-  var idx = order.indexOf(_theme);
-  if (idx < 0) idx = 0;
-  var next = order[(idx + 1) % order.length];
+  // Alterna apenas entre light e dark — sistema é só o padrão inicial
+  var next = (_theme === 'dark') ? 'light' : 'dark';
   applyTheme(next);
 }
 
@@ -600,14 +591,15 @@ function applyTheme(theme) {
   root.classList.remove('dark', 'light');
   if (theme === 'dark')  root.classList.add('dark');   // dark vars always
   if (theme === 'light') root.classList.add('light');  // light vars always (overrides @media)
-  // 'system': sem classe — @media :root:not(.dark):not(.light) decide
+  // 'system' or unknown: sem classe — @media cuida
+  // 'light': adiciona .light para sobrescrever @media dark se necessário
   // Atualiza botões no Config se abertos
   document.querySelectorAll('[data-theme]').forEach(function(btn) {
     btn.style.opacity     = btn.dataset.theme === theme ? '1' : '0.4';
     btn.style.borderColor = btn.dataset.theme === theme ? 'var(--accent)' : 'var(--border)';
   });
   // Ícone do botão na topbar
-  var icons = { system:'&#9680;', light:'&#9728;', dark:'&#9790;' };
+  var icons = { system:'&#9728;', light:'&#9728;', dark:'&#9790;' }; // system shows sun (light appearance)
   var tb = document.getElementById('theme-btn');
   if (tb) tb.innerHTML = icons[theme] || '&#9680;';
 }
@@ -2202,7 +2194,7 @@ function memoHTML(c) {
   const isMan=c.vtManualDays!==null, vtDL=c.emp.vtDiscount==='none'?'Sem desconto \u2014 integral':'Desconto legal (6% sal. base) \u2014 m\u00e1x R$ '+fm(c.vtGross);
   const canEditVT=canWrite(); // VT ajustável mesmo após pagamento registrado
   out.push(`<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:10px;"><p class="lbl">&#9317; Vale-Transporte \u2014 ${vl}</p><div class="fi" style="gap:6px;">${isMan?'<span class="badge" style="background:rgba(196,151,58,.15);color:var(--warn);">ajustado</span>':'<span class="badge" style="background:rgba(107,159,191,.15);color:var(--blue);">autom\u00e1tico</span>'}<span class="badge" style="background:rgba(107,159,191,.1);color:var(--blue);">m\u00eas seguinte</span></div></div><div class="mt2"><div class="mr mrh"><span>Item</span><span>Mem\u00f3ria</span><span style="text-align:right;">Valor</span></div><div class="mr"><span>Dias em ${vl}</span><span style="color:var(--muted);">Sugerido: ${c.vtWdAuto}${isMan?' \u2192 Ajustado: '+c.vtWd:''} dias \u00fateis</span><span class="money" style="text-align:right;">${c.vtWd}${isMan?' <span style="color:var(--warn);font-size:9px;">&#9998;</span>':''}</span></div><div class="mr"><span>VT bruto</span><span style="color:var(--muted);">${c.vtWd} \u00d7 R$ ${fm(c.emp.vtDaily||0)}</span><span class="money" style="text-align:right;">R$ ${fm(c.vtGross)}</span></div><div class="mr"><span>Desconto</span><span style="color:var(--muted);">${vtDL}</span><span class="money" style="text-align:right;color:${c.vtDisc>0?'var(--danger)':'var(--sage)'};">${c.vtDisc>0?'\u2212 R$ '+fm(c.vtDisc):'R$ 0,00 \u2014 integral'}</span></div></div>${c.payment?`<div class="fb" style="padding-top:10px;"><span>VT pago</span><span class="money" style="font-size:18px;color:var(--blue);">R$ ${fm(c.vtNet)}</span></div>`:canEditVT?`<div class="fi" style="gap:8px;padding-top:12px;flex-wrap:wrap;"><span style="font-size:11px;color:var(--muted);">Ajustar dias VT:</span><input type="number" min="0" max="31" value="${c.vtWd}" oninput="setVTDays('${c.vtOK}',this.value)" style="width:60px;padding:5px 8px;border-radius:7px;border:1px solid var(--border);font-size:12px;text-align:center;">${isMan?`<button onclick="resetVTDays('${c.vtOK}')" class="btn btn-gh btn-sm" style="padding:5px 10px;font-size:10px;">&#8634; Usar sugerido (${c.vtWdAuto})</button>`:''}<span class="money" style="font-size:18px;color:var(--blue);margin-left:auto;">R$ ${fm(c.vtNet)}</span></div>`:`<div class="fb" style="padding-top:10px;"><span>VT (somente leitura)</span><span class="money" style="font-size:18px;color:var(--blue);">R$ ${fm(c.vtNet)}</span></div>`}</div>`);
-  out.push(`<div class="dark" style="border-radius:16px;"><p style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.12em;text-transform:uppercase;margin-bottom:16px;">Resumo \u2014 ${rl}</p>`);
+  out.push(`<div class="banner-dk" style="border-radius:16px;"><p style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.12em;text-transform:uppercase;margin-bottom:16px;">Resumo \u2014 ${rl}</p>`);
   [[rl+' \u2014 Sal\u00e1rio base'+(c.proRataActive?' \u00d7 '+c.proRataDias+'/30':''),c.proRataActive?c.proRataSalBase:c.salBase,false,false],['+ Di\u00e1rias recorrentes',c.recTot,false,c.recTot===0],['+ Di\u00e1rias avulsas',c.avTot,false,c.avTot===0],['+ B\u00f4nus',c.bons,false,c.bons===0],['\u2212 Descontos',c.deds,true,c.deds===0],['\u2212 INSS',c.inssAmt,true,c.inssAmt===0]].filter(r=>!r[3]).forEach(r=>out.push(`<div class="fb" style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,.07);"><span style="font-size:12px;color:rgba(255,255,255,.5);">${r[0]}</span><span class="money" style="font-size:16px;color:${r[2]?'#e99':'rgba(255,255,255,.8)'};">${r[2]?'\u2212':''}R$ ${fm(r[1])}</span></div>`));
   out.push(`<div class="fb" style="padding:14px 0 8px;border-top:1px solid rgba(255,255,255,.15);margin-top:6px;"><span style="font-size:14px;font-weight:500;color:#fff;">&#127974; Sal\u00e1rio l\u00edquido</span><span class="money" style="font-size:28px;color:var(--a2);">R$ ${fm(c.finalNetSal)}</span></div><div class="fb" style="padding:8px 0;border-top:1px solid rgba(255,255,255,.08);"><span style="font-size:12px;color:rgba(255,255,255,.5);">+ VT ${vl}</span><span class="money" style="font-size:18px;color:var(--blue);">R$ ${fm(c.vtNet)}</span></div><div class="fb" style="padding:12px 0 0;border-top:2px solid rgba(255,255,255,.18);margin-top:4px;"><span style="font-size:15px;font-weight:500;color:#fff;">&#128179; Total do envelope</span><span class="money" style="font-size:28px;color:#fff;font-weight:300;">R$ ${fm(c.total)}</span></div></div>`);
   return out.join('');
@@ -2819,7 +2811,7 @@ async function renderConfig() {
     <div class="fi" style="gap:8px;">
       <button data-theme="light" onclick="applyTheme('light')" class="btn btn-gh btn-sm" style="flex:1;">&#9728; Claro</button>
       <button data-theme="dark"  onclick="applyTheme('dark')"  class="btn btn-gh btn-sm" style="flex:1;">&#9790; Escuro</button>
-      <button data-theme="system" onclick="applyTheme('system')" class="btn btn-gh btn-sm" style="flex:1;">&#9881; Sistema</button>
+      
     </div>
   </div>`);
   const {data:houseData}=await supa.from('houses').select('invite_code').eq('id',currentHouseId).single();
@@ -3240,6 +3232,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
