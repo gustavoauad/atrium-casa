@@ -493,6 +493,8 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -526,6 +528,8 @@ const SUPA_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 if (!window.supabase) { throw new Error('Supabase SDK not loaded'); }
 let supa = null; // inicializado no DOMContentLoaded após SDK carregar
 let _sessionProcessed = false; // módulo — persiste entre eventos de auth
+let _realtimeChannel = null;   // canal Realtime ativo
+let _realtimePending = false;  // evita reloads em cascata
 
 // ── SECURITY: HTML escape para prevenir XSS ──────────────────
 // Ordena funcionários por nome (case-insensitive)
@@ -817,6 +821,7 @@ async function afterSignupSetup() {
   }
 }
 async function doLogout() {
+  teardownRealtime(); // para escuta Realtime
   try { await supa.auth.signOut(); } catch(e) { console.error('Logout error:', e); }
   // Continua o logout local mesmo se Supabase falhar
   currentUser = null; currentHouseId = null; currentRole = null; currentHouseName = '';
@@ -923,6 +928,65 @@ async function criarCasaManual() {
   }
 }
 
+// ── Realtime: escuta mudanças feitas por outros usuários ────
+function setupRealtime(houseId) {
+  if (_DEV_MODE || !supa) return;
+  teardownRealtime(); // limpa canal anterior se existir
+
+  _realtimeChannel = supa
+    .channel('house:' + houseId)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'employees',
+      filter: 'house_id=eq.' + houseId
+    }, handleRemoteChange)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'events',
+      filter: 'house_id=eq.' + houseId
+    }, handleRemoteChange)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'adjustments',
+      filter: 'house_id=eq.' + houseId
+    }, handleRemoteChange)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'payments',
+      filter: 'house_id=eq.' + houseId
+    }, handleRemoteChange)
+    .subscribe((status) => {
+      console.log('[Realtime] status:', status);
+      if (status === 'SUBSCRIBED') showSyncBanner('online');
+      if (status === 'CHANNEL_ERROR') showSyncBanner('error');
+    });
+}
+
+function teardownRealtime() {
+  if (_realtimeChannel) {
+    supa.removeChannel(_realtimeChannel);
+    _realtimeChannel = null;
+  }
+}
+
+function handleRemoteChange(payload) {
+  // Ignora mudanças feitas pelo próprio usuário (evita reload desnecessário)
+  // Throttle: agrupa múltiplas mudanças em um único reload
+  if (_realtimePending) return;
+  _realtimePending = true;
+  console.log('[Realtime] remote change:', payload.table, payload.eventType);
+  showSyncBanner('syncing');
+  // Espera 800ms para agregar possíveis mudanças em lote
+  setTimeout(async () => {
+    _realtimePending = false;
+    await loadFromSupabase();
+  }, 800);
+}
+
 async function selectHouse(houseId, houseName, role) {
   dbg('selectHouse chamado: ' + houseName + ' (' + role + ')');
   currentHouseId   = houseId;
@@ -939,6 +1003,7 @@ async function selectHouse(houseId, houseName, role) {
   dbg('App visível — carregando dados...');
   if (isOnline) {
     await loadFromSupabase();
+    setupRealtime(houseId); // Nível 2: inicia escuta em tempo real
   } else {
     const cached = localStorage.getItem(DBK + '_' + houseId);
     if (cached) try { db = JSON.parse(cached); } catch (_) { db = defDB(); }
@@ -1125,6 +1190,16 @@ function initNetworkListeners() {
   // Recarrega do Supabase quando a aba volta ao foco após ≥60 s.
   // Captura edições feitas em outro dispositivo ou pelo Supabase Studio.
   document.addEventListener('visibilitychange', () => {
+  // Nível 1: ao voltar para a aba, recarrega dados do Supabase
+  // Reduz janela de conflito entre múltiplos usuários
+  if (document.visibilityState === 'visible' && currentHouseId && isOnline && supa) {
+    const now = Date.now();
+    if (!window._lastReload || now - window._lastReload > 30000) { // throttle: 30s
+      window._lastReload = now;
+      loadFromSupabase();
+    }
+  }
+  // Original handler continua abaixo:
     if (document.visibilityState !== 'visible') return;
     if (!currentHouseId || !isOnline) return;
     const now = Date.now();
@@ -1133,7 +1208,7 @@ function initNetworkListeners() {
     loadFromSupabase();
   });
 }
-function showSyncBanner(state) {
+function showSyncBanner(state, msg) {
   const b = document.getElementById('sync-banner'); if (!b) return;
   const map = {
     online:  ['\u2705 Online \u2014 sincronizado',               'rgba(138,155,138,.9)'],
@@ -1226,7 +1301,7 @@ async function syncAll() {
 // ── SUPABASE WRITE HELPERS ────────────────────────────────────
 async function _sbSaveEmployee(emp) {
   if (_DEV_MODE) { return; } // dev mode: skip Supabase
-  const payload = { data: emp, house_id: currentHouseId };
+  const payload = { data: emp, house_id: currentHouseId, updated_at: new Date().toISOString() };
   if (emp._sbid) {
     await supa.from('employees').update(payload).eq('id', emp._sbid).eq('house_id', currentHouseId);
   } else {
@@ -1253,21 +1328,21 @@ async function _sbDeleteEmployee(sbid, empId) {
 }
 async function _sbSaveEvent(empId, mk, ev) {
   if (_DEV_MODE) { return; }
-  const payload = { emp_id: empId, month_key: mk, data: ev, house_id: currentHouseId };
+  const payload = { emp_id: empId, month_key: mk, data: ev, house_id: currentHouseId, updated_at: new Date().toISOString() };
   if (ev._sbid) await supa.from('events').update(payload).eq('id', ev._sbid).eq('house_id', currentHouseId);
   else { const { data } = await supa.from('events').insert(payload).select(); if (data?.[0]) ev._sbid = data[0].id; }
 }
 async function _sbDeleteEvent(sbid) { if (sbid) await supa.from('events').delete().eq('id', sbid).eq('house_id', currentHouseId); }
 async function _sbSaveAdj(empId, mk, adj) {
   if (_DEV_MODE) { return; }
-  const payload = { emp_id: empId, month_key: mk, data: adj, house_id: currentHouseId };
+  const payload = { emp_id: empId, month_key: mk, data: adj, house_id: currentHouseId, updated_at: new Date().toISOString() };
   if (adj._sbid) await supa.from('adjustments').update(payload).eq('id', adj._sbid).eq('house_id', currentHouseId);
   else { const { data } = await supa.from('adjustments').insert(payload).select(); if (data?.[0]) adj._sbid = data[0].id; }
 }
 async function _sbDeleteAdj(sbid) { if (sbid) await supa.from('adjustments').delete().eq('id', sbid).eq('house_id', currentHouseId); }
 async function _sbSavePayment(pay) {
   if (_DEV_MODE) { return; }
-  const payload = { emp_id: String(pay.empId), month_key: pay.monthKey, data: pay, house_id: currentHouseId };
+  const payload = { emp_id: String(pay.empId), month_key: pay.monthKey, data: pay, house_id: currentHouseId, updated_at: new Date().toISOString() };
   if (pay._sbid) {
     await supa.from('payments').update(payload).eq('id', pay._sbid).eq('house_id', currentHouseId);
   } else {
@@ -2577,6 +2652,29 @@ async function renderConfig() {
   out.push('</div>');
   out.push(`<div class="card" style="margin-bottom:16px;"><p class="lbl" style="margin-bottom:4px;">&#128190; Backup &amp; Restauração</p><p class="tip" style="margin-bottom:16px;">Exporte todos os dados da sua Casa. Importe para restaurar ou migrar para outra Casa.</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;"><div style="background:var(--cream);border:1px solid var(--border);border-radius:12px;padding:16px;"><p style="font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Exportar</p><p class="tip" style="margin-bottom:12px;">Arquivo <code style="background:var(--border);padding:1px 5px;border-radius:4px;font-size:10px;">.json</code> com todos os dados da Casa.</p><button class="btn btn-dk" style="width:100%;" onclick="exportBackup()">&#8659; Backup JSON</button><button class="btn btn-gh" style="width:100%;margin-top:8px;" onclick="exportBackupCSV()">&#8659; Tabelas CSV</button></div><div style="background:var(--cream);border:1px solid var(--border);border-radius:12px;padding:16px;"><p style="font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Importar / Restaurar</p><p class="tip" style="margin-bottom:12px;">Selecione um <code style="background:var(--border);padding:1px 5px;border-radius:4px;font-size:10px;">.json</code> exportado pelo Atrium. Registros existentes são preservados.</p><label style="display:block;width:100%;padding:10px 20px;border-radius:9px;border:1px solid var(--border);background:var(--card);font-size:12px;font-weight:500;cursor:pointer;text-align:center;">&#8657; Selecionar arquivo JSON<input type="file" accept=".json" onchange="importBackup(event)" style="display:none;"></label></div></div><div id="backup-status" style="display:none;"></div><div style="background:rgba(196,151,58,.07);border:1px solid rgba(196,151,58,.25);border-radius:10px;padding:12px 14px;"><p style="font-size:11px;color:var(--warn);font-weight:500;margin-bottom:4px;">&#9888;&#65039; Merge, não sobrescrita</p><p class="tip" style="color:var(--warn);opacity:.85;">Registros com o mesmo ID são ignorados. Para restauração completa em uma Casa vazia, não há risco de conflito.</p></div></div>`);
   out.push(`<div class="div"></div><button class="btn btn-gh" style="width:100%;margin-top:8px;" onclick="doLogout()">Sair da conta</button>`);
+  // Painel de diagnóstico de sincronização
+  const rtStatus = _realtimeChannel ? '✅ Conectado' : '❌ Desconectado';
+  const rtColor  = _realtimeChannel ? 'var(--sage)' : 'var(--danger)';
+  out.push(`<div class="card" style="margin-bottom:16px;">
+    <p class="lbl" style="margin-bottom:12px;">&#128268; Diagnóstico de Sincronização</p>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;">
+      <div class="fb"><span>Realtime</span>
+        <span style="color:${rtColor};font-weight:500;">${rtStatus}</span></div>
+      <div class="fb"><span>Usuário</span>
+        <span style="color:var(--muted);">${currentUser?.email||'—'}</span></div>
+      <div class="fb"><span>Permissão</span>
+        <span style="color:var(--muted);">${currentRole}</span></div>
+      <div class="fb"><span>Casa ID</span>
+        <span style="color:var(--muted);font-size:11px;">${currentHouseId?.slice(0,8)}…</span></div>
+      <div class="fb"><span>Online</span>
+        <span style="color:${isOnline?'var(--sage)':'var(--danger)'}">${isOnline?'✅ Sim':'❌ Offline'}</span></div>
+    </div>
+    <div style="margin-top:12px;">
+      <button class="btn btn-gh btn-sm" onclick="loadFromSupabase().then(()=>renderConfig())">
+        &#8635; Forçar sincronização
+      </button>
+    </div>
+  </div>`);
   document.getElementById('tab-config').innerHTML=out.join('');
   requestAnimationFrame(()=>{
     const qrEl=document.getElementById('qr-'+currentHouseId);
@@ -2934,6 +3032,8 @@ function initApp() {
       + '</div>';
   }
 }
+
+
 
 
 
