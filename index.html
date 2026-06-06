@@ -68,7 +68,7 @@ input::placeholder,textarea::placeholder{color:var(--stone);}
 #auth-screen.hidden{display:none;}
 .auth-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:36px 32px;width:100%;max-width:400px;box-shadow:0 8px 40px rgba(42,37,32,.08);}
 .auth-logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:28px;}
-.auth-logo-text{font-family:'Playfair Display',serif;font-size:26px;font-weight:400;letter-spacing:.18em;text-transform:uppercase;}
+.auth-logo-text{font-family:'Inter',sans-serif;font-size:22px;font-weight:400;letter-spacing:.22em;text-transform:uppercase;color:var(--text);line-height:1.1;}.auth-logo-sub{font-family:'Inter',sans-serif;font-size:9px;font-weight:400;letter-spacing:.35em;text-transform:uppercase;color:var(--accent);}
 .auth-tabs{display:flex;background:var(--cream);border-radius:10px;padding:3px;margin-bottom:24px;}
 .auth-tab{flex:1;padding:8px;border-radius:8px;border:none;background:transparent;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;color:var(--muted);}
 .auth-tab.active{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(42,37,32,.08);}
@@ -117,7 +117,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 .wrap{max-width:960px;margin:0 auto;padding:0 20px 80px;}
 .topbar{position:sticky;top:0;z-index:100;background:rgba(245,242,238,.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;margin:0 -20px;}
 .logo{display:flex;align-items:center;gap:9px;}
-.logo-text{font-family:'Playfair Display',serif;font-size:21px;font-weight:400;letter-spacing:.16em;text-transform:uppercase;}
+.logo-text{font-family:'Inter',sans-serif;font-size:14px;font-weight:400;letter-spacing:.22em;text-transform:uppercase;color:var(--text);line-height:1.1;}.logo-sub{font-family:'Inter',sans-serif;font-size:6px;font-weight:400;letter-spacing:.3em;text-transform:uppercase;color:var(--accent);}
 .tabs{display:flex;gap:6px;padding:18px 0 4px;border-bottom:1px solid var(--border);margin-bottom:28px;overflow-x:auto;}
 .tab{padding:8px 18px;border-radius:20px;border:1px solid transparent;background:transparent;color:var(--muted);font-size:12px;font-weight:400;cursor:pointer;transition:all .2s;white-space:nowrap;}
 .tab.active{background:var(--text);color:var(--surface);}
@@ -207,16 +207,8 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 <div id="auth-screen" class="hidden">
   <div class="auth-box">
     <div class="auth-logo">
-      <svg width="28" height="28" viewBox="0 0 72 72" fill="none">
-        <rect x="4" y="4" width="64" height="64" rx="6" stroke="#2A2520" stroke-width="1.8" fill="none"/>
-        <rect x="22" y="22" width="28" height="28" rx="2" stroke="#8B7355" stroke-width="1.8" fill="none"/>
-        <line x1="4" y1="4" x2="22" y2="22" stroke="#2A2520" stroke-width="1" opacity=".35"/>
-        <line x1="68" y1="4" x2="50" y2="22" stroke="#2A2520" stroke-width="1" opacity=".35"/>
-        <line x1="4" y1="68" x2="22" y2="50" stroke="#2A2520" stroke-width="1" opacity=".35"/>
-        <line x1="68" y1="68" x2="50" y2="50" stroke="#2A2520" stroke-width="1" opacity=".35"/>
-        <circle cx="36" cy="36" r="2.5" fill="#8B7355"/>
-      </svg>
-      <span class="auth-logo-text">Atrium</span>
+      <svg width="32" height="32" viewBox="0 0 72 72" fill="none"><rect x="4" y="4" width="64" height="64" rx="5" stroke="var(--accent)" stroke-width="5" fill="none"/><rect x="19" y="19" width="34" height="34" rx="2" stroke="var(--accent)" stroke-width="3.5" fill="none"/><circle cx="36" cy="36" r="4" fill="var(--accent)"/></svg>
+      <div style="display:flex;flex-direction:column;gap:2px;"><span class="auth-logo-text">Atrium</span><span class="auth-logo-sub">Casa</span></div>
     </div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Entrar</button>
@@ -252,8 +244,8 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 <div id="house-screen" class="hidden">
   <div class="house-box">
     <div class="auth-logo" style="margin-bottom:20px;">
-      <svg width="22" height="22" viewBox="0 0 72 72" fill="none"><rect x="4" y="4" width="64" height="64" rx="6" stroke="#2A2520" stroke-width="1.8" fill="none"/><rect x="22" y="22" width="28" height="28" rx="2" stroke="#8B7355" stroke-width="1.8" fill="none"/><circle cx="36" cy="36" r="2.5" fill="#8B7355"/></svg>
-      <span class="auth-logo-text">Atrium</span>
+      <svg width="32" height="32" viewBox="0 0 72 72" fill="none"><rect x="4" y="4" width="64" height="64" rx="5" stroke="var(--accent)" stroke-width="5" fill="none"/><rect x="19" y="19" width="34" height="34" rx="2" stroke="var(--accent)" stroke-width="3.5" fill="none"/><circle cx="36" cy="36" r="4" fill="var(--accent)"/></svg>
+      <div style="display:flex;flex-direction:column;gap:2px;"><span class="auth-logo-text">Atrium</span><span class="auth-logo-sub">Casa</span></div>
     </div>
     <p style="font-size:13px;color:var(--muted);margin-bottom:20px;">Selecione uma Casa para continuar:</p>
     <div id="house-list" class="house-list"></div>
@@ -272,16 +264,8 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 <div id="app">
 <div class="topbar">
   <div class="logo">
-    <svg width="26" height="26" viewBox="0 0 72 72" fill="none">
-      <rect x="4" y="4" width="64" height="64" rx="6" stroke="#2A2520" stroke-width="1.8" fill="none"/>
-      <rect x="22" y="22" width="28" height="28" rx="2" stroke="#8B7355" stroke-width="1.8" fill="none"/>
-      <line x1="4" y1="4" x2="22" y2="22" stroke="#2A2520" stroke-width="1" opacity=".35"/>
-      <line x1="68" y1="4" x2="50" y2="22" stroke="#2A2520" stroke-width="1" opacity=".35"/>
-      <line x1="4" y1="68" x2="22" y2="50" stroke="#2A2520" stroke-width="1" opacity=".35"/>
-      <line x1="68" y1="68" x2="50" y2="50" stroke="#2A2520" stroke-width="1" opacity=".35"/>
-      <circle cx="36" cy="36" r="2.5" fill="#8B7355"/>
-    </svg>
-    <span class="logo-text">Atrium</span>
+      <svg width="22" height="22" viewBox="0 0 72 72" fill="none"><rect x="4" y="4" width="64" height="64" rx="5" stroke="var(--accent)" stroke-width="5" fill="none"/><rect x="19" y="19" width="34" height="34" rx="2" stroke="var(--accent)" stroke-width="3.5" fill="none"/><circle cx="36" cy="36" r="4" fill="var(--accent)"/></svg>
+      <div style="display:flex;flex-direction:column;gap:1px;line-height:1;"><span class="logo-text">Atrium</span><span class="logo-sub">Casa</span></div>
   </div>
   <div class="fi" style="gap:8px;">
     <span id="house-label" style="font-size:11px;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><span id="role-badge" style="font-size:11px;margin-left:6px;padding:2px 8px;border-radius:20px;border:1px solid var(--border);"></span><button onclick="cycletheme()" id="theme-btn" title="Alternar tema" style="margin-left:8px;background:none;border:1px solid var(--border);border-radius:20px;padding:3px 8px;cursor:pointer;font-size:14px;color:var(--muted);line-height:1;">&#9680;</button>
