@@ -536,6 +536,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -2488,7 +2489,7 @@ function renderFech() {
   const warnD={};c.holWarns.forEach(w=>{warnD[w.iso]=1;});
   const canAct=canWrite()&&!isPaid;
   const canEdit=canWrite();
-  const empHeader=`<div style="background:var(--text);border-radius:14px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">${avt(emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:300;color:#fff;word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(emp.name)}</div><div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:2px;">${escapeHTML(emp.role)}${emp.admissao?' &nbsp;&middot;&nbsp; Adm. '+fd(emp.admissao):''}${isPaid?' &nbsp;&middot;&nbsp; <span style="color:var(--sage);">&#10003; Pago</span>':' &nbsp;&middot;&nbsp; <span style="color:var(--warn);">Pendente</span>'}</div></div><div style="margin-left:auto;text-align:right;flex-shrink:0;"><div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;">Compet\u00eancia</div><div style="font-family:'Playfair Display',serif;font-size:20px;color:var(--a2);">${wl}</div><div style="font-size:11px;color:rgba(255,255,255,.4);">Pgto em ${pl}</div></div></div>`;
+  const empHeader=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">${avt(emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:300;color:var(--text);word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(emp.name)}</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">${escapeHTML(emp.role)}${emp.admissao?' &nbsp;&middot;&nbsp; Adm. '+fd(emp.admissao):''}${isPaid?' &nbsp;&middot;&nbsp; <span style="color:var(--sage);">&#10003; Pago</span>':' &nbsp;&middot;&nbsp; <span style="color:var(--warn);">Pendente</span>'}</div></div><div style="margin-left:auto;text-align:right;flex-shrink:0;"><div style="font-size:10px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;">Compet\u00eancia</div><div style="font-family:'Playfair Display',serif;font-size:20px;color:var(--a2);">${wl}</div><div style="font-size:11px;color:var(--muted);">Pgto em ${pl}</div></div></div>`;
   const calParts=['<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:4px;"><span style="font-size:13px;font-weight:400;">'+wl+'</span><div class="fi" style="gap:8px;"><button class="btn btn-gh btn-sm" onclick="openReg()">&#128467; Feriados regionais</button>'+(canAct?`<button class="btn btn-gh btn-sm" onclick="openEvM('${emp.id}','${td}')">+ Di\u00e1ria avulsa</button>`:'')+`</div></div><div class="cg">`];
   DP.forEach(d=>calParts.push(`<div class="ch">${d}</div>`));
   for(let z=0;z<fdow;z++)calParts.push('<div class="cd ce"></div>');
@@ -3232,6 +3233,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
