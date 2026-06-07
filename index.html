@@ -550,6 +550,10 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
+
+
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -1558,6 +1562,107 @@ function addMonth(y, m) {
   showToast('✓ '+MP[m]+' '+y+' adicionado.');
 }
 
+// Abre modal para deletar um mês
+function openPayEv(eid, evId, mk) {
+  const md=document.getElementById('mod-pay-ev'); if(!md)return;
+  md.dataset.eid=eid; md.dataset.evId=evId; md.dataset.mk=mk;
+  md.innerHTML=
+    '<div class="mod-box">'
+    +'<div class="mod-hd"><span class="lbl">Pagamento de Diária</span>'
+    +'<button class="mod-x" onclick="cm(\'mod-pay-ev\')">&#10005;</button></div>'
+    +'<div class="field"><label>Data do pagamento</label><input id="pev-date" type="date" value="'+tod()+'"></div>'
+    +'<div class="field"><label>Forma</label><select id="pev-meth" class="ssel" style="width:100%;">'
+    +'<option>PIX</option><option>Dinheiro</option><option>TED</option><option>Cartão</option></select></div>'
+    +'<div class="field"><label>Observações</label><input id="pev-notes" placeholder="Opcional"></div>'
+    +'<div class="div"></div>'
+    +'<div class="fe">'
+    +'<button class="btn btn-gh" onclick="cm(\'mod-pay-ev\')">Cancelar</button>'
+    +'<button class="btn btn-sg" onclick="confirmPayEv()">&#10003; Confirmar pagamento</button>'
+    +'</div></div>';
+  md.classList.remove('hidden');
+}
+
+async function confirmPayEv() {
+  const md=document.getElementById('mod-pay-ev'); if(!md)return;
+  const eid=md.dataset.eid, evId=md.dataset.evId, mk=md.dataset.mk;
+  const paidDate=document.getElementById('pev-date').value||tod();
+  const method=document.getElementById('pev-meth').value||'PIX';
+  const notes=document.getElementById('pev-notes').value||'';
+  const [ry,rm]=mk.split('-').map(Number);
+  const evList=db.events[eid]?.[mk]||[];
+  const ev=evList.find(e=>e.id===evId); if(!ev)return;
+  ev.paidDate=paidDate; ev.paidMethod=method; ev.paidNotes=notes;
+  saveDB();
+  try{ await _sbSaveEvent(String(eid),mk,ev); }catch(e){console.error('payEv:',e);}
+  cm('mod-pay-ev');
+  renderFech();
+}
+
+async function unPayEv(eid, evId, mk) {
+  if(!confirm('Desfazer pagamento desta diária?'))return;
+  const evList=db.events[eid]?.[mk]||[];
+  const ev=evList.find(e=>e.id===evId); if(!ev)return;
+  delete ev.paidDate; delete ev.paidMethod; delete ev.paidNotes;
+  saveDB();
+  try{ await _sbSaveEvent(String(eid),mk,ev); }catch(e){console.error('unPayEv:',e);}
+  renderFech();
+}
+
+function openDeleteMonth() {
+  if(!canAdmin()){showToast('Apenas Admin pode deletar meses.');return;}
+  const active=getActiveMonths();
+  if(!active.length){showToast('Nenhum mês disponível.');return;}
+  const curRy=SM===0?SY-1:SY, curRm=SM===0?11:SM-1;
+  const md=document.getElementById('mod-delete-month'); if(!md)return;
+  const monthOpts=active.map(({y,m})=>`<option value="${y}-${m}"${y===curRy&&m===curRm?' selected':''}>${MP[m]} ${y}</option>`).join('');
+  md.innerHTML=
+    '<div class="mod-box">'
+    +'<div class="mod-hd"><span class="lbl" style="color:var(--danger);">&#9888; Deletar mês</span>'
+    +'<button class="mod-x" onclick="cm(\'mod-delete-month\')">&#10005;</button></div>'
+    +'<p class="tip" style="margin-bottom:16px;">Todos os registros do mês (diárias, ajustes e pagamentos) serão <strong>permanentemente deletados</strong> do banco de dados.</p>'
+    +'<div class="field" style="margin-bottom:20px;"><label>Mês a deletar</label>'
+    +'<select id="del-m-sel" class="ssel" style="width:100%;">'+monthOpts+'</select></div>'
+    +'<div class="div"></div>'
+    +'<div class="fe">'
+    +'<button class="btn btn-gh" onclick="cm(\'mod-delete-month\')">Cancelar</button>'
+    +'<button class="btn" style="background:var(--danger);color:#fff;" onclick="confirmDeleteMonth()">&#128465; Deletar</button>'
+    +'</div></div>';
+  md.classList.remove('hidden');
+}
+
+async function confirmDeleteMonth() {
+  const sel=document.getElementById('del-m-sel'); if(!sel)return;
+  const [ry,rm]=sel.value.split('-').map(Number);
+  const mk=MK(ry,rm);
+  if(!confirm(`Deletar TODOS os dados de ${MP[rm]} ${ry}? Esta ação não pode ser desfeita.`))return;
+  cm('mod-delete-month');
+  showSyncBanner('syncing','Deletando...');
+  try {
+    // Delete from Supabase
+    if(supa&&!_DEV_MODE){
+      await supa.from('events').delete().eq('month_key',mk).eq('house_id',currentHouseId);
+      await supa.from('adjustments').delete().eq('month_key',mk).eq('house_id',currentHouseId);
+      await supa.from('payments').delete().eq('month_key',mk).eq('house_id',currentHouseId);
+    }
+    // Delete from local db
+    for(const eid in db.events){ delete db.events[eid][mk]; }
+    for(const eid in db.adjustments){ delete db.adjustments[eid][mk]; }
+    db.payments=db.payments.filter(p=>p.monthKey!==mk);
+    // Remove sentinel from localStorage
+    const sentKey='month_sentinels_'+currentHouseId;
+    const sents=JSON.parse(localStorage.getItem(sentKey)||'[]').filter(s=>!(s.y===ry&&s.m===rm));
+    localStorage.setItem(sentKey,JSON.stringify(sents));
+    saveDB();
+    initMonthFromData();
+    showSyncBanner('online');
+    showToast('✓ '+MP[rm]+' '+ry+' deletado.');
+  } catch(e){
+    console.error('confirmDeleteMonth:',e);
+    showSyncBanner('error');
+    showToast('Erro ao deletar: '+e.message);
+  }
+}
+
 function openAddMonth() {
   if(!currentHouseId){showToast('Faça login primeiro.');return;}
   const active=getActiveMonths();
@@ -2293,6 +2398,8 @@ function calc(eid, ry, rm) {
   }
   const recTot=recs.reduce((a,r)=>a+r.value,0);
   const avs=events.map(e=>Object.assign({},e,{hn:h[e.date]||null})).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
+  // Diárias já pagas individualmente são deduzidas do envelope do mês
+  const avPaid=avs.filter(e=>e.paidDate).reduce((a,e)=>a+e.value,0);
   const avTot=avs.reduce((a,e)=>a+e.value,0), gross=salBase+recTot+avTot;
   let deds=0,bons=0;
   for (const a of adjs) { if(['advance','discount','loan','other'].includes(a.type))deds+=a.value; else if(a.type==='bonus')bons+=a.value; }
@@ -2324,8 +2431,8 @@ function calc(eid, ry, rm) {
   }
   // Se pro-rata ativo, sobrepõe o total e netSal com o valor proporcional
   const finalNetSal = proRataActive ? proRataSal : netSal;
-  const finalTotal  = proRataActive ? proRataSal + vtNet : netSal + vtNet;
-  return { emp,ry,rm,key,payment,salBase,recs,recTot,avs,avTot,holWarns,gross,adjs,deds,bons,inssAmt,netSal,finalNetSal,vtY,vtM,vtWd,vtWdAuto,vtManualDays,vtOK,vtGross,vtDisc,vtNet,pay1:bday1(pyY,pyM),pay5:bday5(pyY,pyM),pyY,pyM,total:finalTotal,isFirstMonth,proRataDias,proRataSal,proRataSalBase,proRataActive };
+  const finalTotal  = proRataActive ? r2(proRataSal + vtNet - avPaid) : r2(netSal + vtNet - avPaid);
+  return { emp,ry,rm,key,payment,salBase,recs,recTot,avs,avTot,avPaid,holWarns,gross,adjs,deds,bons,inssAmt,netSal,finalNetSal,vtY,vtM,vtWd,vtWdAuto,vtManualDays,vtOK,vtGross,vtDisc,vtNet,pay1:bday1(pyY,pyM),pay5:bday5(pyY,pyM),pyY,pyM,total:finalTotal,isFirstMonth,proRataDias,proRataSal,proRataSalBase,proRataActive };
 }
 
 // ── MEMO HTML ─────────────────────────────────────────────────
@@ -2616,15 +2723,14 @@ function buildDashCharts(calcs, wy, wm) {
   const barW=`100%`;
   let chart1=`<div class="card" style="margin-bottom:12px;">
     <p class="lbl" style="margin-bottom:14px;">&#128200; Envelope total — últimos ${last6.length} meses</p>
-    <div style="display:flex;align-items:flex-end;gap:6px;height:100px;padding-bottom:28px;position:relative;">`;
+    <div style="display:flex;align-items:flex-end;gap:4px;height:80px;padding-bottom:24px;position:relative;overflow-x:auto;">`;
 
   byMonth.forEach(b=>{
     const pct=Math.max(Math.round((b.tot/maxTot)*90),2);
     const isCur=(b.y===wy&&b.m===wm);
     chart1+=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;">
-      <span style="font-size:8px;color:var(--muted);white-space:nowrap;">R$ ${fm(b.tot)}</span>
       <div style="width:100%;background:${isCur?'var(--accent)':'var(--a2)'};border-radius:4px 4px 0 0;
-        height:${pct}px;transition:height .3s;opacity:${isCur?1:0.6};"></div>
+        height:${pct}px;min-height:4px;transition:height .3s;opacity:${isCur?1:0.6};" title="R$ ${fm(b.tot)}"></div>
       <span style="font-size:9px;color:${isCur?'var(--accent)':'var(--muted)'};font-weight:${isCur?500:400};
         white-space:nowrap;position:absolute;bottom:-20px;">${b.label}</span>
     </div>`;
@@ -2807,7 +2913,25 @@ function renderFech() {
   calParts.push('</div></div>');
   const avL=['<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:10px;"><span style="font-size:13px;font-weight:400;">Di\u00e1rias Avulsas</span>'+(canAct?`<button class="btn btn-gh btn-sm" onclick="openEvM('${emp.id}','${td}')">+ Adicionar</button>`:'')+`</div>`];
   if(!c.avs.length)avL.push('<p class="tip">Nenhuma di\u00e1ria avulsa lan\u00e7ada.</p>');
-  else c.avs.forEach(e=>avL.push(`<div class="ep"><div><div style="font-size:13px;">${fd(e.date)}${e.duration?' \u00b7 '+e.duration:''}${e.hn?` <span class="badge" style="background:rgba(196,151,58,.15);color:var(--warn);">&#127881; ${e.hn}</span>`:''}</div>${e.notes?`<div class="tip">${e.notes}</div>`:''}</div><div class="fi" style="gap:8px;flex-shrink:0;"><span class="money" style="font-size:16px;color:var(--blue);">R$ ${fm(e.value)}</span>${canAct?`<button onclick="openEvM('${emp.id}','${e.date}','${e.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);">&#9998;</button><button onclick="delEv('${emp.id}',${wy},${wm},'${e.id}')" style="background:none;border:none;cursor:pointer;color:var(--danger);">\xd7</button>`:''}</div></div>`));
+  c.avs.forEach(e=>{
+    const isPaidEv=!!(e.paidDate);
+    const evCard=`<div class="ep" style="${isPaidEv?'opacity:.85;':''}"><div style="flex:1;min-width:0;">`
+      +`<div style="font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">`
+      +`<span>${fd(e.date)}${e.duration?' · '+e.duration:''}</span>`
+      +(e.hn?`<span class="badge" style="background:rgba(196,151,58,.15);color:var(--warn);">&#127881; ${e.hn}</span>`:'')
+      +(isPaidEv?`<span class="badge" style="background:rgba(107,143,113,.15);color:var(--sage);font-size:10px;">&#10003; Pago ${fd(e.paidDate)}</span>`:'')
+      +`</div>`
+      +(e.notes?`<div class="tip">${e.notes}</div>`:'')
+      +`</div>`
+      +`<div class="fi" style="gap:8px;flex-shrink:0;">`
+      +`<span class="money" style="font-size:16px;color:${isPaidEv?'var(--sage)':'var(--blue)'};">R$ ${fm(e.value)}</span>`
+      +(canWrite()&&!isPaidEv?`<button onclick="openPayEv('${emp.id}','${e.id}','${MK(wy,wm)}')" title="Registrar pagamento" style="background:var(--sage);color:#fff;border:none;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:11px;">&#36; Pagar</button>`:'')
+      +(canWrite()&&isPaidEv?`<button onclick="unPayEv('${emp.id}','${e.id}','${MK(wy,wm)}')" title="Desfazer pagamento" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 8px;cursor:pointer;font-size:11px;color:var(--muted);">&#215;</button>`:'')
+      +(canAct?`<button onclick="openEvM('${emp.id}','${e.date}','${e.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);">&#9998;</button>`:'')
+      +(canAct?`<button onclick="delEv('${emp.id}','${e.id}','${MK(wy,wm)}')" style="background:none;border:none;cursor:pointer;color:var(--danger);">&#10005;</button>`:'')
+      +`</div></div>`;
+    avL.push(evCard);
+  });
   avL.push('</div>');
   const adjL=['<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:10px;"><span style="font-size:13px;font-weight:400;">Ajustes &amp; Descontos</span>'+(canAct?`<button class="btn btn-gh btn-sm" onclick="openAM('${emp.id}',${wy},${wm})">+ Adicionar</button>`:'')+`</div>`];
   if(!c.adjs.length)adjL.push('<p class="tip">Nenhum ajuste lan\u00e7ado.</p>');
@@ -3631,6 +3755,10 @@ function initApp() {
       + '</div>';
   }
 }
+
+
+
+
 
 
 
