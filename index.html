@@ -110,9 +110,9 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 /* ── MAIN APP ────────────────────────────────────────────── */
 #app{display:none;}
 #app.visible{display:block;}
-.wrap{max-width:960px;margin:0 auto;padding:0 20px 80px;}
-.topbar{position:sticky;top:0;z-index:100;background:var(--surface);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;margin:0 -20px;}
-.logo{display:flex;align-items:center;gap:9px;}
+.wrap{max-width:960px;margin:0 auto;padding:0 16px 80px;}
+.topbar{position:sticky;top:0;z-index:100;background:var(--surface);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;margin:0;}
+.logo{display:flex;align-items:center;gap:8px;flex-shrink:0;overflow:visible;}
 .logo-text{font-family:'Inter',sans-serif;font-size:14px;font-weight:400;letter-spacing:.22em;text-transform:uppercase;color:var(--text);line-height:1.1;}.logo-sub{font-family:'Inter',sans-serif;font-size:6px;font-weight:400;letter-spacing:.3em;text-transform:uppercase;color:var(--accent);}
 .tabs{display:flex;gap:6px;padding:18px 0 4px;border-bottom:1px solid var(--border);margin-bottom:28px;overflow-x:auto;}
 .tab{padding:8px 18px;border-radius:20px;border:1px solid transparent;background:transparent;color:var(--muted);font-size:12px;font-weight:400;cursor:pointer;transition:all .2s;white-space:nowrap;}
@@ -187,8 +187,8 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 @media (max-width:480px){
   .wrap{padding:0 12px 80px;}
   .card{padding:14px;}
-  .topbar{padding:8px 12px;}
-  .logo svg{width:18px;height:18px;}
+  .topbar{padding:8px 14px;}
+  .logo svg{width:20px;height:20px;}
   .logo-text{font-size:12px;}
   .logo-sub{font-size:5px;}
   #house-label{max-width:80px;font-size:10px;}
@@ -310,7 +310,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 <div id="app">
 <div class="topbar">
   <div class="logo">
-      <svg width="22" height="22" viewBox="0 0 72 72" fill="none"><rect x="4" y="4" width="64" height="64" rx="5" stroke="var(--accent)" stroke-width="5" fill="none"/><rect x="19" y="19" width="34" height="34" rx="2" stroke="var(--accent)" stroke-width="3.5" fill="none"/><circle cx="36" cy="36" r="4" fill="var(--accent)"/></svg>
+      <svg width="24" height="24" viewBox="0 0 72 72" fill="none" style="flex-shrink:0;overflow:visible;"><rect x="4" y="4" width="64" height="64" rx="5" stroke="var(--accent)" stroke-width="5" fill="none"/><rect x="19" y="19" width="34" height="34" rx="2" stroke="var(--accent)" stroke-width="3.5" fill="none"/><circle cx="36" cy="36" r="4" fill="var(--accent)"/></svg>
       <div style="display:flex;flex-direction:column;gap:1px;line-height:1;"><span class="logo-text">Atrium</span><span class="logo-sub">Casa</span></div>
   </div>
   <div class="fi" style="gap:6px;flex-wrap:nowrap;overflow:hidden;">
@@ -503,6 +503,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" crossorigin="anonymous"></script>
 <script>
+
 
 
 
@@ -3798,6 +3799,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
