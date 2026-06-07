@@ -546,6 +546,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -1515,17 +1516,34 @@ async function pushAllToSupabase() {
 // ── MONTH SELECTOR ────────────────────────────────────────────
 function getActiveMonths() {
   const set = new Set();
+  // Meses adicionados manualmente (sentinelas em localStorage)
+  const _sentKey='month_sentinels_'+currentHouseId;
+  const _sents=JSON.parse(localStorage.getItem(_sentKey)||'[]');
+  _sents.forEach(s=>set.add(s.y+'-'+s.m));
+  // db.payments = array
   (db.payments||[]).forEach(p => { if(p.ry!==undefined&&p.rm!==undefined) set.add(p.ry+'-'+p.rm); });
-  (db.events||[]).forEach(ev => { if(ev.date){const d=new Date(ev.date);set.add(d.getFullYear()+'-'+d.getMonth());} });
-  (db.adjustments||[]).forEach(aj => { if(aj.monthKey&&aj.type!=='month_open'){const[y,m]=aj.monthKey.split('-').map(Number);if(!isNaN(y)&&!isNaN(m))set.add(y+'-'+m);} });
+  // db.events = { empId: { monthKey: [ev,...] } }
+  for(const eid in (db.events||{})) for(const mk in db.events[eid]) {
+    const parts=mk.split('-'); if(parts.length>=2){const y=+parts[0],m=+parts[1];if(!isNaN(y)&&!isNaN(m))set.add(y+'-'+m);}
+  }
+  // db.adjustments = { empId: { monthKey: [adj,...] } } ou array de sentinelas
+  if(Array.isArray(db.adjustments)){
+    db.adjustments.forEach(aj=>{ if(aj.monthKey&&aj.type!=='month_open'){const[y,m]=aj.monthKey.split('-').map(Number);if(!isNaN(y)&&!isNaN(m))set.add(y+'-'+m);} });
+  } else {
+    for(const eid in (db.adjustments||{})) for(const mk in db.adjustments[eid]) {
+      const parts=mk.split('-'); if(parts.length>=2){const y=+parts[0],m=+parts[1];if(!isNaN(y)&&!isNaN(m))set.add(y+'-'+m);}
+    }
+  }
   return Array.from(set).map(k=>{const[y,m]=k.split('-').map(Number);return{y,m};}).sort((a,b)=>a.y-b.y||a.m-b.m);
 }
 
 function addMonth(y, m) {
   const existing=getActiveMonths();
   if(existing.some(e=>e.y===y&&e.m===m)){showToast('Este mês já está disponível.');return;}
-  if(!db.adjustments)db.adjustments=[];
-  db.adjustments.push({id:'sentinel_'+y+'_'+m,empId:'__sentinel__',monthKey:y+'-'+m,type:'month_open',value:0,note:'Mês adicionado'});
+  // Sentinela: guarda em localStorage para persistir o mês adicionado
+  const _sentKey='month_sentinels_'+currentHouseId;
+  const _sents=JSON.parse(localStorage.getItem(_sentKey)||'[]');
+  _sents.push({y,m}); localStorage.setItem(_sentKey,JSON.stringify(_sents));
   saveDB();
   const pd=new Date(y,m+1,1); SY=pd.getFullYear(); SM=pd.getMonth();
   buildMS(); renderAll();
@@ -3375,6 +3393,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
