@@ -604,6 +604,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -3645,7 +3646,12 @@ function render(tab){
   else if(tab==='rel')renderRel();
   else if(tab==='config')renderConfig();
 }
-function renderAll(){render(CT);}
+function renderAll(){
+  // Garante que house-bar esteja visível na aba correta
+  const _hb=document.getElementById('house-bar');
+  if(_hb) _hb.style.display=(CT==='config')?'none':'flex';
+  render(CT);
+}
 
 // ── [C] INIT ──────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -3840,6 +3846,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
