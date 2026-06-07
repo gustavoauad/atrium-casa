@@ -605,6 +605,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -3779,62 +3780,40 @@ function initApp() {
       showAuth();
     }
 
-    // ── Listener principal ────────────────────────────────────
-    // sessionProcessed bloqueia APENAS chamadas duplicadas de
-    // INITIAL_SESSION + SIGNED_IN que disparam juntas no reload.
-    // SIGNED_IN após um login real sempre deve ser processado,
-    // então a trava só se aplica a INITIAL_SESSION.
-    supa.auth.onAuthStateChange(async (event, session) => {
-      dbg('onAuthStateChange: ' + event);
+    // ── Estratégia de sessão ──────────────────────────────────────────
+    // getSession() lê localStorage imediatamente — sem race condition.
+    // Substitui o setTimeout fallback que causava logout no F5.
 
-      if (event === 'INITIAL_SESSION') {
-        // Dispara uma vez ao carregar — define o estado inicial.
-        // _signingUp: doSignup está no controle, ignorar.
-        if (_signingUp) return;
-        if (session?.user) {
-          await handleSession(session.user);
-        } else {
-          // Sem sessão — mostra login e libera trava para SIGNED_IN futuro
-          handleNoSession();
-        }
-
-      } else if (event === 'SIGNED_IN') {
-        // Login explícito do usuário — SEMPRE processar.
-        if (_signingUp) return;
-        _sessionProcessed = false;   // reseta para garantir execução
-        await handleSession(session.user);
-
-      } else if (event === 'TOKEN_REFRESHED') {
-        // Renovação silenciosa — não reprocessar
-        dbg('Token renovado silenciosamente');
-
-      } else if (event === 'SIGNED_OUT') {
-        _signingUp         = false;
-        _sessionProcessed  = false; // permite novo login
-        showAuth();
-      }
-    });
-
-    // ── Fallback: getSession após 1.5 s ──────────────────────
-    // Se onAuthStateChange(INITIAL_SESSION) não disparar dentro
-    // de 1.5 s (ex: SDK lento, sessão expirada silenciosa),
-    // getSession() garante que o estado visual é resolvido.
-    setTimeout(async () => {
-      if (_sessionProcessed) return; // listener já resolveu, não fazer nada
-      dbg('Fallback getSession acionado');
-      try {
-        const { data, error } = await supa.auth.getSession();
-        if (error) throw error;
-        if (data?.session?.user) {
-          await handleSession(data.session.user);
-        } else {
-          handleNoSession();
-        }
-      } catch (err) {
-        console.error('getSession fallback error:', err);
+    // PASSO 1 — restaurar sessão no reload
+    supa.auth.getSession().then(function(res) {
+      var sd = res.data, se = res.error;
+      if (se) { console.error('getSession error:', se); handleNoSession(); return; }
+      if (sd && sd.session && sd.session.user) {
+        dbg('Sessão restaurada via getSession()');
+        handleSession(sd.session.user);
+      } else {
+        dbg('Sem sessão — mostrando login');
         handleNoSession();
       }
-    }, 800);
+    }).catch(function(err) {
+      console.error('getSession catch:', err);
+      handleNoSession();
+    });
+
+    // PASSO 2 — listener para eventos futuros (login/logout/token)
+    supa.auth.onAuthStateChange(async (event, session) => {
+      dbg('onAuthStateChange: ' + event);
+      if (event === 'SIGNED_IN') {
+        if (_signingUp) return;
+        _sessionProcessed = false;
+        await handleSession(session.user);
+      } else if (event === 'TOKEN_REFRESHED') {
+        dbg('Token renovado silenciosamente');
+      } else if (event === 'SIGNED_OUT') {
+        _signingUp = false; _sessionProcessed = false; showAuth();
+      }
+      // INITIAL_SESSION ignorado — getSession() ja tratou o restore
+    });
 
   } catch (initErr) {
     console.error('Atrium init error:', initErr);
@@ -3846,6 +3825,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
