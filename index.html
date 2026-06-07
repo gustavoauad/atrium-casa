@@ -316,7 +316,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
   <div class="fi" style="gap:6px;flex-wrap:nowrap;overflow:hidden;">
     <span id="house-label" style="font-size:11px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><span id="role-badge" style="font-size:11px;margin-left:6px;padding:2px 8px;border-radius:20px;border:1px solid var(--border);"></span><button onclick="cycletheme()" id="theme-btn" title="Alternar tema" style="margin-left:8px;background:none;border:1px solid var(--border);border-radius:20px;padding:3px 8px;cursor:pointer;font-size:14px;color:var(--muted);line-height:1;">&#9680;</button>
     <span class="viewer-badge">&#128274; Somente leitura</span>
-    <div style="display:flex;align-items:center;gap:6px;"><span class="mref-label" style="font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;">Mês ref.</span><select id="msel" onchange="onMC()" class="ssel" style="padding:7px 28px 7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--cream);color:var(--text);font-size:12px;cursor:pointer;"></select><button onclick="openAddMonth()" title="Adicionar mês" style="flex-shrink:0;background:none;border:1px solid var(--border);border-radius:8px;padding:5px 8px;cursor:pointer;font-size:14px;color:var(--muted);line-height:1;">+</button></div>
+    <div style="display:flex;align-items:center;gap:6px;"><span class="mref-label" style="font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;">Mês ref.</span><select id="msel" onchange="onMC()" class="ssel" style="padding:7px 28px 7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--cream);color:var(--text);font-size:12px;cursor:pointer;"></select><button onclick="openAddMonth()" title="Adicionar mês" style="flex-shrink:0;background:none;border:1px solid var(--border);border-radius:8px;padding:5px 8px;cursor:pointer;font-size:14px;color:var(--muted);line-height:1;">+</button><button onclick="openDeleteMonth()" title="Deletar mês" style="flex-shrink:0;background:none;border:1px solid rgba(176,74,74,.4);border-radius:8px;padding:5px 8px;cursor:pointer;font-size:13px;color:var(--danger);line-height:1;">&#128465;</button></div>
     <button id="topbar-sync" class="btn btn-gh btn-sm write-only" onclick="pushAllToSupabase()" title="For&ccedil;ar sincroniza&ccedil;&atilde;o">&#8645;</button>
     <button class="btn btn-dk btn-sm" onclick="expCSV()">&#8595; CSV</button>
     <button class="btn btn-gh btn-sm" onclick="doLogout()" title="Sair" style="padding:7px 10px;">&#x2715;</button>
@@ -503,6 +503,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" crossorigin="anonymous"></script>
 <script>
+
 
 
 
@@ -1566,26 +1567,46 @@ async function pushAllToSupabase() {
 
 // ── MONTH SELECTOR ────────────────────────────────────────────
 function getActiveMonths() {
-  const set = new Set();
-  // Meses adicionados manualmente (sentinelas em localStorage)
+  // Chave interna: 'YYYY-M' onde M = índice 0-11 (igual ao JS Date)
+  // Eventos/ajustes usam chave 'YYYY-MM' (mês 1-12) — convertemos subtraindo 1
+  // Pagamentos usam {ry, rm} onde rm = índice 0-11
+  const set = new Set(); // formato interno: 'YYYY-M'
+
+  // Sentinelas (meses adicionados manualmente)
   const _sentKey='month_sentinels_'+currentHouseId;
   const _sents=JSON.parse(localStorage.getItem(_sentKey)||'[]');
-  _sents.forEach(s=>set.add(s.y+'-'+s.m));
-  // db.payments = array
-  (db.payments||[]).forEach(p => { if(p.ry!==undefined&&p.rm!==undefined) set.add(p.ry+'-'+p.rm); });
-  // db.events = { empId: { monthKey: [ev,...] } }
-  for(const eid in (db.events||{})) for(const mk in db.events[eid]) {
-    const parts=mk.split('-'); if(parts.length>=2){const y=+parts[0],m=+parts[1];if(!isNaN(y)&&!isNaN(m))set.add(y+'-'+m);}
-  }
-  // db.adjustments = { empId: { monthKey: [adj,...] } } ou array de sentinelas
-  if(Array.isArray(db.adjustments)){
-    db.adjustments.forEach(aj=>{ if(aj.monthKey&&aj.type!=='month_open'){const[y,m]=aj.monthKey.split('-').map(Number);if(!isNaN(y)&&!isNaN(m))set.add(y+'-'+m);} });
-  } else {
-    for(const eid in (db.adjustments||{})) for(const mk in db.adjustments[eid]) {
-      const parts=mk.split('-'); if(parts.length>=2){const y=+parts[0],m=+parts[1];if(!isNaN(y)&&!isNaN(m))set.add(y+'-'+m);}
+  _sents.forEach(s=>{ if(s.y!==undefined&&s.m!==undefined) set.add(s.y+'-'+s.m); });
+
+  // Pagamentos: ry/rm já em índice 0-11
+  (db.payments||[]).forEach(p=>{ if(p.ry!==undefined&&p.rm!==undefined) set.add(p.ry+'-'+p.rm); });
+
+  // Eventos: chave 'YYYY-MM' (mês 1-12) → converter para índice 0-11
+  for(const eid in (db.events||{})) {
+    for(const mk in db.events[eid]) {
+      const parts=mk.split('-');
+      if(parts.length>=2) {
+        const y=+parts[0], mm1=+parts[1]; // mm1 = mês 1-12
+        if(!isNaN(y)&&mm1>=1&&mm1<=12) set.add(y+'-'+(mm1-1));
+      }
     }
   }
-  return Array.from(set).map(k=>{const[y,m]=k.split('-').map(Number);return{y,m};}).sort((a,b)=>a.y-b.y||a.m-b.m);
+
+  // Ajustes: mesma chave 'YYYY-MM' (mês 1-12)
+  const adjObj = Array.isArray(db.adjustments)?{}:(db.adjustments||{});
+  for(const eid in adjObj) {
+    for(const mk in adjObj[eid]) {
+      const parts=mk.split('-');
+      if(parts.length>=2) {
+        const y=+parts[0], mm1=+parts[1];
+        if(!isNaN(y)&&mm1>=1&&mm1<=12) set.add(y+'-'+(mm1-1));
+      }
+    }
+  }
+
+  return Array.from(set)
+    .map(k=>{ const[y,m]=k.split('-').map(Number); return{y,m}; })
+    .filter(e=>!isNaN(e.y)&&e.m>=0&&e.m<=11)
+    .sort((a,b)=>a.y-b.y||a.m-b.m);
 }
 
 function addMonth(y, m) {
@@ -1675,31 +1696,57 @@ function openDeleteMonth() {
 }
 
 async function confirmDeleteMonth() {
-  const sel=document.getElementById('del-m-sel'); if(!sel)return;
-  const [ry,rm]=sel.value.split('-').map(Number);
-  const mk=MK(ry,rm);
-  if(!confirm(`Deletar TODOS os dados de ${MP[rm]} ${ry}? Esta ação não pode ser desfeita.`))return;
+  const sel=document.getElementById('del-m-sel'); if(!sel||!sel.value)return;
+  // sel.value = 'YYYY-M' (índice 0-11, formato interno)
+  const parts=sel.value.split('-').map(Number);
+  const ry=parts[0], rm=parts[1]; // rm = índice 0-11
+  const mk=MK(ry,rm); // 'YYYY-MM' formato Supabase
+  const label=MP[rm]+' '+ry;
+
+  // Coleta estatísticas antes de deletar para mostrar ao usuário
+  let evCount=0, adjCount=0, payCount=0;
+  for(const eid in db.events){ evCount+=(db.events[eid][mk]||[]).length; }
+  for(const eid in db.adjustments){ adjCount+=(db.adjustments[eid][mk]||[]).length; }
+  payCount=db.payments.filter(p=>p.monthKey===mk).length;
+
+  // Modal de confirmação com detalhes
+  const detalhes=[
+    payCount>0?payCount+' pagamento(s)':'',
+    evCount>0?evCount+' diária(s) avulsa(s)':'',
+    adjCount>0?adjCount+' ajuste(s)':''
+  ].filter(Boolean).join(', ');
+  const msg='Deletar TODOS os dados de '+label+'?'
+    +(detalhes?'\n\nSerão apagados: '+detalhes+'.':'')
+    +'\n\nEsta ação não pode ser desfeita.\nSe adicionar o mês novamente, ele virá vazio.';
+  if(!confirm(msg)) return;
+
   cm('mod-delete-month');
-  showSyncBanner('syncing','Deletando...');
+  showSyncBanner('syncing');
   try {
-    // Delete from Supabase
+    // 1. Deletar do Supabase
     if(supa&&!_DEV_MODE){
       await supa.from('events').delete().eq('month_key',mk).eq('house_id',currentHouseId);
       await supa.from('adjustments').delete().eq('month_key',mk).eq('house_id',currentHouseId);
       await supa.from('payments').delete().eq('month_key',mk).eq('house_id',currentHouseId);
     }
-    // Delete from local db
+    // 2. Deletar do db local
     for(const eid in db.events){ delete db.events[eid][mk]; }
     for(const eid in db.adjustments){ delete db.adjustments[eid][mk]; }
     db.payments=db.payments.filter(p=>p.monthKey!==mk);
-    // Remove sentinel from localStorage
+    // 3. Limpar overrides de localStorage para esse mês
+    const lsPrefix=['vt_','prorata_','resc_'];
+    Object.keys(localStorage).forEach(k=>{
+      lsPrefix.forEach(pfx=>{ if(k.startsWith(pfx)&&k.endsWith('_'+mk))localStorage.removeItem(k); });
+    });
+    // 4. Remover sentinela
     const sentKey='month_sentinels_'+currentHouseId;
-    const sents=JSON.parse(localStorage.getItem(sentKey)||'[]').filter(s=>!(s.y===ry&&s.m===rm));
+    const sents=JSON.parse(localStorage.getItem(sentKey)||'[]')
+      .filter(s=>!(s.y===ry&&s.m===rm));
     localStorage.setItem(sentKey,JSON.stringify(sents));
     saveDB();
     initMonthFromData();
     showSyncBanner('online');
-    showToast('✓ '+MP[rm]+' '+ry+' deletado.');
+    showToast('✓ '+label+' deletado. Se adicionado novamente, virá vazio.');
   } catch(e){
     console.error('confirmDeleteMonth:',e);
     showSyncBanner('error');
@@ -1783,31 +1830,15 @@ function isMonthClosed(ry, rm) {
 // Retorna o primeiro mês com pagamentos em aberto (mais antigo primeiro)
 // Se todos fechados, retorna o mês atual
 function firstOpenMonth() {
-  // Coleta todos os meses que têm dados (pagamentos ou eventos)
-  const months = new Set();
-  const now = new Date();
-  // Adiciona meses dos últimos 12 meses
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.add(d.getFullYear() + '-' + d.getMonth());
-  }
-  // Adiciona meses com pagamentos
-  db.payments.forEach(p => {
-    if (p.ry !== undefined) months.add(p.ry + '-' + p.rm);
-  });
-  // Ordena crescente (mais antigo primeiro)
-  const sorted = Array.from(months)
-    .map(k => { const [y,m] = k.split('-').map(Number); return {y,m}; })
-    .sort((a,b) => a.y - b.y || a.m - b.m);
-  // Retorna o mês do pagamento (SY/SM = mês seguinte ao de referência)
-  // O mês de referência é SM-1, então procuramos o primeiro mês de ref em aberto
-  for (const {y, m} of sorted) {
-    // SY/SM representa o mês de pagamento (1 à frente)
-    // mês de referência = m anterior. Verificamos se o mês ref está fechado
-    // Aqui y/m já é o mês de referência (ry/rm)
+  // Usa apenas meses com dados reais — sem loop de 12 meses hardcoded
+  const active = getActiveMonths();
+  for (const {y,m} of active) {
     if (!isMonthClosed(y, m)) return {y, m};
   }
-  // Todos fechados — retorna mês atual
+  // Todos fechados: retorna o último mês ativo
+  if (active.length) return active[active.length-1];
+  // Sem dados: mês atual
+  const now = new Date();
   return {y: now.getFullYear(), m: now.getMonth()};
 }
 
@@ -3799,6 +3830,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
