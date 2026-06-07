@@ -547,6 +547,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -1545,13 +1546,18 @@ function addMonth(y, m) {
   const _sents=JSON.parse(localStorage.getItem(_sentKey)||'[]');
   _sents.push({y,m}); localStorage.setItem(_sentKey,JSON.stringify(_sents));
   saveDB();
+  // Navega para o mês adicionado
   const pd=new Date(y,m+1,1); SY=pd.getFullYear(); SM=pd.getMonth();
-  buildMS(); renderAll();
+  buildMS();
+  // Seleciona o novo mês no select
+  const s=document.getElementById('msel');
+  if(s) s.value=y+'-'+m;
+  renderAll();
   showToast('✓ '+MP[m]+' '+y+' adicionado.');
 }
 
 function openAddMonth() {
-  if(!canWrite())return;
+  if(!currentHouseId){showToast('Faça login primeiro.');return;}
   const now=new Date(), active=getActiveMonths();
   let sugY=now.getFullYear(), sugM=now.getMonth();
   for(let i=0;i<12;i++){
@@ -1585,18 +1591,25 @@ function confirmAddMonth() {
 
 function buildMS() {
   const s=document.getElementById('msel'); if(!s)return;
-  const months=getActiveMonths();
-  s.innerHTML=months.length
-    ?months.map(({y,m})=>{
-        const ry2=m===0?y-1:y,rm2=m===0?11:m-1;
-        const closed=isMonthClosed(ry2,rm2);
-        const sel=(y===SY&&m===SM)?' selected':'';
-        return `<option value="${y}-${m}"${sel}>${MP[m]} ${y}${closed?' ✓':''}</option>`;
-      }).join('')
-    :'<option value="">— Nenhum mês —</option>';
-  if(months.length&&!months.some(({y,m})=>y===SY&&m===SM)){
-    const last=months[months.length-1]; SY=last.y; SM=last.m;
-    s.value=SY+'-'+SM;
+  const refMonths=getActiveMonths(); // meses de referência {y,m}
+  if(!refMonths.length){
+    s.innerHTML='<option value="">— Nenhum mês —</option>';
+    return;
+  }
+  // Mês de referência atual = wy/wm
+  const curRy=SM===0?SY-1:SY, curRm=SM===0?11:SM-1;
+  s.innerHTML=refMonths.map(({y,m})=>{
+    const closed=isMonthClosed(y,m);
+    // valor = ref month, pois onMC converte ref→pay
+    const sel=(y===curRy&&m===curRm)?' selected':'';
+    return `<option value="${y}-${m}"${sel}>${MP[m]} ${y}${closed?' ✓':''}</option>`;
+  }).join('');
+  // Se ref atual não existe na lista, seleciona o último
+  if(!refMonths.some(({y,m})=>y===curRy&&m===curRm)){
+    const last=refMonths[refMonths.length-1];
+    // Atualiza SY/SM para o pay month correspondente
+    const pd=new Date(last.y,last.m+1,1); SY=pd.getFullYear(); SM=pd.getMonth();
+    s.value=last.y+'-'+last.m;
   }
 }
 // Verifica se todos os funcionários ativos têm pagamento no mês
@@ -1641,13 +1654,16 @@ function firstOpenMonth() {
 }
 
 function initMonthFromData() {
-  // Chamado após loadFromSupabase — encontra o primeiro mês em aberto
-  const open = firstOpenMonth(); // retorna {y, m} = mês de referência
-  // SY/SM = mês de pagamento = ref + 1
-  const payDate = new Date(open.y, open.m + 1, 1);
-  SY = payDate.getFullYear();
-  SM = payDate.getMonth();
-  renderAll();
+  const active=getActiveMonths();
+  if(!active.length){
+    // Sem meses — mantém SY/SM como hoje e mostra seletor vazio
+    buildMS(); renderAll(); return;
+  }
+  // Encontra o primeiro mês de referência em aberto
+  const open=firstOpenMonth(); // {y,m} = ref
+  const pd=new Date(open.y,open.m+1,1);
+  SY=pd.getFullYear(); SM=pd.getMonth();
+  buildMS(); renderAll();
 }
 
 function showToast(msg, duration) {
@@ -1668,7 +1684,14 @@ function showToast(msg, duration) {
   t._timer = setTimeout(function() { t.style.opacity = '0'; }, duration);
 }
 
-function onMC() { const v = document.getElementById('msel').value.split('-'); SY = +v[0]; SM = +v[1]; renderAll(); }
+function onMC() {
+  const v=document.getElementById('msel').value.split('-');
+  if(v.length<2)return;
+  const ry=+v[0], rm=+v[1];
+  // Converte mês de referência → mês de pagamento (SY/SM)
+  const pd=new Date(ry,rm+1,1); SY=pd.getFullYear(); SM=pd.getMonth();
+  renderAll();
+}
 
 // ── TABS ──────────────────────────────────────────────────────
 let CT = 'dash';
@@ -3393,6 +3416,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
