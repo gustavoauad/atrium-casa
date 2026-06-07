@@ -540,6 +540,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -1078,6 +1079,7 @@ async function selectHouse(houseId, houseName, role) {
   dbg('App visível — carregando dados...');
   if (isOnline) {
     await loadFromSupabase();
+    initMonthFromData(); // inicia no primeiro mês com pagamentos em aberto
     setupRealtime(houseId); // Nível 2: inicia escuta em tempo real
   } else {
     const cached = localStorage.getItem(DBK + '_' + houseId);
@@ -1188,6 +1190,7 @@ let db = defDB();
 function uid() { return Date.now().toString(36) + Math.random().toString(36).substring(2, 7); }
 function MK(y, m) { return y + '-' + String(m + 1).padStart(2, '0'); }
 let SY = new Date().getFullYear(), SM = new Date().getMonth();
+// SY/SM são inicializados depois que os dados carregam (ver initMonthFromData)
 let isOnline = navigator.onLine;
 
 // ── HELPERS ───────────────────────────────────────────────────
@@ -1517,6 +1520,75 @@ function buildMS() {
     s.appendChild(o);
   }
 }
+// Verifica se todos os funcionários ativos têm pagamento no mês
+function isMonthClosed(ry, rm) {
+  const active = db.employees.filter(e => e.status !== 'desligado');
+  if (!active.length) return false;
+  return active.every(e => {
+    const mk = MK(ry, rm);
+    return db.payments.some(p => String(p.empId) === String(e.id) && p.monthKey === mk);
+  });
+}
+
+// Retorna o primeiro mês com pagamentos em aberto (mais antigo primeiro)
+// Se todos fechados, retorna o mês atual
+function firstOpenMonth() {
+  // Coleta todos os meses que têm dados (pagamentos ou eventos)
+  const months = new Set();
+  const now = new Date();
+  // Adiciona meses dos últimos 12 meses
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.add(d.getFullYear() + '-' + d.getMonth());
+  }
+  // Adiciona meses com pagamentos
+  db.payments.forEach(p => {
+    if (p.ry !== undefined) months.add(p.ry + '-' + p.rm);
+  });
+  // Ordena crescente (mais antigo primeiro)
+  const sorted = Array.from(months)
+    .map(k => { const [y,m] = k.split('-').map(Number); return {y,m}; })
+    .sort((a,b) => a.y - b.y || a.m - b.m);
+  // Retorna o mês do pagamento (SY/SM = mês seguinte ao de referência)
+  // O mês de referência é SM-1, então procuramos o primeiro mês de ref em aberto
+  for (const {y, m} of sorted) {
+    // SY/SM representa o mês de pagamento (1 à frente)
+    // mês de referência = m anterior. Verificamos se o mês ref está fechado
+    // Aqui y/m já é o mês de referência (ry/rm)
+    if (!isMonthClosed(y, m)) return {y, m};
+  }
+  // Todos fechados — retorna mês atual
+  return {y: now.getFullYear(), m: now.getMonth()};
+}
+
+function initMonthFromData() {
+  // Chamado após loadFromSupabase — encontra o primeiro mês em aberto
+  const open = firstOpenMonth(); // retorna {y, m} = mês de referência
+  // SY/SM = mês de pagamento = ref + 1
+  const payDate = new Date(open.y, open.m + 1, 1);
+  SY = payDate.getFullYear();
+  SM = payDate.getMonth();
+  renderAll();
+}
+
+function showToast(msg, duration) {
+  duration = duration || 3000;
+  var t = document.getElementById('app-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'app-toast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);'
+      + 'background:var(--text);color:var(--bg);padding:12px 20px;border-radius:20px;'
+      + 'font-size:13px;z-index:9999;transition:opacity .3s;pointer-events:none;'
+      + 'white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.2);';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function() { t.style.opacity = '0'; }, duration);
+}
+
 function onMC() { const v = document.getElementById('msel').value.split('-'); SY = +v[0]; SM = +v[1]; renderAll(); }
 
 // ── TABS ──────────────────────────────────────────────────────
@@ -2109,7 +2181,7 @@ function calc(eid, ry, rm) {
     }
   }
   const recTot=recs.reduce((a,r)=>a+r.value,0);
-  const avs=events.map(e=>Object.assign({},e,{hn:h[e.date]||null}));
+  const avs=events.map(e=>Object.assign({},e,{hn:h[e.date]||null})).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
   const avTot=avs.reduce((a,e)=>a+e.value,0), gross=salBase+recTot+avTot;
   let deds=0,bons=0;
   for (const a of adjs) { if(['advance','discount','loan','other'].includes(a.type))deds+=a.value; else if(a.type==='bonus')bons+=a.value; }
@@ -2214,6 +2286,11 @@ async function confirmPay() {
   const rec={ id:uid(), empId:eid, empName:c.emp.name, empRole:c.emp.role, monthKey:c.key, ry, rm, salBase:c.salBase, recTot:c.recTot, avTot:c.avTot, bons:c.bons, deds:c.deds, inssAmt:c.inssAmt, netSal:c.finalNetSal, proRataActive:c.proRataActive||false, vtNet:c.vtNet, vtGross:c.vtGross, vtDisc:c.vtDisc, vtWd:c.vtWd, vtWdAuto:c.vtWdAuto, vtY:c.vtY, vtM:c.vtM, total:c.total, paidDate:document.getElementById('pdate').value, method:document.getElementById('pmeth').value, isRescisao:document.getElementById('pay-resc')?.checked||false, rescTotal:null, notes:document.getElementById('pnotes').value.trim(), events:c.avs, adjs:c.adjs, recs:c.recs, paidAt:new Date().toISOString() };
   db.payments=db.payments.filter(p=>!(String(p.empId)===String(eid)&&p.monthKey===c.key));
   db.payments.push(rec); saveDB(); cm('mod-pay');
+  // Verifica se o mês fechou após este pagamento
+  const _ref={y:SM===0?SY-1:SY,m:SM===0?11:SM-1};
+  if(isMonthClosed(_ref.y,_ref.m)){
+    setTimeout(function(){showToast('✓ Mês fechado! Avançando para o próximo.');initMonthFromData();},800);
+  } else { renderAll(); }
   const histBtn=[...document.querySelectorAll('.tab')].find(b=>b.textContent.includes('Hist'));
   swTab('hist', histBtn);
   if (isOnline) { try { await _sbSavePayment(rec); saveDB(); } catch(e) { console.error(e); showSyncBanner('error'); } }
@@ -2414,7 +2491,7 @@ function renderDash() {
   [{l:'Funcion\u00e1rios',v:''+db.employees.filter(e=>e.status!=='desligado').length,s:'ativos',c:'var(--accent)'},{l:'Total sal\u00e1rios',v:'R$ '+fm(totSal),s:wl,c:'var(--sage)'},{l:'Total VT',v:'R$ '+fm(totVT),s:calcs.length?MP[calcs[0].vtM]:'-',c:'var(--blue)'},{l:'Envelope total',v:'R$ '+fm(totAll),s:'sal. + VT',c:'var(--accent)'}].forEach(k=>out.push(`<div class="card"><div class="lbl" style="margin-bottom:8px;">${k.l}</div><div class="money" style="font-size:22px;color:${k.c};">${k.v}</div><div style="font-size:11px;color:var(--muted);margin-top:4px;">${k.s}</div></div>`));
   out.push('</div>');
   if(!calcs.length){out.push('<div class="empty"><div class="ei">&#127968;</div><div class="et">Nenhum funcion\u00e1rio cadastrado.</div></div>');document.getElementById('tab-dash').innerHTML=out.join('');return;}
-  out.push(`<p style="font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;font-weight:500;margin-bottom:14px;">Pagamentos \u2014 ${wl}</p>`);
+  out.push(`<p style="font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;font-weight:500;margin-bottom:14px;">Pagamentos \u2014 ${wl}${_monthClosed?'<span style=\"margin-left:8px;background:rgba(143,187,149,.2);color:var(--sage);border-radius:10px;padding:2px 8px;font-size:9px;letter-spacing:.06em;">&#10003; FECHADO</span>':''}</p>`);
   calcs.forEach(c=>{
     const isPaid=!!c.payment, hw=c.holWarns.length>0;
     out.push(`<div class="card" style="border:1px solid ${isPaid?'rgba(138,155,138,.4)':hw?'rgba(196,151,58,.4)':'var(--border)'};">`);
@@ -2477,6 +2554,7 @@ function buildPaidSummary(p, eid, wy, wm, canEdit, isRescPaid) {
 
 function renderFech() {
   const wy=SM===0?SY-1:SY, wm=SM===0?11:SM-1, wl=MP[wm]+' '+wy, pl=MP[SM]+' '+SY;
+  const _monthClosed = isMonthClosed(wy, wm);
   const activeEmps=sortEmps(db.employees.filter(e=>e.status!=='desligado'));
   // Preserva o funcionário selecionado sem coerção numérica (IDs são strings)
   const prevSel=document.getElementById('fechsel');
@@ -3236,6 +3314,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
