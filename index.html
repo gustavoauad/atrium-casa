@@ -606,6 +606,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -3730,7 +3731,7 @@ function initDevMode() {
   renderAll();
 }
 
-function initApp() {
+async function initApp() {
   _sessionProcessed = false; // garante reset a cada reload
   applyTheme(_theme); // aplica tema salvo
   // Dev mode: pula autenticação e entra direto com dados locais
@@ -3784,26 +3785,22 @@ function initApp() {
     // getSession() lê localStorage imediatamente — sem race condition.
     // Substitui o setTimeout fallback que causava logout no F5.
 
-    // PASSO 1 — restaurar sessão no reload
-    supa.auth.getSession().then(function(res) {
-      var sd = res.data, se = res.error;
-      if (se) { console.error('getSession error:', se); handleNoSession(); return; }
-      if (sd && sd.session && sd.session.user) {
-        dbg('Sessão restaurada via getSession()');
-        handleSession(sd.session.user);
-      } else {
-        dbg('Sem sessão — mostrando login');
-        handleNoSession();
-      }
-    }).catch(function(err) {
-      console.error('getSession catch:', err);
-      handleNoSession();
-    });
+    // ── Auth: registra listener PRIMEIRO, depois checa sessão ──
+    // Ordem correta para o Supabase SDK:
+    // 1. onAuthStateChange registrado — captura INITIAL_SESSION
+    // 2. getSession() como fallback explícito (garante restore no Safari)
 
-    // PASSO 2 — listener para eventos futuros (login/logout/token)
+    // PASSO 1 — listener para todos os eventos de auth
     supa.auth.onAuthStateChange(async (event, session) => {
       dbg('onAuthStateChange: ' + event);
-      if (event === 'SIGNED_IN') {
+      if (event === 'INITIAL_SESSION') {
+        if (_signingUp) return;
+        if (session && session.user) {
+          await handleSession(session.user);
+        } else {
+          handleNoSession();
+        }
+      } else if (event === 'SIGNED_IN') {
         if (_signingUp) return;
         _sessionProcessed = false;
         await handleSession(session.user);
@@ -3812,8 +3809,22 @@ function initApp() {
       } else if (event === 'SIGNED_OUT') {
         _signingUp = false; _sessionProcessed = false; showAuth();
       }
-      // INITIAL_SESSION ignorado — getSession() ja tratou o restore
     });
+
+    // PASSO 2 — fallback explícito para Safari/iOS onde INITIAL_SESSION
+    // pode não disparar corretamente após F5
+    setTimeout(async function() {
+      if (_sessionProcessed) return; // listener já resolveu
+      dbg('Fallback getSession após 1.5s');
+      try {
+        var r = await supa.auth.getSession();
+        if (r.data && r.data.session && r.data.session.user) {
+          await handleSession(r.data.session.user);
+        } else {
+          handleNoSession();
+        }
+      } catch(e) { console.error('fallback getSession:', e); handleNoSession(); }
+    }, 1500);
 
   } catch (initErr) {
     console.error('Atrium init error:', initErr);
@@ -3825,6 +3836,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
