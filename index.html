@@ -545,6 +545,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -1514,9 +1515,9 @@ async function pushAllToSupabase() {
 // ── MONTH SELECTOR ────────────────────────────────────────────
 function getActiveMonths() {
   const set = new Set();
-  db.payments.forEach(p => { if(p.ry!==undefined&&p.rm!==undefined) set.add(p.ry+'-'+p.rm); });
-  db.events.forEach(ev => { if(ev.date){const d=new Date(ev.date);set.add(d.getFullYear()+'-'+d.getMonth());} });
-  (db.adjustments||[]).forEach(aj => { if(aj.monthKey){const[y,m]=aj.monthKey.split('-').map(Number);if(!isNaN(y)&&!isNaN(m))set.add(y+'-'+m);} });
+  (db.payments||[]).forEach(p => { if(p.ry!==undefined&&p.rm!==undefined) set.add(p.ry+'-'+p.rm); });
+  (db.events||[]).forEach(ev => { if(ev.date){const d=new Date(ev.date);set.add(d.getFullYear()+'-'+d.getMonth());} });
+  (db.adjustments||[]).forEach(aj => { if(aj.monthKey&&aj.type!=='month_open'){const[y,m]=aj.monthKey.split('-').map(Number);if(!isNaN(y)&&!isNaN(m))set.add(y+'-'+m);} });
   return Array.from(set).map(k=>{const[y,m]=k.split('-').map(Number);return{y,m};}).sort((a,b)=>a.y-b.y||a.m-b.m);
 }
 
@@ -3374,6 +3375,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
