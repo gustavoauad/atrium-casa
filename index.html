@@ -182,6 +182,44 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 .banner{background:linear-gradient(135deg,#241e19,#3d3028);border-radius:16px;padding:20px;color:#F0EBE3;margin-bottom:20px;}
 .viewer-badge{display:none;background:rgba(138,155,138,.15);color:var(--sage);padding:4px 10px;border-radius:6px;font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;}
 @media(max-width:600px){.g4{grid-template-columns:1fr 1fr;}}
+
+/* ── MOBILE PORTRAIT (≤480px) ─────────────────────────── */
+@media (max-width:480px){
+  .wrap{padding:0 12px 80px;}
+  .card{padding:14px;}
+  .topbar{padding:8px 12px;}
+  .logo svg{width:18px;height:18px;}
+  .logo-text{font-size:12px;}
+  .logo-sub{font-size:5px;}
+  #house-label{max-width:80px;font-size:10px;}
+  #role-badge{display:none;}
+  .tabs{gap:2px;padding:12px 0 4px;}
+  .tab{padding:6px 10px;font-size:11px;}
+  .g4{grid-template-columns:1fr 1fr;gap:6px;}
+  .g2{gap:8px;}
+  .card .money{font-size:18px;}
+  .ep{padding:8px 10px;}
+  .mr{padding:6px 8px;font-size:11px;}
+  .mod-box{padding:20px 16px;}
+  .modal{max-height:88vh;}
+  .ov.ctr .modal{margin:0 8px;}
+  .btn{padding:8px 14px;}
+  .btn.btn-sm{padding:5px 10px;font-size:11px;}
+  .ssel{font-size:12px;}
+  .topbar .fi{gap:4px;}
+  /* Topbar: hide CSV button on mobile */
+  .topbar .btn.btn-dk{display:none;}
+  /* Topbar: hide sync button label */
+  #topbar-sync{padding:5px 6px;}
+  /* Mês ref label: hide on mobile */
+  .mref-label{display:none;}
+}
+@media (max-width:390px){
+  .wrap{padding:0 10px 80px;}
+  .card{padding:12px;}
+  .g4{grid-template-columns:1fr 1fr;gap:6px;}
+  .tab{padding:5px 8px;font-size:10px;}
+}
 </style>
 
 <script>
@@ -275,10 +313,10 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
       <svg width="22" height="22" viewBox="0 0 72 72" fill="none"><rect x="4" y="4" width="64" height="64" rx="5" stroke="var(--accent)" stroke-width="5" fill="none"/><rect x="19" y="19" width="34" height="34" rx="2" stroke="var(--accent)" stroke-width="3.5" fill="none"/><circle cx="36" cy="36" r="4" fill="var(--accent)"/></svg>
       <div style="display:flex;flex-direction:column;gap:1px;line-height:1;"><span class="logo-text">Atrium</span><span class="logo-sub">Casa</span></div>
   </div>
-  <div class="fi" style="gap:8px;">
+  <div class="fi" style="gap:6px;flex-wrap:nowrap;overflow:hidden;">
     <span id="house-label" style="font-size:11px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><span id="role-badge" style="font-size:11px;margin-left:6px;padding:2px 8px;border-radius:20px;border:1px solid var(--border);"></span><button onclick="cycletheme()" id="theme-btn" title="Alternar tema" style="margin-left:8px;background:none;border:1px solid var(--border);border-radius:20px;padding:3px 8px;cursor:pointer;font-size:14px;color:var(--muted);line-height:1;">&#9680;</button>
     <span class="viewer-badge">&#128274; Somente leitura</span>
-    <div style="display:flex;align-items:center;gap:6px;"><span style="font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;">Mês ref.</span><select id="msel" onchange="onMC()" class="ssel" style="padding:7px 28px 7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--cream);color:var(--text);font-size:12px;cursor:pointer;"></select><button onclick="openAddMonth()" title="Adicionar mês" style="flex-shrink:0;background:none;border:1px solid var(--border);border-radius:8px;padding:5px 8px;cursor:pointer;font-size:14px;color:var(--muted);line-height:1;">+</button></div>
+    <div style="display:flex;align-items:center;gap:6px;"><span class="mref-label" style="font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;">Mês ref.</span><select id="msel" onchange="onMC()" class="ssel" style="padding:7px 28px 7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--cream);color:var(--text);font-size:12px;cursor:pointer;"></select><button onclick="openAddMonth()" title="Adicionar mês" style="flex-shrink:0;background:none;border:1px solid var(--border);border-radius:8px;padding:5px 8px;cursor:pointer;font-size:14px;color:var(--muted);line-height:1;">+</button></div>
     <button id="topbar-sync" class="btn btn-gh btn-sm write-only" onclick="pushAllToSupabase()" title="For&ccedil;ar sincroniza&ccedil;&atilde;o">&#8645;</button>
     <button class="btn btn-dk btn-sm" onclick="expCSV()">&#8595; CSV</button>
     <button class="btn btn-gh btn-sm" onclick="doLogout()" title="Sair" style="padding:7px 10px;">&#x2715;</button>
@@ -465,6 +503,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" crossorigin="anonymous"></script>
 <script>
+
 
 
 
@@ -2443,7 +2482,7 @@ function calc(eid, ry, rm) {
 const AL = { advance:'Adiantamento', discount:'Desconto/Falta', bonus:'B\u00f4nus', loan:'Parcela empr\u00e9stimo', other:'Outro desconto' };
 function memoHTML(c) {
   const rl=MP[c.rm]+' '+c.ry, vl=MP[c.vtM]+' '+c.vtY, out=[];
-  out.push(`<div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:16px;"><p style="font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;font-weight:500;margin-bottom:4px;">Compet\u00eancia \u2014 m\u00eas trabalhado</p><p style="font-family:'Playfair Display',serif;font-size:22px;font-weight:300;">${rl}</p><p class="tip" style="margin-top:4px;">Prazo legal: at\u00e9 5\u00ba dia \u00fatil \u2014 <strong>${c.pay5?c.pay5.d+'/'+String(c.pyM+1).padStart(2,'0')+'/'+c.pyY:'-'}</strong> &nbsp;\u00b7&nbsp; 1\u00ba dia \u00fatil: ${c.pay1?fd(c.pay1.iso):'-'}</p></div>`);
+  out.push(`<div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:16px;"><p style="font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;font-weight:500;margin-bottom:4px;">Compet\u00eancia \u2014 m\u00eas trabalhado</p><p style="font-family:'Playfair Display',serif;font-size:19px;font-weight:300;">${rl}</p><p class="tip" style="margin-top:4px;">Prazo legal: at\u00e9 5\u00ba dia \u00fatil \u2014 <strong>${c.pay5?c.pay5.d+'/'+String(c.pyM+1).padStart(2,'0')+'/'+c.pyY:'-'}</strong> &nbsp;\u00b7&nbsp; 1\u00ba dia \u00fatil: ${c.pay1?fd(c.pay1.iso):'-'}</p></div>`);
   if(c.isFirstMonth)out.push(`<div class="alert aw" style="margin-bottom:14px;flex-direction:column;gap:4px;"><p style="font-size:12px;font-weight:500;color:var(--warn);">&#8505;&#65039; Primeiro m\u00eas \u2014 Pagamento Pro Rata</p><p style="font-size:11px;color:var(--warn);">Admiss\u00e3o em ${fd(c.emp.admissao)} &nbsp;&middot;&nbsp; ${c.proRataDias} dias trabalhados de ${dim(c.ry,c.rm)}</p><p style="font-size:11px;color:var(--warn);">Sal\u00e1rio proporcional: <strong>R\$ ${fm(c.proRataSal)}</strong> (${c.proRataDias}/${dim(c.ry,c.rm)} &times; R\$ ${fm(c.salBase)})</p></div>`);
   if (c.holWarns.length) {
     out.push(`<div class="alert aw" style="flex-direction:column;gap:6px;margin-bottom:14px;"><p style="font-size:12px;font-weight:500;color:var(--warn);">&#9888;&#65039; ${c.holWarns.length} dia(s) recorrente(s) em feriado sem di\u00e1ria lan\u00e7ada</p>`);
@@ -2826,9 +2865,9 @@ function renderDash() {
   calcs.forEach(c=>{
     const isPaid=!!c.payment, hw=c.holWarns.length>0;
     out.push(`<div class="card" style="border:1px solid ${isPaid?'rgba(138,155,138,.4)':hw?'rgba(196,151,58,.4)':'var(--border)'};">`);
-    out.push(`<div class="fb" style="margin-bottom:14px;"><div class="fi" style="gap:12px;flex:1;min-width:0;">${avt(c.emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-size:15px;font-weight:400;word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(c.emp.name)}</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">${escapeHTML(c.emp.role)}</div></div></div><div style="text-align:right;flex-shrink:0;"><div class="money" style="font-size:24px;color:var(--accent);">R$ ${fm(c.total)}</div><div style="font-size:10px;color:var(--muted);">sal. R$ ${fm(c.netSal)} + VT R$ ${fm(c.vtNet)}</div></div></div>`);
+    out.push(`<div class="fb" style="margin-bottom:14px;"><div class="fi" style="gap:12px;flex:1;min-width:0;">${avt(c.emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-size:14px;font-weight:400;word-break:break-word;overflow-wrap:anywhere;line-height:1.3;">${escapeHTML(c.emp.name)}</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">${escapeHTML(c.emp.role)}</div></div></div><div style="text-align:right;flex-shrink:0;"><div class="money" style="font-size:24px;color:var(--accent);">R$ ${fm(c.total)}</div><div style="font-size:10px;color:var(--muted);">sal. R$ ${fm(c.netSal)} + VT R$ ${fm(c.vtNet)}</div></div></div>`);
     if(hw)out.push(`<div class="alert aw" style="margin-bottom:12px;"><span style="font-size:11px;color:var(--warn);">&#9888;&#65039; ${c.holWarns.length} feriado(s) sem di\u00e1ria &nbsp;<button onclick="goFech('${c.emp.id}')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;text-decoration:underline;">ver detalhes</button></span></div>`);
-    out.push('<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">');
+    out.push('<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;min-width:0;">');
     [['Base','R$ '+fm(c.proRataActive?c.proRataSalBase:c.salBase)+(c.proRataActive?' (PR)':''),'var(--text)'],['Di\u00e1rias','R$ '+fm(c.recTot+c.avTot),'var(--sage)'],['Descontos','R$ '+fm(c.deds+c.inssAmt),'var(--danger)'],[MP[c.vtM].slice(0,3)+' VT','R$ '+fm(c.vtNet),'var(--blue)']].forEach(k=>out.push(`<div style="background:var(--cream);border-radius:9px;padding:10px;text-align:center;"><div class="lbl" style="margin-bottom:4px;">${k[0]}</div><div class="money" style="font-size:14px;color:${k[2]};">${k[1]}</div></div>`));
         out.push(`</div><div class="fi" style="gap:8px;flex-wrap:wrap;"><button class="btn btn-gh btn-sm" onclick="goFech('${c.emp.id}')">Ver memória</button><button class=\"btn btn-gh btn-sm\" onclick=\"editPayment(\'${c.emp.id}\',${c.ry},${c.rm})\">&#9998; Editar pgto</button>`);
     out.push(isPaid?`<span style="margin-left:auto;font-size:11px;color:var(--sage);">&#10003; Pago em ${fd(c.payment.paidDate)} via ${c.payment.method}${c.payment?.isRescisao?'<span style=\"margin-left:6px;color:var(--danger);font-size:10px;\">&#128197; Rescis\u00e3o</span>':''}</span>`:canWrite()?`<button class="btn btn-sg btn-sm write-only" style="margin-left:auto;" onclick="openPayM('${c.emp.id}',${wy},${wm})">Confirmar pagamento</button>`:'');
@@ -2902,7 +2941,7 @@ function renderFech() {
   const warnD={};c.holWarns.forEach(w=>{warnD[w.iso]=1;});
   const canAct=canWrite()&&!isPaid;
   const canEdit=canWrite();
-  const empHeader=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">${avt(emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:300;color:var(--text);word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(emp.name)}</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">${escapeHTML(emp.role)}${emp.admissao?' &nbsp;&middot;&nbsp; Adm. '+fd(emp.admissao):''}${isPaid?' &nbsp;&middot;&nbsp; <span style="color:var(--sage);">&#10003; Pago</span>':' &nbsp;&middot;&nbsp; <span style="color:var(--warn);">Pendente</span>'}</div></div><div style="margin-left:auto;text-align:right;flex-shrink:0;"><div style="font-size:10px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;">Compet\u00eancia</div><div style="font-family:'Playfair Display',serif;font-size:20px;color:var(--a2);">${wl}</div><div style="font-size:11px;color:var(--muted);">Pgto em ${pl}</div></div></div>`;
+  const empHeader=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">${avt(emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:300;color:var(--text);word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(emp.name)}</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">${escapeHTML(emp.role)}${emp.admissao?' &nbsp;&middot;&nbsp; Adm. '+fd(emp.admissao):''}${isPaid?' &nbsp;&middot;&nbsp; <span style="color:var(--sage);">&#10003; Pago</span>':' &nbsp;&middot;&nbsp; <span style="color:var(--warn);">Pendente</span>'}</div></div><div style="margin-left:auto;text-align:right;flex-shrink:0;"><div style="font-size:10px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;">Compet\u00eancia</div><div style="font-family:'Playfair Display',serif;font-size:20px;color:var(--a2);">${wl}</div><div style="font-size:11px;color:var(--muted);">Pgto em ${pl}</div></div></div>`;
   const calParts=['<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:4px;"><span style="font-size:13px;font-weight:400;">'+wl+'</span><div class="fi" style="gap:8px;"><button class="btn btn-gh btn-sm" onclick="openReg()">&#128467; Feriados regionais</button>'+(canAct?`<button class="btn btn-gh btn-sm" onclick="openEvM('${emp.id}','${td}')">+ Di\u00e1ria avulsa</button>`:'')+`</div></div><div class="cg">`];
   DP.forEach(d=>calParts.push(`<div class="ch">${d}</div>`));
   for(let z=0;z<fdow;z++)calParts.push('<div class="cd ce"></div>');
@@ -3759,6 +3798,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
