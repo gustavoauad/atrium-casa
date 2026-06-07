@@ -379,7 +379,9 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 </div>
 
 <!-- Modal Confirm Payment -->
-<div id="mod-add-month" class="mod" onclick="this===event.target&&cm('mod-add-month')"></div>
+<div id="mod-delete-month" class="ov ctr hidden" onclick="this===event.target&&cm('mod-delete-month')"></div>
+<div id="mod-pay-ev" class="ov ctr hidden" onclick="this===event.target&&cm('mod-pay-ev')"></div>
+<div id="mod-add-month" class="ov ctr hidden" onclick="this===event.target&&cm('mod-add-month')"></div>
 <div id="mod-pay" class="ov ctr hidden" onclick="cbd(event,'mod-pay')">
   <div class="modal cm" style="max-width:600px;">
     <div class="mh"><div class="mt">Confirmar Pagamento</div><button class="xi" onclick="cm('mod-pay')">&#215;</button></div>
@@ -463,6 +465,8 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" crossorigin="anonymous"></script>
 <script>
+
+
 
 
 
@@ -3755,6 +3759,8 @@ function initApp() {
       + '</div>';
   }
 }
+
+
 
 
 
