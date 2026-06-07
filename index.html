@@ -220,6 +220,9 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
   .g4{grid-template-columns:1fr 1fr;gap:6px;}
   .tab{padding:5px 8px;font-size:10px;}
 }
+
+#house-bar{display:flex;align-items:center;gap:6px;padding:6px 0 8px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+#house-bar-name{font-size:12px;color:var(--muted);font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;}
 </style>
 
 <script>
@@ -314,7 +317,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
       <div style="display:flex;flex-direction:column;gap:1px;line-height:1;"><span class="logo-text">Atrium</span><span class="logo-sub">Casa</span></div>
   </div>
   <div class="fi" style="gap:6px;flex-wrap:nowrap;overflow:hidden;">
-    <span id="house-label" style="font-size:11px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><span id="role-badge" style="font-size:11px;margin-left:6px;padding:2px 8px;border-radius:20px;border:1px solid var(--border);"></span><button onclick="cycletheme()" id="theme-btn" title="Alternar tema" style="margin-left:8px;background:none;border:1px solid var(--border);border-radius:20px;padding:3px 8px;cursor:pointer;font-size:14px;color:var(--muted);line-height:1;">&#9680;</button>
+    <button onclick="cycletheme()" id="theme-btn" title="Alternar tema" style="margin-left:8px;background:none;border:1px solid var(--border);border-radius:20px;padding:3px 8px;cursor:pointer;font-size:14px;color:var(--muted);line-height:1;">&#9680;</button>
     <span class="viewer-badge">&#128274; Somente leitura</span>
     <div style="display:flex;align-items:center;gap:6px;"><span class="mref-label" style="font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;">Mês ref.</span><select id="msel" onchange="onMC()" class="ssel" style="padding:7px 28px 7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--cream);color:var(--text);font-size:12px;cursor:pointer;"></select><button onclick="openAddMonth()" title="Adicionar mês" style="flex-shrink:0;background:none;border:1px solid var(--border);border-radius:8px;padding:5px 8px;cursor:pointer;font-size:14px;color:var(--muted);line-height:1;">+</button><button onclick="openDeleteMonth()" title="Deletar mês" style="flex-shrink:0;background:none;border:1px solid rgba(176,74,74,.4);border-radius:8px;padding:5px 8px;cursor:pointer;font-size:13px;color:var(--danger);line-height:1;">&#128465;</button></div>
     <button id="topbar-sync" class="btn btn-gh btn-sm write-only" onclick="pushAllToSupabase()" title="For&ccedil;ar sincroniza&ccedil;&atilde;o">&#8645;</button>
@@ -332,6 +335,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
     <button class="tab" onclick="swTab('rel',this)">&#128196; Relat&#243;rios</button>
     <button class="tab write-only" onclick="swTab('config',this)">&#9881; Casa</button>
   </div>
+  <div id="house-bar" style="display:none;padding:8px 0 0;"><span id="house-bar-name" style="font-size:12px;color:var(--muted);font-weight:400;"></span><span id="house-bar-role" style="font-size:11px;margin-left:8px;padding:2px 8px;border-radius:20px;border:1px solid var(--border);"></span></div>
   <div id="tab-dash"></div>
   <div id="tab-fech" class="hidden"></div>
   <div id="tab-emps" class="hidden"></div>
@@ -599,6 +603,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -741,17 +746,19 @@ function applyRoleToBody() {
     if (tabEmpsWrite)  tabEmpsWrite.style.display  = '';
     if (tabEmpsViewer) tabEmpsViewer.style.display = 'none';
   }
-  // Exibe nome da casa e role na topbar
-  const lbl = document.getElementById('house-label');
-  if (lbl) lbl.textContent = currentHouseName;
-  const roleBadge = document.getElementById('role-badge');
-  if (roleBadge) {
+  // Exibe nome da casa e role abaixo das tabs (exceto na aba Casa)
+  const houseBar = document.getElementById('house-bar');
+  const houseBarName = document.getElementById('house-bar-name');
+  const houseBarRole = document.getElementById('house-bar-role');
+  if (houseBarName) houseBarName.textContent = currentHouseName;
+  if (houseBarRole) {
     const labels = { admin:'Admin', member:'Membro', editor:'Editor', viewer:'Visitante' };
     const colors = { admin:'var(--accent)', member:'var(--sage)', viewer:'var(--muted)' };
-    roleBadge.textContent = labels[currentRole] || currentRole;
-    roleBadge.style.color = colors[currentRole] || 'var(--muted)';
-    roleBadge.style.borderColor = colors[currentRole] || 'var(--border)';
+    houseBarRole.textContent = labels[currentRole] || currentRole;
+    houseBarRole.style.color = colors[currentRole] || 'var(--muted)';
+    houseBarRole.style.borderColor = colors[currentRole] || 'var(--border)';
   }
+  // house-bar visibility handled by swTab
 }
 
 // ── AUTH FLOW ─────────────────────────────────────────────────
@@ -1891,6 +1898,9 @@ function swTab(tab, btn) {
   if (btn) btn.classList.add('active');
   const el = document.getElementById('tab-' + tab);
   if (el) el.classList.remove('hidden');
+  // Mostra nome da casa abaixo das tabs — esconde na aba Config
+  const hb = document.getElementById('house-bar');
+  if (hb) hb.style.display = (tab === 'config') ? 'none' : 'flex';
   render(tab);
 }
 
@@ -3830,6 +3840,7 @@ function initApp() {
       + '</div>';
   }
 }
+
 
 
 
