@@ -548,6 +548,8 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -1558,35 +1560,42 @@ function addMonth(y, m) {
 
 function openAddMonth() {
   if(!currentHouseId){showToast('Faça login primeiro.');return;}
-  const now=new Date(), active=getActiveMonths();
-  let sugY=now.getFullYear(), sugM=now.getMonth();
-  for(let i=0;i<12;i++){
-    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
-    if(!active.some(e=>e.y===d.getFullYear()&&e.m===d.getMonth())){sugY=d.getFullYear();sugM=d.getMonth();break;}
+  const active=getActiveMonths();
+  const now=new Date(), curY=now.getFullYear(), curM=now.getMonth();
+  // Sugere o mês atual se ainda não adicionado, senão o mês anterior
+  let sugY=curY, sugM=curM;
+  if(active.some(e=>e.y===sugY&&e.m===sugM)){
+    const prev=new Date(curY,curM-1,1); sugY=prev.getFullYear(); sugM=prev.getMonth();
   }
   const md=document.getElementById('mod-add-month'); if(!md)return;
-  md.innerHTML='<div class="mod-box">'
+  const minY=2026, maxY=curY+1;
+  const yearOpts=Array.from({length:maxY-minY+1},(_,i)=>minY+i)
+    .map(y=>`<option value="${y}"${y===sugY?' selected':''}>${y}</option>`).join('');
+  const monthOpts=MP.map((n,i)=>`<option value="${i}"${i===sugM?' selected':''}>${n}</option>`).join('');
+  md.innerHTML=
+    '<div class="mod-box">'
     +'<div class="mod-hd"><span class="lbl">Adicionar mês de referência</span>'
     +'<button class="mod-x" onclick="cm(\'mod-add-month\')">&#10005;</button></div>'
-    +'<p class="tip" style="margin-bottom:16px;">Selecione o mês trabalhado a fechar.</p>'
+    +'<p class="tip" style="margin-bottom:16px;">Escolha o mês de competência (período trabalhado).</p>'
     +'<div class="g2" style="gap:12px;margin-bottom:20px;">'
-    +'<div class="field"><label>Mês</label><select id="add-m-month" class="ssel" style="width:100%;">'
-    +MP.map((n,i)=>`<option value="${i}"${i===sugM?' selected':''}>${n}</option>`).join('')
-    +'</select></div>'
-    +`<div class="field"><label>Ano</label><input id="add-m-year" type="number" value="${sugY}" min="2020" max="2099" style="width:100%;"></div>`
+    +'<div class="field"><label>Mês</label>'
+    +'<select id="add-m-month" class="ssel" style="width:100%;">'+monthOpts+'</select></div>'
+    +'<div class="field"><label>Ano</label>'
+    +'<select id="add-m-year" class="ssel" style="width:100%;">'+yearOpts+'</select></div>'
     +'</div><div class="div"></div>'
     +'<div class="fe">'
     +'<button class="btn btn-gh" onclick="cm(\'mod-add-month\')">Cancelar</button>'
     +'<button class="btn btn-sg" onclick="confirmAddMonth()">+ Adicionar</button>'
     +'</div></div>';
-  om('mod-add-month');
+  md.classList.remove('hidden');
 }
 
 function confirmAddMonth() {
-  const m=parseInt(document.getElementById('add-m-month').value,10);
-  const y=parseInt(document.getElementById('add-m-year').value,10);
-  if(isNaN(m)||isNaN(y))return;
-  cm('mod-add-month'); addMonth(y,m);
+  const m=parseInt(document.getElementById('add-m-month')?.value,10);
+  const y=parseInt(document.getElementById('add-m-year')?.value,10);
+  if(isNaN(m)||isNaN(y)){showToast('Selecione mês e ano.');return;}
+  cm('mod-add-month');
+  addMonth(y,m);
 }
 
 function buildMS() {
@@ -2582,6 +2591,115 @@ function gerarQuitacao(emp,adm,data,e){docWindow('Recibo de Quita\u00e7\u00e3o',
 function gerarAcordo(emp,adm,data,e){docWindow('Acordo M\u00fatuo',`<h1>TERMO DE ACORDO M\u00daTUO DE RESCIS\u00c3O</h1><p style="text-align:center;font-size:12px;color:#9C9087;">Artigo 484-A da CLT</p><br><p>De um lado, <span class="campo">${e}</span>, empregador(a), e de outro, <span class="campo">${escapeHTML(emp.name)}</span>, fun\u00e7\u00e3o <span class="campo">${escapeHTML(emp.role)}</span>, sal\u00e1rio <span class="campo">R$ ${fm(emp.salary)}</span>, admitido(a) em <span class="campo">${fd(adm)}</span>;</p><p>Resolvem, de comum acordo, rescindir o contrato com base no art. 484-A da CLT a partir de <span class="campo">${fd(data)}</span>, fazendo jus a 50% do aviso pr\u00e9vio e 50% da multa FGTS.</p><div class="sig"><div>${e}<br><span style="color:#9C9087;font-size:10px;">Empregador(a)</span></div><div>${escapeHTML(emp.name)}<br><span style="color:#9C9087;font-size:10px;">Empregado(a)</span></div></div>`);}
 
 // ── [D] RENDER DASHBOARD ──────────────────────────────────────
+function buildDashCharts(calcs, wy, wm) {
+  if(!calcs.length) return '';
+  const active=getActiveMonths();
+  // Últimos 6 meses de referência disponíveis
+  const last6=active.slice(-6);
+  if(!last6.length) return '';
+
+  const allEmps=sortEmps(db.employees.filter(e=>e.status!=='desligado'));
+
+  // Dados por mês
+  const byMonth=last6.map(({y,m})=>{
+    const cs=allEmps.map(e=>calc(e.id,y,m));
+    const tot=cs.reduce((s,c)=>s+c.total,0);
+    const sal=cs.reduce((s,c)=>s+c.finalNetSal,0);
+    const vt=cs.reduce((s,c)=>s+c.vtNet,0);
+    const paid=cs.filter(c=>c.payment).length;
+    return {y,m,tot,sal,vt,paid,total:allEmps.length,label:MP[m].slice(0,3)};
+  });
+
+  const maxTot=Math.max(...byMonth.map(b=>b.tot),1);
+
+  // ── Gráfico 1: Envelope total por mês (barras) ──────────────
+  const barW=`100%`;
+  let chart1=`<div class="card" style="margin-bottom:12px;">
+    <p class="lbl" style="margin-bottom:14px;">&#128200; Envelope total — últimos ${last6.length} meses</p>
+    <div style="display:flex;align-items:flex-end;gap:6px;height:100px;padding-bottom:28px;position:relative;">`;
+
+  byMonth.forEach(b=>{
+    const pct=Math.max(Math.round((b.tot/maxTot)*90),2);
+    const isCur=(b.y===wy&&b.m===wm);
+    chart1+=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;">
+      <span style="font-size:8px;color:var(--muted);white-space:nowrap;">R$ ${fm(b.tot)}</span>
+      <div style="width:100%;background:${isCur?'var(--accent)':'var(--a2)'};border-radius:4px 4px 0 0;
+        height:${pct}px;transition:height .3s;opacity:${isCur?1:0.6};"></div>
+      <span style="font-size:9px;color:${isCur?'var(--accent)':'var(--muted)'};font-weight:${isCur?500:400};
+        white-space:nowrap;position:absolute;bottom:-20px;">${b.label}</span>
+    </div>`;
+  });
+  chart1+=`</div></div>`;
+
+  // ── Gráfico 2: Status de pagamentos (rosca simples) ──────────
+  const totalFuncs=allEmps.length;
+  const paidCount=calcs.filter(c=>c.payment).length;
+  const pendCount=totalFuncs-paidCount;
+  const paidPct=totalFuncs>0?Math.round((paidCount/totalFuncs)*100):0;
+  // SVG donut
+  const r=30,cx=40,cy=40,circ=2*Math.PI*r;
+  const paidArc=circ*(paidCount/Math.max(totalFuncs,1));
+  const donut=`<svg width="80" height="80" viewBox="0 0 80 80">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="10"/>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--sage)" stroke-width="10"
+      stroke-dasharray="${paidArc} ${circ}" stroke-dashoffset="${circ/4}" stroke-linecap="round"/>
+    <text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="13" font-weight="500"
+      fill="var(--text)">${paidPct}%</text>
+  </svg>`;
+
+  // ── Gráfico 3: Composição sal vs VT (barras empilhadas) ──────
+  let chart3=`<div class="card" style="margin-bottom:12px;">
+    <p class="lbl" style="margin-bottom:14px;">&#128184; Composição por mês</p>
+    <div style="display:flex;align-items:flex-end;gap:6px;height:80px;padding-bottom:28px;">`;
+  const maxComp=Math.max(...byMonth.map(b=>b.sal+b.vt),1);
+  byMonth.forEach(b=>{
+    const salH=Math.max(Math.round((b.sal/maxComp)*72),1);
+    const vtH=Math.max(Math.round((b.vt/maxComp)*72),1);
+    const isCur=(b.y===wy&&b.m===wm);
+    chart3+=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;position:relative;">
+      <div style="width:100%;display:flex;flex-direction:column;align-items:stretch;gap:1px;">
+        <div style="background:var(--blue);border-radius:3px 3px 0 0;height:${vtH}px;opacity:${isCur?1:.55};"></div>
+        <div style="background:${isCur?'var(--accent)':'var(--a2)'};height:${salH}px;border-radius:0 0 3px 3px;opacity:${isCur?1:.55};"></div>
+      </div>
+      <span style="font-size:9px;color:${isCur?'var(--accent)':'var(--muted)'};white-space:nowrap;
+        position:absolute;bottom:-20px;">${b.label}</span>
+    </div>`;
+  });
+  chart3+=`</div>
+    <div style="display:flex;gap:12px;margin-top:6px;">
+      <span style="font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px;">
+        <span style="width:10px;height:10px;background:var(--accent);border-radius:2px;display:inline-block;"></span>Salário
+      </span>
+      <span style="font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px;">
+        <span style="width:10px;height:10px;background:var(--blue);border-radius:2px;display:inline-block;"></span>VT
+      </span>
+    </div>
+  </div>`;
+
+  const chart2=`<div class="card" style="margin-bottom:12px;">
+    <p class="lbl" style="margin-bottom:10px;">&#10003; Status — ${MP[wm]} ${wy}</p>
+    <div style="display:flex;align-items:center;gap:16px;">
+      ${donut}
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="font-size:13px;"><span style="color:var(--sage);font-weight:500;">${paidCount}</span>
+          <span style="color:var(--muted);font-size:11px;"> pagos</span></div>
+        <div style="font-size:13px;"><span style="color:var(--warn);font-weight:500;">${pendCount}</span>
+          <span style="color:var(--muted);font-size:11px;"> pendentes</span></div>
+        <div style="font-size:11px;color:var(--muted);">${totalFuncs} funcionário${totalFuncs!==1?'s':''}</div>
+      </div>
+    </div>
+  </div>`;
+
+  return `<div style="margin-top:8px;">
+    <p style="font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;
+      font-weight:500;margin-bottom:10px;">Gráficos</p>
+    <div class="g2" style="gap:12px;margin-bottom:0;">
+      ${chart2}
+      ${chart1}
+    </div>
+    ${chart3}
+  </div>`;
+}
 function renderDash() {
   const wy=SM===0?SY-1:SY, wm=SM===0?11:SM-1, wl=MP[wm]+' '+wy;
   const _monthClosed=isMonthClosed(wy,wm);
@@ -2609,6 +2727,8 @@ function renderDash() {
   out.push(`<div class="card" style="margin-top:8px;"><p class="lbl" style="margin-bottom:14px;">Consolidado \u2014 ${wl}</p><div class="mt2"><div class="mr mrh"><span>Funcion\u00e1rio</span><span>Sal\u00e1rio l\u00edquido</span><span style="text-align:right;">VT (${MP[calcs[0].vtM].slice(0,3)}) \u00b7 Envelope</span></div>`);
   calcs.forEach(c=>out.push(`<div class="mr"><span style="word-break:break-word;">${escapeHTML(c.emp.name)}</span><span class="money">R$ ${fm(c.finalNetSal)}</span><span class="money" style="text-align:right;">R$ ${fm(c.vtNet)} \u00b7 <strong>R$ ${fm(c.total)}</strong></span></div>`));
   out.push(`<div class="mr" style="background:var(--cream);font-weight:500;"><span>TOTAL</span><span class="money">R$ ${fm(totSal)}</span><span class="money" style="text-align:right;">R$ ${fm(totVT)} \u00b7 <strong>R$ ${fm(totAll)}</strong></span></div></div></div>`);
+  // ── Gráficos ───────────────────────────────────────────
+  out.push(buildDashCharts(calcs, wy, wm));
   document.getElementById('tab-dash').innerHTML=out.join('');
 }
 function goFech(eid){swTab('fech',document.querySelectorAll('.tab')[1]);setTimeout(()=>{const s=document.getElementById('fechsel');if(s){s.value=eid;renderFech();}},50);}
@@ -2840,11 +2960,7 @@ function renderHist() {
 // ── [D] RENDER REPORTS ────────────────────────────────────────
 function renderRel() {
   const wy=SM===0?SY-1:SY, wm=SM===0?11:SM-1;
-  const monthSet={};db.payments.forEach(p=>{monthSet[p.ry+'-'+p.rm]=1;});monthSet[wy+'-'+wm]=1;
-  const months=Object.keys(monthSet).sort((a,b)=>{
-    const[ay,am]=a.split('-').map(Number),[by,bm]=b.split('-').map(Number);
-    return by-ay||bm-am;
-  }).map(k=>{const[y,m]=k.split('-').map(Number);return{y,m};});
+  const active=getActiveMonths(); // [{y,m}] ref months
   const selSel=document.getElementById('rel-month-sel');
   const selMonth=selSel?selSel.value:(wy+'-'+wm);
   const[ry,rm]=selMonth.split('-').map(Number);
@@ -2862,13 +2978,26 @@ function renderRel() {
   const totInss=calcs.reduce((a,c)=>a+c.inssAmt,0);
   const paidCount=calcs.filter(c=>c.payment).length;
   const empOpts=db.employees.map(e=>`<option value="${e.id}"${String(e.id)===String(relEmpId)?' selected':''}>${escapeHTML(e.name)}${e.status==='desligado'?' (deslig.)':''}</option>`).join('');
+  const monthOpts=active.map(({y,m})=>`<option value="${y}-${m}"${y===ry&&m===rm?' selected':''}>${MP[m]} ${y}</option>`).join('');
   const out=[];
 
-  // ── Header ─────────────────────────────────────────────────
+  // ── Tabs: Mensal | Acumulado ──────────────────────────────
+  const relTab=document.getElementById('rel-subtab')||'mensal';
+  const curSubtab=(typeof relTab==='string'?relTab:relTab.dataset?.v)||'mensal';
+
   out.push(`<div style="margin-bottom:20px;">
     <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:300;margin-bottom:12px;">Relatórios</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-      <select id="rel-month-sel" onchange="renderRel()" class="ssel">${months.map(mo=>`<option value="${mo.y+'-'+mo.m}"${(mo.y+'-'+mo.m)===selMonth?' selected':''}>${MP[mo.m]} ${mo.y}</option>`).join('')}</select>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button onclick="swRelTab('mensal')" id="rbt-mensal" class="btn${curSubtab==='mensal'?' btn-sg':' btn-gh'}" style="font-size:12px;">Mensal</button>
+      <button onclick="swRelTab('acumulado')" id="rbt-acumulado" class="btn${curSubtab==='acumulado'?' btn-sg':' btn-gh'}" style="font-size:12px;">Acumulado</button>
+    </div>
+    <div id="rel-subtab" data-v="${curSubtab}"></div>
+  </div>`);
+
+  if(curSubtab==='mensal'){
+    // ── Header filtros ──────────────────────────────────────
+    out.push(`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
+      <select id="rel-month-sel" onchange="renderRel()" class="ssel">${monthOpts}</select>
       <select id="rel-emp-filter" onchange="renderRel()" class="ssel"><option value="">Todos os func.</option>${empOpts}</select>
       <label style="display:flex;gap:6px;align-items:center;font-size:13px;cursor:pointer;white-space:nowrap;">
         <input type="checkbox" id="rel-incl-des" onchange="renderRel()"${inclDes?' checked':''}>Desligados
@@ -2877,113 +3006,199 @@ function renderRel() {
         <button class="btn btn-dk btn-sm" onclick="printReport()">&#128438; PDF</button>
         <button class="btn btn-gh btn-sm" onclick="exportReportCSV()">&#8595; CSV</button>
       </div>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center;">
+    </div>`);
+    out.push(`<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
       <span class="tip">${refLabel} · pago em ${payLabel}</span>
       <span class="badge" style="background:${paidCount===calcs.length&&calcs.length>0?'rgba(138,155,138,.15)':'rgba(196,151,58,.12)'};color:${paidCount===calcs.length&&calcs.length>0?'var(--sage)':'var(--warn)'};">${paidCount}/${calcs.length} pagos</span>
+    </div>`);
+
+    if(!calcs.length){
+      out.push('<div class="empty"><div class="ei">&#128196;</div><div class="et">Nenhum funcionário encontrado.</div></div>');
+    } else {
+      // Totais
+      out.push('<div class="g4" style="margin-bottom:20px;">');
+      [{l:'Total salários',v:'R$ '+fm(totSal),col:'var(--sage)'},{l:'Total VT',v:'R$ '+fm(totVT),col:'var(--blue)'},{l:'Envelope total',v:'R$ '+fm(totAll),col:'var(--accent)'},{l:'Total INSS',v:'R$ '+fm(totInss),col:'var(--muted)'}]
+        .forEach(k=>out.push(`<div class="card"><div class="lbl" style="margin-bottom:6px;">${k.l}</div><div class="money" style="font-size:18px;color:${k.col};">${k.v}</div></div>`));
+      out.push('</div>');
+
+      // Tabela
+      out.push(`<div class="card" style="margin-bottom:16px;overflow-x:auto;">
+        <p style="font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;">Resumo — ${refLabel}</p>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:480px;">
+          <thead><tr style="border-bottom:2px solid var(--border);">
+            <th style="text-align:left;padding:6px 8px;font-weight:500;color:var(--muted);font-size:11px;text-transform:uppercase;">Funcionário</th>
+            <th style="text-align:right;padding:6px 8px;font-weight:500;color:var(--muted);font-size:11px;text-transform:uppercase;">Sal. líq.</th>
+            <th style="text-align:right;padding:6px 8px;font-weight:500;color:var(--muted);font-size:11px;text-transform:uppercase;">VT</th>
+            <th style="text-align:right;padding:6px 8px;font-weight:500;color:var(--muted);font-size:11px;text-transform:uppercase;">Total</th>
+            <th style="text-align:center;padding:6px 8px;font-weight:500;color:var(--muted);font-size:11px;text-transform:uppercase;">Status</th>
+          </tr></thead><tbody>`);
+      calcs.forEach(c=>{
+        const isPaid=!!c.payment;
+        out.push(`<tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:10px 8px;"><div style="font-size:13px;word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(c.emp.name)}</div><div style="font-size:11px;color:var(--muted);">${escapeHTML(c.emp.role)}</div></td>
+          <td class="money" style="text-align:right;padding:10px 8px;font-size:13px;">R$ ${fm(c.finalNetSal)}</td>
+          <td class="money" style="text-align:right;padding:10px 8px;font-size:13px;color:var(--blue);">R$ ${fm(c.vtNet)}</td>
+          <td class="money" style="text-align:right;padding:10px 8px;font-size:14px;font-weight:500;color:var(--accent);">R$ ${fm(c.total)}</td>
+          <td style="text-align:center;padding:10px 8px;">${isPaid?`<span style="font-size:11px;color:var(--sage);">&#10003; Pago${c.payment?.isRescisao?' <span style="color:var(--danger);">Rescisão</span>':''}</span>`:`<span style="font-size:11px;color:var(--warn);">&#9711; Pendente</span>`}</td>
+        </tr>`);
+      });
+      out.push(`<tr style="background:var(--cream);font-weight:500;">
+        <td style="padding:10px 8px;font-size:13px;">TOTAL (${calcs.length})</td>
+        <td class="money" style="text-align:right;padding:10px 8px;">R$ ${fm(totSal)}</td>
+        <td class="money" style="text-align:right;padding:10px 8px;color:var(--blue);">R$ ${fm(totVT)}</td>
+        <td class="money" style="text-align:right;padding:10px 8px;font-size:15px;color:var(--accent);">R$ ${fm(totAll)}</td>
+        <td></td></tr>`);
+      out.push('</tbody></table></div>');
+    }
+  } else {
+    // ── ABA ACUMULADO ────────────────────────────────────────
+    renderRelAcumulado(out, allEmps, active);
+  }
+
+  document.getElementById('tab-rel').innerHTML=out.join('');
+  // Re-marca a aba ativa
+  ['mensal','acumulado'].forEach(t=>{
+    const b=document.getElementById('rbt-'+t);
+    if(b){ b.className='btn '+(curSubtab===t?'btn-sg':'btn-gh'); b.style.fontSize='12px'; }
+  });
+}
+
+function swRelTab(tab) {
+  const el=document.getElementById('rel-subtab');
+  if(el) el.dataset.v=tab;
+  renderRel();
+}
+
+function renderRelAcumulado(out, allEmps, active) {
+  // Seletores de intervalo
+  const fromSel=document.getElementById('rel-acc-from');
+  const toSel=document.getElementById('rel-acc-to');
+  const monthOpts2=active.map(({y,m})=>`<option value="${y}-${m}">${MP[m]} ${y}</option>`).join('');
+  const fromVal=fromSel?.value||(active[0]?active[0].y+'-'+active[0].m:'');
+  const toVal=toSel?.value||(active[active.length-1]?active[active.length-1].y+'-'+active[active.length-1].m:'');
+
+  out.push(`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
+    <span style="font-size:12px;color:var(--muted);">De</span>
+    <select id="rel-acc-from" onchange="renderRel()" class="ssel">
+      ${active.map(({y,m})=>`<option value="${y}-${m}"${(y+'-'+m)===fromVal?' selected':''}>${MP[m]} ${y}</option>`).join('')}
+    </select>
+    <span style="font-size:12px;color:var(--muted);">até</span>
+    <select id="rel-acc-to" onchange="renderRel()" class="ssel">
+      ${active.map(({y,m})=>`<option value="${y}-${m}"${(y+'-'+m)===toVal?' selected':''}>${MP[m]} ${y}</option>`).join('')}
+    </select>
+    <div style="margin-left:auto;display:flex;gap:8px;">
+      <button class="btn btn-dk btn-sm" onclick="exportAccCSV()">&#8595; CSV</button>
     </div>
   </div>`);
 
-  if(!calcs.length){
-    out.push('<div class="empty"><div class="ei">&#128196;</div><div class="et">Nenhum funcionário encontrado.</div></div>');
-    document.getElementById('tab-rel').innerHTML=out.join('');
+  if(!active.length){
+    out.push('<div class="empty"><div class="ei">&#128196;</div><div class="et">Nenhum mês disponível.</div></div>');
     return;
   }
 
-  // ── Totais ─────────────────────────────────────────────────
-  out.push('<div class="g4" style="margin-bottom:20px;">');
-  [{l:'Total salários',v:'R$ '+fm(totSal),col:'var(--sage)'},
-   {l:'Total VT',v:'R$ '+fm(totVT),col:'var(--blue)'},
-   {l:'Envelope total',v:'R$ '+fm(totAll),col:'var(--accent)'},
-   {l:'Total INSS',v:'R$ '+fm(totInss),col:'var(--muted)'}
-  ].forEach(k=>out.push(`<div class="card"><div class="lbl" style="margin-bottom:6px;">${k.l}</div><div class="money" style="font-size:18px;color:${k.col};">${k.v}</div></div>`));
-  out.push('</div>');
+  // Filtra meses no intervalo
+  const [fy,fm2]=fromVal.split('-').map(Number);
+  const [ty,tm]=toVal.split('-').map(Number);
+  const inRange=active.filter(({y,m})=>(y>fy||(y===fy&&m>=fm2))&&(y<ty||(y===ty&&m<=tm)));
 
-  // ── Tabela resumo — mobile-friendly ────────────────────────
-  // Usa layout de cards em vez de grid de 7 colunas
+  if(!inRange.length){
+    out.push('<div class="empty"><div class="et">Intervalo sem dados.</div></div>');
+    return;
+  }
+
+  // Acumula por funcionário
+  const acc={};
+  allEmps.forEach(e=>{
+    acc[e.id]={emp:e,months:0,totSal:0,totVT:0,totInss:0,total:0,paid:0};
+  });
+  inRange.forEach(({y,m})=>{
+    allEmps.forEach(e=>{
+      const cx=calc(e.id,y,m);
+      if(!acc[e.id])return;
+      acc[e.id].months++;
+      acc[e.id].totSal+=cx.finalNetSal;
+      acc[e.id].totVT+=cx.vtNet;
+      acc[e.id].totInss+=cx.inssAmt;
+      acc[e.id].total+=cx.total;
+      if(cx.payment)acc[e.id].paid++;
+    });
+  });
+
+  const rows=Object.values(acc).filter(a=>a.months>0).sort((a,b)=>a.emp.name.localeCompare(b.emp.name,'pt-BR'));
+  const gTot={sal:0,vt:0,inss:0,total:0};
+  rows.forEach(r=>{gTot.sal+=r.totSal;gTot.vt+=r.totVT;gTot.inss+=r.totInss;gTot.total+=r.total;});
+
+  const rangeLabel=`${MP[fm2]} ${fy} → ${MP[tm]} ${ty} (${inRange.length} ${inRange.length===1?'mês':'meses'})`;
+
   out.push(`<div class="card" style="margin-bottom:16px;overflow-x:auto;">
-    <p style="font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;">Resumo — ${refLabel}</p>
-    <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:480px;">
-      <thead>
-        <tr style="border-bottom:2px solid var(--border);">
-          <th style="text-align:left;padding:6px 8px;font-weight:500;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase;">Funcionário</th>
-          <th style="text-align:right;padding:6px 8px;font-weight:500;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase;">Sal. líq.</th>
-          <th style="text-align:right;padding:6px 8px;font-weight:500;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase;">VT</th>
-          <th style="text-align:right;padding:6px 8px;font-weight:500;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase;">Total</th>
-          <th style="text-align:center;padding:6px 8px;font-weight:500;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase;">Status</th>
-        </tr>
-      </thead>
-      <tbody>`);
+    <p style="font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;">Acumulado — ${rangeLabel}</p>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:500px;">
+      <thead><tr style="border-bottom:2px solid var(--border);">
+        <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;">Funcionário</th>
+        <th style="text-align:right;padding:6px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;">Meses</th>
+        <th style="text-align:right;padding:6px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;">Sal. total</th>
+        <th style="text-align:right;padding:6px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;">VT total</th>
+        <th style="text-align:right;padding:6px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;">INSS total</th>
+        <th style="text-align:right;padding:6px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;">Total</th>
+      </tr></thead><tbody>`);
 
-  calcs.forEach(c=>{
-    const isPaid=!!c.payment;
+  rows.forEach(r=>{
     out.push(`<tr style="border-bottom:1px solid var(--border);">
-      <td style="padding:10px 8px;">
-        <div style="font-size:13px;font-weight:400;word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(c.emp.name)}</div>
-        <div style="font-size:11px;color:var(--muted);">${escapeHTML(c.emp.role)}${c.proRataActive?' · <span style="color:var(--warn);">PR</span>':''}</div>
-      </td>
-      <td class="money" style="text-align:right;padding:10px 8px;font-size:13px;">R$ ${fm(c.finalNetSal)}</td>
-      <td class="money" style="text-align:right;padding:10px 8px;font-size:13px;color:var(--blue);">R$ ${fm(c.vtNet)}</td>
-      <td class="money" style="text-align:right;padding:10px 8px;font-size:14px;font-weight:500;color:var(--accent);">R$ ${fm(c.total)}</td>
-      <td style="text-align:center;padding:10px 8px;">
-        ${isPaid
-          ? `<span style="font-size:11px;color:var(--sage);">&#10003; Pago${c.payment?.isRescisao?' <span style="color:var(--danger);font-size:10px;">Rescisão</span>':''}</span>`
-          : `<span style="font-size:11px;color:var(--warn);">&#9711; Pendente</span>`}
-      </td>
+      <td style="padding:10px 8px;"><div style="font-size:13px;word-break:break-word;">${escapeHTML(r.emp.name)}</div><div style="font-size:11px;color:var(--muted);">${escapeHTML(r.emp.role)}</div></td>
+      <td style="text-align:right;padding:10px 8px;font-size:13px;color:var(--muted);">${r.paid}/${r.months}</td>
+      <td class="money" style="text-align:right;padding:10px 8px;font-size:13px;">R$ ${fm(r.totSal)}</td>
+      <td class="money" style="text-align:right;padding:10px 8px;font-size:13px;color:var(--blue);">R$ ${fm(r.totVT)}</td>
+      <td class="money" style="text-align:right;padding:10px 8px;font-size:13px;color:var(--muted);">R$ ${fm(r.totInss)}</td>
+      <td class="money" style="text-align:right;padding:10px 8px;font-size:14px;font-weight:500;color:var(--accent);">R$ ${fm(r.total)}</td>
     </tr>`);
   });
 
-  // Linha de total
   out.push(`<tr style="background:var(--cream);font-weight:500;">
-    <td style="padding:10px 8px;font-size:13px;">TOTAL (${calcs.length})</td>
-    <td class="money" style="text-align:right;padding:10px 8px;font-size:13px;">R$ ${fm(totSal)}</td>
-    <td class="money" style="text-align:right;padding:10px 8px;font-size:13px;color:var(--blue);">R$ ${fm(totVT)}</td>
-    <td class="money" style="text-align:right;padding:10px 8px;font-size:15px;color:var(--accent);">R$ ${fm(totAll)}</td>
+    <td style="padding:10px 8px;font-size:13px;">TOTAL (${rows.length} func.)</td>
     <td></td>
+    <td class="money" style="text-align:right;padding:10px 8px;">R$ ${fm(gTot.sal)}</td>
+    <td class="money" style="text-align:right;padding:10px 8px;color:var(--blue);">R$ ${fm(gTot.vt)}</td>
+    <td class="money" style="text-align:right;padding:10px 8px;color:var(--muted);">R$ ${fm(gTot.inss)}</td>
+    <td class="money" style="text-align:right;padding:10px 8px;font-size:15px;color:var(--accent);">R$ ${fm(gTot.total)}</td>
   </tr>`);
   out.push('</tbody></table></div>');
 
-  // ── Cards individuais — compactos (sem memoHTML completo) ──
-  calcs.forEach(c=>{
-    const isPaid=!!c.payment;
-    out.push(`<div class="card" style="margin-bottom:12px;">
-      <div class="fb" style="gap:12px;margin-bottom:12px;">
-        <div class="fi" style="gap:10px;flex:1;min-width:0;">
-          ${avt(c.emp.name,40)}
-          <div style="min-width:0;flex:1;">
-            <div style="font-size:14px;font-weight:400;word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(c.emp.name)}</div>
-            <div style="font-size:11px;color:var(--muted);">${escapeHTML(c.emp.role)}</div>
-          </div>
-        </div>
-        <div style="text-align:right;flex-shrink:0;">
-          <div class="money" style="font-size:20px;color:var(--accent);">R$ ${fm(c.total)}</div>
-          <div style="font-size:11px;margin-top:2px;">
-            ${isPaid
-              ? `<span style="color:var(--sage);">&#10003; Pago em ${fd(c.payment.paidDate)}${c.payment?.isRescisao?' · <span style="color:var(--danger);">Rescisão</span>':''}</span>`
-              : `<span style="color:var(--warn);">&#9711; Pendente</span>`}
-          </div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-        <div style="background:var(--cream);border-radius:10px;padding:10px;text-align:center;">
-          <div class="lbl" style="margin-bottom:4px;">Sal. líquido</div>
-          <div class="money" style="font-size:14px;">R$ ${fm(c.finalNetSal)}</div>
-        </div>
-        <div style="background:var(--cream);border-radius:10px;padding:10px;text-align:center;">
-          <div class="lbl" style="margin-bottom:4px;">VT ${MP[c.vtM].slice(0,3)}</div>
-          <div class="money" style="font-size:14px;color:var(--blue);">R$ ${fm(c.vtNet)}</div>
-        </div>
-        <div style="background:var(--cream);border-radius:10px;padding:10px;text-align:center;">
-          <div class="lbl" style="margin-bottom:4px;">INSS</div>
-          <div class="money" style="font-size:14px;color:var(--muted);">R$ ${fm(c.inssAmt)}</div>
-        </div>
-      </div>
-      ${isPaid&&c.payment.paidDate?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);">Pago em ${fd(c.payment.paidDate)} · ${c.payment.method||'—'}${c.payment.notes?' · '+c.payment.notes:''}</div>`:''}
+  // Gráfico de barras simples por mês (totais)
+  const maxTotal=Math.max(...inRange.map(({y,m})=>allEmps.reduce((s,e)=>s+calc(e.id,y,m).total,0)),1);
+  out.push('<div class="card" style="margin-bottom:16px;"><p style="font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;">Envelope por mês</p>');
+  out.push('<div style="display:flex;align-items:flex-end;gap:8px;height:120px;overflow-x:auto;padding-bottom:24px;position:relative;">');
+  inRange.forEach(({y,m})=>{
+    const tot=allEmps.reduce((s,e)=>s+calc(e.id,y,m).total,0);
+    const pct=Math.round((tot/maxTotal)*100);
+    out.push(`<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:40px;">
+      <span style="font-size:9px;color:var(--muted);">R$ ${fm(tot)}</span>
+      <div style="width:100%;background:var(--accent);border-radius:4px 4px 0 0;height:${pct}px;min-height:4px;"></div>
+      <span style="font-size:9px;color:var(--muted);white-space:nowrap;">${MP[m].slice(0,3)} ${y}</span>
     </div>`);
   });
-
-  document.getElementById('tab-rel').innerHTML=out.join('');
+  out.push('</div></div>');
 }
+
+function exportAccCSV() {
+  const active=getActiveMonths();
+  const fromVal=document.getElementById('rel-acc-from')?.value||(active[0]?active[0].y+'-'+active[0].m:'');
+  const toVal=document.getElementById('rel-acc-to')?.value||(active[active.length-1]?active[active.length-1].y+'-'+active[active.length-1].m:'');
+  const [fy,fm2]=fromVal.split('-').map(Number);
+  const [ty,tm]=toVal.split('-').map(Number);
+  const inRange=active.filter(({y,m})=>(y>fy||(y===fy&&m>=fm2))&&(y<ty||(y===ty&&m<=tm)));
+  const allEmps=sortEmps(db.employees.filter(e=>e.status!=='desligado'));
+  const rows=[['Funcionário','Função','Meses','Sal. Total','VT Total','INSS Total','Total']];
+  allEmps.forEach(e=>{
+    let s=0,v=0,n=0,t=0,cnt=0;
+    inRange.forEach(({y,m})=>{const cx=calc(e.id,y,m);s+=cx.finalNetSal;v+=cx.vtNet;n+=cx.inssAmt;t+=cx.total;cnt++;});
+    rows.push([e.name,e.role,cnt,fm(s),fm(v),fm(n),fm(t)]);
+  });
+  const csvNL='\r\n'; const csv=rows.map(function(r){return r.map(function(v){var s=String(v); return '"'+s.split('"').join('""')+'"';}).join(',');}).join(csvNL);
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv);
+  a.download='acumulado.csv'; a.click();
+}
+
 
 // ── RENDER CONFIG (Casa) ──────────────────────────────────────
 async function renderConfig() {
@@ -3181,7 +3396,7 @@ function expCSV(){
   const wy=SM===0?SY-1:SY, wm=SM===0?11:SM-1;
   const rows=[['Funcion\u00e1rio','Fun\u00e7\u00e3o','Compet\u00eancia','Sal\u00e1rio Base','Di\u00e1rias Rec.','Di\u00e1rias Avulsas','B\u00f4nus','Descontos','INSS','Sal\u00e1rio L\u00edquido','VT Dias','VT Dias Auto','VT','VT M\u00eas','Total Envelope','Pago em','Forma']];
   db.employees.filter(e=>e.status!=='desligado').forEach(emp=>{const c=calc(emp.id,wy,wm);rows.push([emp.name,emp.role,MP[wm]+' '+wy,c.salBase.toFixed(2),c.recTot.toFixed(2),c.avTot.toFixed(2),c.bons.toFixed(2),c.deds.toFixed(2),c.inssAmt.toFixed(2),c.netSal.toFixed(2),c.vtWd,c.vtWdAuto,c.vtNet.toFixed(2),MP[c.vtM]+' '+c.vtY,c.total.toFixed(2),c.payment?.paidDate||'',c.payment?.method||'']);});
-  const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const csvNL='\r\n'; const csv=rows.map(function(r){return r.map(function(v){var s=String(v); return '"'+s.split('"').join('""')+'"';}).join(',');}).join(csvNL);
   const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\ufeff'+encodeURIComponent(csv);a.download='atrium_'+MP[wm]+'_'+wy+'.csv';a.click();
 }
 function printReport(){
@@ -3204,7 +3419,7 @@ function exportReportCSV(){
   const calcs=_emps.map(e=>calc(e.id,ry,rm));
   const rows=[['Funcion\u00e1rio','Fun\u00e7\u00e3o','Sal. Base','Di\u00e1rias Rec.','Di\u00e1rias Avulsas','B\u00f4nus','Descontos','INSS','Sal. L\u00edquido','VT Dias','VT','VT M\u00eas','Total Envelope','Pago em','Forma','Status']];
   calcs.forEach(c=>rows.push([c.emp.name,c.emp.role,c.salBase.toFixed(2),c.recTot.toFixed(2),c.avTot.toFixed(2),c.bons.toFixed(2),c.deds.toFixed(2),c.inssAmt.toFixed(2),c.netSal.toFixed(2),c.vtWd,c.vtNet.toFixed(2),MP[c.vtM]+' '+c.vtY,c.total.toFixed(2),c.payment?.paidDate||'',c.payment?.method||'',c.payment?'Pago':'Pendente']));
-  const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const csvNL='\r\n'; const csv=rows.map(function(r){return r.map(function(v){var s=String(v); return '"'+s.split('"').join('""')+'"';}).join(',');}).join(csvNL);
   const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\ufeff'+encodeURIComponent(csv);a.download='atrium_relatorio_'+MP[rm]+'_'+ry+'.csv';a.click();
 }
 
@@ -3416,6 +3631,8 @@ function initApp() {
       + '</div>';
   }
 }
+
+
 
 
 
