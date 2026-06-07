@@ -541,6 +541,8 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -2482,6 +2484,7 @@ function gerarAcordo(emp,adm,data,e){docWindow('Acordo M\u00fatuo',`<h1>TERMO DE
 // ── [D] RENDER DASHBOARD ──────────────────────────────────────
 function renderDash() {
   const wy=SM===0?SY-1:SY, wm=SM===0?11:SM-1, wl=MP[wm]+' '+wy;
+  const _monthClosed=isMonthClosed(wy,wm);
   const calcs=sortEmps(db.employees.filter(e=>e.status!=='desligado')).map(e=>calc(e.id,wy,wm));
   const totSal=calcs.reduce((a,c)=>a+c.finalNetSal,0), totVT=calcs.reduce((a,c)=>a+c.vtNet,0), totAll=calcs.reduce((a,c)=>a+c.total,0);
   const p5=bday5(SY,SM), out=[];
@@ -2554,7 +2557,6 @@ function buildPaidSummary(p, eid, wy, wm, canEdit, isRescPaid) {
 
 function renderFech() {
   const wy=SM===0?SY-1:SY, wm=SM===0?11:SM-1, wl=MP[wm]+' '+wy, pl=MP[SM]+' '+SY;
-  const _monthClosed = isMonthClosed(wy, wm);
   const activeEmps=sortEmps(db.employees.filter(e=>e.status!=='desligado'));
   // Preserva o funcionário selecionado sem coerção numérica (IDs são strings)
   const prevSel=document.getElementById('fechsel');
@@ -3314,6 +3316,8 @@ function initApp() {
       + '</div>';
   }
 }
+
+
 
 
 
