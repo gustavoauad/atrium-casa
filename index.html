@@ -17,7 +17,6 @@
 <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png">
 <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png">
 <!-- Splash screen iOS (cor de fundo enquanto carrega) -->
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <!-- Cache -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -85,7 +84,7 @@
 
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-weight:300;min-height:100vh;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-weight:300;min-height:100vh;padding-top:env(safe-area-inset-top);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);}
 input,button,select,textarea{font-family:'Inter',sans-serif;}
 ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
 input::placeholder,textarea::placeholder{color:var(--stone);}
@@ -141,7 +140,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 /* ── MAIN APP ────────────────────────────────────────────── */
 #app{display:none;}
 #app.visible{display:block;}
-.wrap{max-width:960px;margin:0 auto;padding:0 16px 80px;}
+.wrap{max-width:960px;margin:0 auto;padding:0 16px calc(80px + env(safe-area-inset-bottom));}
 .topbar{position:sticky;top:0;z-index:100;background:var(--surface);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;margin:0;}
 .logo{display:flex;align-items:center;gap:8px;flex-shrink:0;overflow:visible;}
 .logo-text{font-family:'Inter',sans-serif;font-size:14px;font-weight:400;letter-spacing:.22em;text-transform:uppercase;color:var(--text);line-height:1.1;}.logo-sub{font-family:'Inter',sans-serif;font-size:6px;font-weight:400;letter-spacing:.3em;text-transform:uppercase;color:var(--accent);}
@@ -216,7 +215,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 /* ── MOBILE PORTRAIT (≤480px) ─────────────────────────── */
 @media (max-width:480px){
-  .wrap{padding:0 12px 80px;}
+  .wrap{padding:0 12px calc(80px + env(safe-area-inset-bottom));}
   .card{padding:14px;}
   .topbar{padding:8px 14px;}
   .logo svg{width:20px;height:20px;}
@@ -246,7 +245,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
   .mref-label{display:none;}
 }
 @media (max-width:390px){
-  .wrap{padding:0 10px 80px;}
+  .wrap{padding:0 10px calc(80px + env(safe-area-inset-bottom));}
   .card{padding:12px;}
   .g4{grid-template-columns:1fr 1fr;gap:6px;}
   .tab{padding:5px 8px;font-size:10px;}
