@@ -12,6 +12,25 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<script>
+// Cache-bust: força reload se o app foi atualizado
+(function(){
+  var VER="__ATRIUM_BUILD__";
+  var stored=sessionStorage.getItem("atrium_ver");
+  if(stored && stored!==VER){
+    sessionStorage.setItem("atrium_ver",VER);
+    // Limpa cache do SW e recarrega
+    if("serviceWorker" in navigator){
+      navigator.serviceWorker.getRegistrations().then(function(regs){
+        regs.forEach(function(r){r.unregister();});
+        window.location.reload(true);
+      });
+    }
+  } else {
+    sessionStorage.setItem("atrium_ver",VER);
+  }
+})();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <!-- Supabase JS via CDN oficial -->
 
@@ -507,6 +526,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" crossorigin="anonymous"></script>
 <script>
+
 
 
 
@@ -3732,8 +3752,12 @@ function initDevMode() {
 }
 
 async function initApp() {
-  _sessionProcessed = false; // garante reset a cada reload
-  applyTheme(_theme); // aplica tema salvo
+  _sessionProcessed = false;
+  applyTheme(_theme);
+  // Registra Service Worker para controle de cache
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(function(){});
+  }
   // Dev mode: pula autenticação e entra direto com dados locais
   if (_DEV_MODE) {
     initDevMode();
@@ -3836,6 +3860,7 @@ async function initApp() {
       + '</div>';
   }
 }
+
 
 
 
