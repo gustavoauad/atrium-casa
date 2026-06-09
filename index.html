@@ -130,7 +130,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 #app{display:none;}
 #app.visible{display:block;}
 .wrap{max-width:960px;margin:0 auto;padding:0 16px 80px;}
-.topbar{position:sticky;top:0;z-index:100;background:var(--surface);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;margin:0;}
+.topbar{position:sticky;top:0;z-index:100;background:var(--surface);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;margin:0;}
 .logo{display:flex;align-items:center;gap:8px;flex-shrink:0;overflow:visible;}
 .logo-text{font-family:'Inter',sans-serif;font-size:14px;font-weight:400;letter-spacing:.22em;text-transform:uppercase;color:var(--text);line-height:1.1;}.logo-sub{font-family:'Inter',sans-serif;font-size:6px;font-weight:400;letter-spacing:.3em;text-transform:uppercase;color:var(--accent);}
 .tabs{display:flex;gap:6px;padding:18px 0 4px;border-bottom:1px solid var(--border);margin-bottom:28px;overflow-x:auto;}
@@ -163,7 +163,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 .btn-sm{padding:7px 14px;font-size:11px;border-radius:7px;}
 .xi{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;color:var(--muted);}
 .av{border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Playfair Display',serif;font-weight:400;}
-.ov{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(42,37,32,.55);z-index:500;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);}
+.ov{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(42,37,32,.55);z-index:500;display:flex;align-items:flex-end;justify-content:center;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);}
 .ov.ctr{align-items:center;}
 .modal{background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:680px;max-height:92vh;overflow:hidden;display:flex;flex-direction:column;animation:su .22s ease;}
 .modal.cm{border-radius:20px;animation:fi .18s ease;}
@@ -184,7 +184,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 .mrh{background:var(--cream);font-size:10px;font-weight:500;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;}
 .cg{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:10px;}
 .ch{text-align:center;font-size:9px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;padding:4px 0;font-weight:500;}
-.cd{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:7px;font-size:11px;cursor:pointer;border:1px solid transparent;transition:all .15s;position:relative;flex-direction:column;gap:1px;user-select:none;}
+.cd{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:7px;font-size:11px;cursor:pointer;border:1px solid transparent;transition:all .15s;position:relative;flex-direction:column;gap:1px;-webkit-user-select:none;user-select:none;}
 .cd:hover:not(.ce){background:var(--cream);border-color:var(--border);}
 .ce{cursor:default;color:var(--stone);}
 .cwd{background:rgba(139,115,85,.07);border-color:rgba(139,115,85,.2);}
@@ -526,6 +526,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" crossorigin="anonymous"></script>
 <script>
+
 
 
 
@@ -3756,7 +3757,25 @@ async function initApp() {
   applyTheme(_theme);
   // Registra Service Worker para controle de cache
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(function(){});
+    navigator.serviceWorker.register('/sw.js')
+      .then(function(reg) {
+        // Verifica atualização do SW a cada foco na aba
+        reg.update();
+        document.addEventListener('visibilitychange', function() {
+          if (document.visibilityState === 'visible') reg.update();
+        });
+        // Se SW atualizado, recarrega a página automaticamente
+        reg.addEventListener('updatefound', function() {
+          var newSW = reg.installing;
+          newSW.addEventListener('statechange', function() {
+            if (newSW.state === 'activated') window.location.reload();
+          });
+        });
+      }).catch(function(){});
+    // Mensagem do SW: reload quando nova versão estiver pronta
+    navigator.serviceWorker.addEventListener('controllerchange', function() {
+      window.location.reload();
+    });
   }
   // Dev mode: pula autenticação e entra direto com dados locais
   if (_DEV_MODE) {
@@ -3860,6 +3879,7 @@ async function initApp() {
       + '</div>';
   }
 }
+
 
 
 
