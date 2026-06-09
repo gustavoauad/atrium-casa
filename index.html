@@ -5,10 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Atrium &middot; Gest&atilde;o Dom&eacute;stica</title>
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'><rect width='72' height='72' rx='16' fill='%23F5F2EE'/><rect x='4' y='4' width='64' height='64' rx='6' stroke='%232A2520' stroke-width='1.8' fill='none'/><rect x='22' y='22' width='28' height='28' rx='2' stroke='%238B7355' stroke-width='1.8' fill='none'/><circle cx='36' cy='36' r='2.5' fill='%238B7355'/></svg>">
+<!-- PWA -->
+<link rel="manifest" href="/manifest.json">
+<meta name="application-name" content="Atrium">
+<meta name="theme-color" content="#8B6F47">
+<!-- iOS PWA -->
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Atrium">
-<meta name="theme-color" content="#F5F2EE">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png">
+<!-- Splash screen iOS (cor de fundo enquanto carrega) -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- Cache -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -526,6 +536,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" crossorigin="anonymous"></script>
 <script>
+
 
 
 
@@ -3879,6 +3890,7 @@ async function initApp() {
       + '</div>';
   }
 }
+
 
 
 
