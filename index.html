@@ -22,6 +22,8 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<!-- Desabilita BFCache no Edge/Chrome -->
+<meta http-equiv="cache-control" content="no-store">
 <script>
 // Cache-bust: força reload se o app foi atualizado
 (function(){
@@ -536,6 +538,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" crossorigin="anonymous"></script>
 <script>
+
 
 
 
@@ -3786,48 +3789,44 @@ function swdiag() {
   }
 }
 
+// Força revalidação de sessão quando a página é restaurada do BFCache
+// BFCache = back-forward cache — usado pelo Edge/Chrome no F5/reload
+// Sem isso, a página carrega um snapshot congelado sem re-executar JS
+window.addEventListener('pageshow', function(e) {
+  if (e.persisted) {
+    // Página veio do BFCache — re-verifica sessão
+    console.log('[pageshow] BFCache restore — revalidando sessão');
+    if (typeof supa !== 'undefined' && supa) {
+      supa.auth.getSession().then(function(res) {
+        if (res.data && res.data.session && res.data.session.user) {
+          // Sessão ok — só re-renderiza
+          if (typeof renderAll === 'function') renderAll();
+        } else {
+          // Sem sessão — volta para login
+          if (typeof showAuth === 'function') showAuth();
+        }
+      }).catch(function() {
+        window.location.reload();
+      });
+    } else {
+      // Supabase não inicializado — força reload limpo
+      window.location.reload();
+    }
+  }
+});
+
+// Impede que o browser armazene a página no BFCache
+// Isso faz o F5 sempre buscar do servidor
+window.addEventListener('beforeunload', function() {});
+
 async function initApp() {
   _sessionProcessed = false;
   applyTheme(_theme);
-  // Registra Service Worker para controle de cache
+  // Service Worker — desregistra qualquer SW antigo para não bloquear o app
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js')
-      .then(function(reg) {
-        reg.update();
-        // Log status para diagnóstico
-        var swState = reg.active ? reg.active.state : (reg.installing ? 'installing' : 'waiting');
-        console.log('[SW] registered, state:', swState);
-        // Toast de diagnóstico — remover após confirmar funcionamento
-        if (localStorage.getItem('sw_diag') === '1') {
-          setTimeout(function(){
-            var ctrl = navigator.serviceWorker.controller;
-            showToast('SW: ' + (ctrl ? 'ATIVO ✓' : 'sem controle ✗') + ' | state: ' + swState);
-          }, 2000);
-        }
-        document.addEventListener('visibilitychange', function() {
-          if (document.visibilityState === 'visible') reg.update();
-        });
-        reg.addEventListener('updatefound', function() {
-          var newSW = reg.installing;
-          newSW.addEventListener('statechange', function() {
-            if (newSW.state === 'activated') window.location.reload();
-          });
-        });
-      }).catch(function(err){
-        console.error('[SW] register failed:', err);
-        if (localStorage.getItem('sw_diag') === '1') {
-          setTimeout(function(){ showToast('SW ERRO: ' + err.message); }, 2000);
-        }
-      });
-    navigator.serviceWorker.addEventListener('controllerchange', function() {
-      console.log('[SW] controllerchange — reloading');
-      window.location.reload();
+    navigator.serviceWorker.getRegistrations().then(function(regs) {
+      regs.forEach(function(r) { r.unregister(); });
     });
-  } else {
-    console.warn('[SW] serviceWorker not supported in this browser');
-    if (localStorage.getItem('sw_diag') === '1') {
-      setTimeout(function(){ showToast('SW: não suportado neste browser'); }, 2000);
-    }
   }
   // Dev mode: pula autenticação e entra direto com dados locais
   if (_DEV_MODE) {
@@ -3931,6 +3930,7 @@ async function initApp() {
       + '</div>';
   }
 }
+
 
 
 
