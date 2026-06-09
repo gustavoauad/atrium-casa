@@ -643,6 +643,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 // Captura erros globais e mostra na loading screen (ajuda diagnóstico)
 window.addEventListener('error', function(ev) {
   if (ev.message === 'Script error.' || !ev.message) return; // erro cross-origin sem detalhe
@@ -3792,32 +3793,39 @@ function swdiag() {
 // Força revalidação de sessão quando a página é restaurada do BFCache
 // BFCache = back-forward cache — usado pelo Edge/Chrome no F5/reload
 // Sem isso, a página carrega um snapshot congelado sem re-executar JS
+// ── BFCache restore (F5 / reload no Edge/Chrome) ────────────────────
+// pageshow dispara quando a página é restaurada do cache do browser
+// e.persisted=true significa que veio do BFCache (JS congelado)
 window.addEventListener('pageshow', function(e) {
-  if (e.persisted) {
-    // Página veio do BFCache — re-verifica sessão
-    console.log('[pageshow] BFCache restore — revalidando sessão');
-    if (typeof supa !== 'undefined' && supa) {
-      supa.auth.getSession().then(function(res) {
-        if (res.data && res.data.session && res.data.session.user) {
-          // Sessão ok — só re-renderiza
-          if (typeof renderAll === 'function') renderAll();
-        } else {
-          // Sem sessão — volta para login
-          if (typeof showAuth === 'function') showAuth();
-        }
-      }).catch(function() {
-        window.location.reload();
-      });
-    } else {
-      // Supabase não inicializado — força reload limpo
-      window.location.reload();
-    }
+  if (!e.persisted) return; // carregamento normal — initApp já tratou
+  console.log('[pageshow] BFCache — revalidando sessão');
+  if (typeof supa === 'undefined' || !supa) {
+    window.location.reload(); return;
   }
+  supa.auth.getSession().then(function(res) {
+    if (res.data && res.data.session && res.data.session.user) {
+      // Sessão válida — re-renderiza sem reload
+      if (typeof renderAll === 'function') renderAll();
+    } else {
+      // Sessão expirada — mostra login
+      if (typeof showAuth === 'function') showAuth();
+      else window.location.reload();
+    }
+  }).catch(function() { window.location.reload(); });
 });
 
-// Impede que o browser armazene a página no BFCache
-// Isso faz o F5 sempre buscar do servidor
+// beforeunload vazio sinaliza ao browser que não pode usar BFCache
 window.addEventListener('beforeunload', function() {});
+
+// ── Safety net: se loading screen não sair em 5s, mostra login ──────
+setTimeout(function() {
+  var ls = document.getElementById('loading-screen');
+  if (ls && !ls.classList.contains('hidden') && ls.style.display !== 'none') {
+    console.warn('[safety] loading screen travada — forçando login');
+    ls.classList.add('hidden');
+    if (typeof showAuth === 'function') showAuth();
+  }
+}, 5000);
 
 async function initApp() {
   _sessionProcessed = false;
@@ -3875,50 +3883,35 @@ async function initApp() {
       showAuth();
     }
 
-    // ── Estratégia de sessão ──────────────────────────────────────────
-    // getSession() lê localStorage imediatamente — sem race condition.
-    // Substitui o setTimeout fallback que causava logout no F5.
+    // ── Auth: fluxo robusto para F5 / BFCache / Safari / Edge iOS ────
 
-    // ── Auth: registra listener PRIMEIRO, depois checa sessão ──
-    // Ordem correta para o Supabase SDK:
-    // 1. onAuthStateChange registrado — captura INITIAL_SESSION
-    // 2. getSession() como fallback explícito (garante restore no Safari)
+    // PASSO 1 — getSession() imediato
+    // Lê o token do localStorage de forma síncrona — sempre funciona no F5
+    var _initSession = await supa.auth.getSession();
+    if (_initSession.data && _initSession.data.session && _initSession.data.session.user) {
+      dbg('Sessão encontrada via getSession()');
+      await handleSession(_initSession.data.session.user);
+    } else {
+      dbg('Sem sessão — mostrando login');
+      handleNoSession();
+    }
 
-    // PASSO 1 — listener para todos os eventos de auth
+    // PASSO 2 — listener para eventos futuros (login/logout)
+    // INITIAL_SESSION ignorado — getSession() já resolveu
     supa.auth.onAuthStateChange(async (event, session) => {
-      dbg('onAuthStateChange: ' + event);
-      if (event === 'INITIAL_SESSION') {
-        if (_signingUp) return;
-        if (session && session.user) {
-          await handleSession(session.user);
-        } else {
-          handleNoSession();
-        }
-      } else if (event === 'SIGNED_IN') {
+      dbg('auth event: ' + event);
+      if (event === 'SIGNED_IN') {
         if (_signingUp) return;
         _sessionProcessed = false;
         await handleSession(session.user);
-      } else if (event === 'TOKEN_REFRESHED') {
-        dbg('Token renovado silenciosamente');
       } else if (event === 'SIGNED_OUT') {
-        _signingUp = false; _sessionProcessed = false; showAuth();
+        _signingUp = false;
+        _sessionProcessed = false;
+        showAuth();
+      } else if (event === 'TOKEN_REFRESHED') {
+        dbg('Token renovado');
       }
     });
-
-    // PASSO 2 — fallback explícito para Safari/iOS onde INITIAL_SESSION
-    // pode não disparar corretamente após F5
-    setTimeout(async function() {
-      if (_sessionProcessed) return; // listener já resolveu
-      dbg('Fallback getSession após 1.5s');
-      try {
-        var r = await supa.auth.getSession();
-        if (r.data && r.data.session && r.data.session.user) {
-          await handleSession(r.data.session.user);
-        } else {
-          handleNoSession();
-        }
-      } catch(e) { console.error('fallback getSession:', e); handleNoSession(); }
-    }, 1500);
 
   } catch (initErr) {
     console.error('Atrium init error:', initErr);
@@ -3930,6 +3923,7 @@ async function initApp() {
       + '</div>';
   }
 }
+
 
 
 
