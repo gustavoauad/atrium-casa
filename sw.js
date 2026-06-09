@@ -1,90 +1,81 @@
-// Atrium Casa — Service Worker
-// Estratégia: Network First para o HTML principal, Cache First para assets estáticos
-// Isso garante que o app sempre carrega a versão mais recente do servidor no reload.
+// Atrium Casa — Service Worker v2
+// Estratégia: Network First para HTML, Cache First para fontes
+// Garante reload limpo no Edge/Safari iOS
 
-const CACHE_NAME = 'atrium-v1';
+const CACHE = 'atrium-v2';
+const HTML_URL = '/atrium-casa-supabase.html';
 
-// Assets que podem ser cacheados (fontes, ícones)
-const CACHE_STATIC = [
-  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap',
-];
-
-// Install — pré-cacheia assets estáticos
+// ── Install ──────────────────────────────────────────────────
 self.addEventListener('install', function(e) {
-  self.skipWaiting(); // ativa imediatamente sem esperar aba fechar
+  self.skipWaiting(); // ativa imediatamente, sem esperar fechar abas
+});
+
+// ── Activate ─────────────────────────────────────────────────
+self.addEventListener('activate', function(e) {
   e.waitUntil(
-    caches.open(CACHE_NAME).then(function(cache) {
-      return cache.addAll(CACHE_STATIC).catch(function(){});
+    // Remove versões antigas de cache
+    caches.keys().then(function(keys) {
+      return Promise.all(
+        keys.filter(function(k) { return k !== CACHE; })
+            .map(function(k) { return caches.delete(k); })
+      );
+    }).then(function() {
+      return self.clients.claim(); // assume controle de todas as abas imediatamente
     })
   );
 });
 
-// Activate — remove caches antigos
-self.addEventListener('activate', function(e) {
-  e.waitUntil(
-    caches.keys().then(function(keys) {
-      return Promise.all(
-        keys.filter(function(k){ return k !== CACHE_NAME; })
-            .map(function(k){ return caches.delete(k); })
-      );
-    }).then(function(){ return self.clients.claim(); }) // assume controle imediato
-  );
-});
-
-// Fetch — estratégia por tipo de recurso
+// ── Fetch ─────────────────────────────────────────────────────
 self.addEventListener('fetch', function(e) {
-  var url = e.request.url;
+  var req = e.request;
+  var url = req.url;
 
-  // Supabase API — nunca cachear, sempre rede
-  if (url.includes('supabase.co')) {
-    e.respondWith(fetch(e.request));
-    return;
+  // 1. Supabase API — nunca cachear
+  if (url.includes('supabase.co') || url.includes('supabase.io')) {
+    return; // deixa o browser fazer normalmente
   }
 
-  // HTML principal (atrium-casa-supabase.html ou /) — Network First
-  // Sempre tenta buscar do servidor; só usa cache se offline
-  if (
-    e.request.mode === 'navigate' ||
-    url.endsWith('.html') ||
-    url.endsWith('/')
-  ) {
+  // 2. Navegação (HTML) — Network First, sem cache
+  if (req.mode === 'navigate') {
     e.respondWith(
-      fetch(e.request, { cache: 'no-store' })
-        .then(function(response) {
-          // Atualiza o cache com a versão mais recente
-          var clone = response.clone();
-          caches.open(CACHE_NAME).then(function(cache) {
-            cache.put(e.request, clone);
-          });
-          return response;
+      fetch(req, { cache: 'no-store' })
+        .then(function(res) {
+          // Guarda cópia para offline
+          var copy = res.clone();
+          caches.open(CACHE).then(function(c) { c.put(req, copy); });
+          return res;
         })
         .catch(function() {
-          // Offline: serve do cache
-          return caches.match(e.request);
+          // Offline: serve o que tiver em cache
+          return caches.match(req).then(function(cached) {
+            return cached || new Response('Sem conexão. Tente novamente.', {
+              status: 503,
+              headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+            });
+          });
         })
     );
     return;
   }
 
-  // Google Fonts e outros assets estáticos — Cache First
+  // 3. Fontes Google — Cache First (não mudam)
   if (url.includes('fonts.googleapis.com') || url.includes('fonts.gstatic.com')) {
     e.respondWith(
-      caches.match(e.request).then(function(cached) {
-        return cached || fetch(e.request).then(function(response) {
-          caches.open(CACHE_NAME).then(function(cache) {
-            cache.put(e.request, response.clone());
-          });
-          return response;
+      caches.match(req).then(function(cached) {
+        if (cached) return cached;
+        return fetch(req).then(function(res) {
+          caches.open(CACHE).then(function(c) { c.put(req, res.clone()); });
+          return res;
         });
       })
     );
     return;
   }
 
-  // Default — Network First para todo o resto
+  // 4. Todo o resto — Network First
   e.respondWith(
-    fetch(e.request, { cache: 'no-store' }).catch(function() {
-      return caches.match(e.request);
+    fetch(req, { cache: 'no-store' }).catch(function() {
+      return caches.match(req);
     })
   );
 });
