@@ -253,6 +253,17 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 #house-bar{display:flex;align-items:center;gap:6px;padding:6px 0 8px;border-bottom:1px solid var(--border);margin-bottom:16px;}
 #house-bar-name{font-size:12px;color:var(--muted);font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;}
+
+/* ── Onboarding ── */
+#onboarding-overlay{position:fixed;inset:0;background:var(--bg);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;padding-top:calc(40px + env(safe-area-inset-top));}
+.ob-step{display:none;flex-direction:column;align-items:center;text-align:center;max-width:360px;width:100%;}
+.ob-step.active{display:flex;}
+.ob-icon{font-size:48px;margin-bottom:20px;}
+.ob-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:400;color:var(--text);margin-bottom:12px;}
+.ob-desc{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:32px;}
+.ob-dots{display:flex;gap:8px;margin-bottom:32px;}
+.ob-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:.3s;}
+.ob-dot.active{background:var(--accent);width:24px;border-radius:4px;}
 </style>
 
 <script>
@@ -537,6 +548,52 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" crossorigin="anonymous"></script>
 <script>
+function mp(n){return 'R$ '+fm(n||0);}
+
+// ── Onboarding ──────────────────────────────────────────
+var _obStep = 0;
+var _obTotal = 4;
+
+function obShow() {
+  var ol = document.getElementById('onboarding-overlay');
+  if (ol) ol.style.display = 'flex';
+  obGoto(0);
+}
+
+function obSkip() {
+  localStorage.setItem('atrium_ob_done','1');
+  var ol = document.getElementById('onboarding-overlay');
+  if (ol) ol.style.display = 'none';
+}
+
+function obNext() {
+  if (_obStep < _obTotal - 1) {
+    obGoto(_obStep + 1);
+  } else {
+    obSkip();
+  }
+}
+
+function obGoto(n) {
+  _obStep = n;
+  for (var i = 0; i < _obTotal; i++) {
+    var step = document.getElementById('ob-step-' + i);
+    var dot  = document.getElementById('ob-dot-' + i);
+    if (step) step.classList.toggle('active', i === n);
+    if (dot)  dot.classList.toggle('active',  i === n);
+  }
+  var btn = document.getElementById('ob-next');
+  if (btn) btn.textContent = (n === _obTotal - 1) ? 'Começar ✓' : 'Próximo →';
+}
+
+// Mostra onboarding na primeira visita
+function checkOnboarding() {
+  if (!localStorage.getItem('atrium_ob_done')) obShow();
+}
+
+
+
+
 
 
 
@@ -874,14 +931,9 @@ async function doSignup() {
       setBtn('Verificando código…');
       const code = invCode.toLowerCase().trim();
       // ── DEBUG: mostra exatamente o que está sendo enviado e recebido ──
-      console.log('[INVITE DEBUG] code being queried:', JSON.stringify(code));
-      console.log('[INVITE DEBUG] code length:', code.length);
-      console.log('[INVITE DEBUG] code charCodes:', [...code].map(ch=>ch.charCodeAt(0)));
-      const { data: hv, error: hvErr } = await supa
+                  const { data: hv, error: hvErr } = await supa
         .from('houses').select('id, name, invite_code').eq('invite_code', code).maybeSingle();
-      console.log('[INVITE DEBUG] data:', JSON.stringify(hv));
-      console.log('[INVITE DEBUG] error:', JSON.stringify(hvErr));
-      if (hvErr) {
+              if (hvErr) {
         _signingUp = false;
         btn.disabled = false; setBtn('Criar conta');
         showAuthErr('Erro ao verificar código: ' + hvErr.message);
@@ -1183,7 +1235,8 @@ async function selectHouse(houseId, houseName, role) {
   dbg('App visível — carregando dados...');
   if (isOnline) {
     await loadFromSupabase();
-    initMonthFromData(); // inicia no primeiro mês com pagamentos em aberto
+    initMonthFromData();
+  checkOnboarding();
     setupRealtime(houseId); // Nível 2: inicia escuta em tempo real
   } else {
     const cached = localStorage.getItem(DBK + '_' + houseId);
@@ -2556,7 +2609,20 @@ function calc(eid, ry, rm) {
   // Se pro-rata ativo, sobrepõe o total e netSal com o valor proporcional
   const finalNetSal = proRataActive ? proRataSal : netSal;
   const finalTotal  = proRataActive ? r2(proRataSal + vtNet - avPaid) : r2(netSal + vtNet - avPaid);
-  return { emp,ry,rm,key,payment,salBase,recs,recTot,avs,avTot,avPaid,holWarns,gross,adjs,deds,bons,inssAmt,netSal,finalNetSal,vtY,vtM,vtWd,vtWdAuto,vtManualDays,vtOK,vtGross,vtDisc,vtNet,pay1:bday1(pyY,pyM),pay5:bday5(pyY,pyM),pyY,pyM,total:finalTotal,isFirstMonth,proRataDias,proRataSal,proRataSalBase,proRataActive };
+  // ── Encargos patronais e provisões (LC 150/2015) ──────────
+  const _baseEnc    = gross; // base de cálculo = salário bruto
+  const fgts        = r2(_baseEnc * 0.08);          // FGTS 8%
+  const inssPatronal= r2(_baseEnc * 0.20);          // INSS patronal 20%
+  const prov13      = r2(_baseEnc / 12);            // Provisão 13º/mês
+  const provFerias  = r2((_baseEnc / 12) * (4/3));  // Provisão férias+1/3/mês
+  const custoTotal  = r2(finalTotal + fgts + inssPatronal + prov13 + provFerias);
+  // IRRF doméstico — tabela progressiva 2024
+  const _irrfBase   = Math.max(0, gross - inssAmt);
+  const irrf        = _irrfBase > 4664.68 ? r2(_irrfBase*0.275-896.00)
+                    : _irrfBase > 3751.06 ? r2(_irrfBase*0.225-662.77)
+                    : _irrfBase > 2826.65 ? r2(_irrfBase*0.150-381.44)
+                    : _irrfBase > 2259.20 ? r2(_irrfBase*0.075-158.40) : 0;
+  return { emp,ry,rm,key,payment,salBase,recs,recTot,avs,avTot,avPaid,holWarns,gross,adjs,deds,bons,inssAmt,netSal,finalNetSal,vtY,vtM,vtWd,vtWdAuto,vtManualDays,vtOK,vtGross,vtDisc,vtNet,pay1:bday1(pyY,pyM),pay5:bday5(pyY,pyM),pyY,pyM,total:finalTotal,isFirstMonth,proRataDias,proRataSal,proRataSalBase,proRataActive,fgts,inssPatronal,prov13,provFerias,custoTotal,irrf };
 }
 
 // ── MEMO HTML ─────────────────────────────────────────────────
@@ -2615,6 +2681,7 @@ function memoHTML(c) {
   out.push(`<div class="banner-dk" style="border-radius:16px;"><p style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.12em;text-transform:uppercase;margin-bottom:16px;">Resumo \u2014 ${rl}</p>`);
   [[rl+' \u2014 Sal\u00e1rio base'+(c.proRataActive?' \u00d7 '+c.proRataDias+'/30':''),c.proRataActive?c.proRataSalBase:c.salBase,false,false],['+ Di\u00e1rias recorrentes',c.recTot,false,c.recTot===0],['+ Di\u00e1rias avulsas',c.avTot,false,c.avTot===0],['+ B\u00f4nus',c.bons,false,c.bons===0],['\u2212 Descontos',c.deds,true,c.deds===0],['\u2212 INSS',c.inssAmt,true,c.inssAmt===0]].filter(r=>!r[3]).forEach(r=>out.push(`<div class="fb" style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,.07);"><span style="font-size:12px;color:rgba(255,255,255,.5);">${r[0]}</span><span class="money" style="font-size:16px;color:${r[2]?'#e99':'rgba(255,255,255,.8)'};">${r[2]?'\u2212':''}R$ ${fm(r[1])}</span></div>`));
   out.push(`<div class="fb" style="padding:14px 0 8px;border-top:1px solid rgba(255,255,255,.15);margin-top:6px;"><span style="font-size:14px;font-weight:500;color:#fff;">&#127974; Sal\u00e1rio l\u00edquido</span><span class="money" style="font-size:28px;color:var(--a2);">R$ ${fm(c.finalNetSal)}</span></div><div class="fb" style="padding:8px 0;border-top:1px solid rgba(255,255,255,.08);"><span style="font-size:12px;color:rgba(255,255,255,.5);">+ VT ${vl}</span><span class="money" style="font-size:18px;color:var(--blue);">R$ ${fm(c.vtNet)}</span></div><div class="fb" style="padding:12px 0 0;border-top:2px solid rgba(255,255,255,.18);margin-top:4px;"><span style="font-size:15px;font-weight:500;color:#fff;">&#128179; Total do envelope</span><span class="money" style="font-size:28px;color:#fff;font-weight:300;">R$ ${fm(c.total)}</span></div></div>`);
+  out.push(`<div class="card" style="margin-bottom:12px;"><p class="lbl" style="margin-bottom:10px;">&#128198; Encargos patronais e provisões</p><p class="tip" style="margin-bottom:12px;">Custo real estimado para o empregador além do envelope de pagamento.</p><div class="mt2"><div class="mr mrh"><span>Item</span><span>Base</span><span style="text-align:right;">Valor/mês</span></div><div class="mr"><span>FGTS (8%)</span><span style="color:var(--muted);">${mp(c.gross)}</span><span style="text-align:right;font-weight:500;">${mp(c.fgts)}</span></div><div class="mr"><span>INSS patronal (20%)</span><span style="color:var(--muted);">${mp(c.gross)}</span><span style="text-align:right;font-weight:500;">${mp(c.inssPatronal)}</span></div><div class="mr"><span>Provisão 13º (1/12)</span><span style="color:var(--muted);">${mp(c.gross)}</span><span style="text-align:right;font-weight:500;">${mp(c.prov13)}</span></div><div class="mr"><span>Provisão férias+1/3 (1/9)</span><span style="color:var(--muted);">${mp(c.gross)}</span><span style="text-align:right;font-weight:500;">${mp(c.provFerias)}</span></div>${c.irrf>0?`<div class="mr"><span>IRRF estimado</span><span style="color:var(--muted);">—</span><span style="text-align:right;color:var(--danger);">${mp(c.irrf)}</span></div>`:''}<div class="mr" style="background:rgba(196,151,58,.1);border-radius:6px;font-weight:500;"><span>&#128200; Custo total estimado</span><span></span><span style="text-align:right;font-size:15px;color:var(--accent);">R\$ ${fm(c.custoTotal)}</span></div></div><p class="tip" style="margin-top:10px;">* Provisões são reservas mensais recomendadas. FGTS e INSS patronal são obrigações mensais para empregados com CTPS.</p></div>`);
   return out.join('');
 }
 
@@ -3922,6 +3989,10 @@ async function initApp() {
       + '</div>';
   }
 }
+
+
+
+
 
 
 
