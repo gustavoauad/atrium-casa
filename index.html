@@ -452,7 +452,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
     <div class="mh"><div class="mt">Ajuste / Desconto</div><button class="xi" onclick="cm('mod-adj')">&#215;</button></div>
     <div class="mb">
       <input type="hidden" id="aeid"><input type="hidden" id="amk"><input type="hidden" id="aid">
-      <div class="field"><label>Tipo</label><select id="atype"><option value="advance">Adiantamento</option><option value="discount">Desconto / Falta</option><option value="bonus">B&#244;nus / Gratifica&#231;&#227;o</option><option value="loan">Empr&#233;stimo (parcela)</option><option value="other">Outro desconto</option></select></div>
+      <div class="field"><label>Tipo</label><select id="atype"><optgroup label="Pagamentos ao funcionário"><option value="advance">Adiantamento</option><option value="bonus">Bônus / Gratificação</option></optgroup><optgroup label="Descontos"><option value="discount">Desconto / Falta</option><option value="loan">Empréstimo (parcela)</option><option value="other">Outro desconto</option></optgroup><optgroup label="Encargos patronais"><option value="fgts">FGTS (8%)</option><option value="inssPatronal">INSS Patronal (20%)</option><option value="prov13">Provisão 13º Salário</option><option value="provFerias">Provisão Férias + 1/3</option><option value="irrf">IRRF Retido na Fonte</option></optgroup></select></div>
       <div class="g2"><div class="field"><label>Valor (R$)</label><input id="aval" type="number" step=".01" placeholder="0,00"></div><div class="field"><label>Data</label><input id="adate" type="date"></div></div>
       <div class="field"><label>Descri&#231;&#227;o</label><input id="adesc" placeholder="ex: Adiantamento 03/06..."></div>
       <div class="div"></div>
@@ -548,6 +548,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" crossorigin="anonymous"></script>
 <script>
+
 
 
 
@@ -4019,6 +4020,7 @@ async function initApp() {
       + '</div>';
   }
 }
+
 
 
 
