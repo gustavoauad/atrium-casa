@@ -555,6 +555,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 function mp(n){return 'R$ '+fm(n||0);}
 
 // ── Onboarding ──────────────────────────────────────────
@@ -3140,20 +3141,25 @@ function renderFech() {
   if(!c.avs.length)avL.push('<p class="tip">Nenhuma di\u00e1ria avulsa lan\u00e7ada.</p>');
   c.avs.forEach(e=>{
     const isPaidEv=!!(e.paidDate);
-    const evCard=`<div class="ep" style="${isPaidEv?'opacity:.85;':''}"><div style="flex:1;min-width:0;">`
+    const bSt='background:var(--cream);border:1px solid var(--border);border-radius:8px;padding:5px 9px;cursor:pointer;font-size:13px;line-height:1;';
+    const evCard=
+      `<div class="ep" style="${isPaidEv?'opacity:.9;':''};align-items:flex-start;gap:10px;">`
+      +`<div style="flex:1;min-width:0;">`
       +`<div style="font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">`
-      +`<span>${fd(e.date)}${e.duration?' · '+e.duration:''}</span>`
+      +`<span style="font-weight:500;">${fd(e.date)}${e.duration?' · '+e.duration:''}</span>`
       +(e.hn?`<span class="badge" style="background:rgba(196,151,58,.15);color:var(--warn);">&#127881; ${e.hn}</span>`:'')
       +(isPaidEv?`<span class="badge" style="background:rgba(107,143,113,.15);color:var(--sage);font-size:10px;">&#10003; Pago ${fd(e.paidDate)}</span>`:'')
       +`</div>`
-      +(e.notes?`<div class="tip">${e.notes}</div>`:'')
+      +(e.notes?`<div class="tip" style="margin-top:4px;">${e.notes}</div>`:'')
       +`</div>`
-      +`<div class="fi" style="gap:8px;flex-shrink:0;">`
+      +`<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">`
       +`<span class="money" style="font-size:16px;color:${isPaidEv?'var(--sage)':'var(--blue)'};">R$ ${fm(e.value)}</span>`
-      +(canWrite()&&!isPaidEv?`<button onclick="openPayEv('${emp.id}','${e.id}','${MK(wy,wm)}')" title="Registrar pagamento" style="background:var(--sage);color:#fff;border:none;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:11px;">&#36; Pagar</button>`:'')
-      +(canWrite()&&isPaidEv?`<button onclick="unPayEv('${emp.id}','${e.id}','${MK(wy,wm)}')" title="Desfazer pagamento" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 8px;cursor:pointer;font-size:11px;color:var(--muted);">&#215;</button>`:'')
-      +(canAct?`<button onclick="openEvM('${emp.id}','${e.date}','${e.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);">&#9998;</button>`:'')
-      +(canAct?`<button onclick="delEv('${emp.id}','${e.id}','${MK(wy,wm)}')" style="background:none;border:none;cursor:pointer;color:var(--danger);">&#10005;</button>`:'')
+      +`<div style="display:flex;gap:5px;">`
+      +(canWrite()&&!isPaidEv?`<button onclick="openPayEv('${emp.id}','${e.id}','${MK(wy,wm)}')" title="Registrar pagamento" style="background:var(--sage);color:#fff;border:none;border-radius:8px;padding:5px 9px;cursor:pointer;font-size:11px;">$ Pagar</button>`:'')
+      +(canWrite()&&isPaidEv?`<button onclick="unPayEv('${emp.id}','${e.id}','${MK(wy,wm)}')" title="Desfazer pagamento" style="${bSt}color:var(--muted);">&#215; Pgto</button>`:'')
+      +(canAct?`<button onclick="openEvM('${emp.id}','${e.date}','${e.id}')" title="Editar" style="${bSt}color:var(--text);">&#9998;</button>`:'')
+      +(canAct?`<button onclick="delEv('${emp.id}',${wy},${wm},'${e.id}')" title="Excluir" style="${bSt}color:var(--danger);">&#10005;</button>`:'')
+      +`</div>`
       +`</div></div>`;
     avL.push(evCard);
   });
@@ -4023,6 +4029,7 @@ async function initApp() {
       + '</div>';
   }
 }
+
 
 
 
