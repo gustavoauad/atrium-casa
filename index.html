@@ -568,6 +568,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 function mp(n){return 'R$ '+fm(n||0);}
 
 // ── Onboarding ──────────────────────────────────────────
@@ -2745,7 +2746,7 @@ function memoHTML(c) {
   if (c.adjs.length) {
     const na=c.bons-c.deds;
     out.push(`<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:12px;"><p class="lbl">&#9315; Ajustes</p><span class="money" style="font-size:18px;color:${na>=0?'var(--sage)':'var(--danger)'};">${na>=0?'+':'\u2212'}R$ ${fm(Math.abs(na))}</span></div><div class="mt2"><div class="mr mrh"><span>Tipo</span><span>Descri\u00e7\u00e3o</span><span style="text-align:right;">Valor</span></div>`);
-    c.adjs.forEach(a=>{const isD=['advance','discount','loan','other'].includes(a.type);out.push(`<div class="mr"><span>${AL[a.type]||a.type}</span><span style="color:var(--muted);">${a.desc||'\u2014'} \u00b7 ${fd(a.date)}</span><span class="money" style="text-align:right;color:${isD?'var(--danger)':'var(--sage)'};">${isD?'\u2212':'+'}R$ ${fm(a.value)}</span></div>`);});
+    c.adjs.forEach(a=>{const isD=['advance','discount','loan','other','antecipacao'].includes(a.type);out.push(`<div class="mr"><span>${AL[a.type]||a.type}</span><span style="color:var(--muted);">${a.desc||'\u2014'} \u00b7 ${fd(a.date)}</span><span class="money" style="text-align:right;color:${isD?'var(--danger)':'var(--sage)'};">${isD?'\u2212':'+'}R$ ${fm(a.value)}</span></div>`);});
     out.push('</div></div>');
   }
   if (c.inssAmt>0) out.push(`<div class="card" style="margin-bottom:12px;"><p class="lbl" style="margin-bottom:10px;">&#9316; INSS</p><div class="mt2"><div class="mr mrh"><span>Item</span><span>Refer\u00eancia</span><span style="text-align:right;">Valor</span></div><div class="mr"><span>Base</span><span style="color:var(--muted);">Sal\u00e1rio bruto</span><span class="money" style="text-align:right;">R$ ${fm(c.gross)}</span></div><div class="mr"><span>Al\u00edquota</span><span style="color:var(--muted);">Tabela progressiva 2024</span><span class="money" style="text-align:right;">${((c.inssAmt/c.gross)*100).toFixed(2)}%</span></div><div class="mr"><span>Desconto INSS</span><span style="color:var(--muted);">Deduzido do sal\u00e1rio</span><span class="money" style="text-align:right;color:var(--danger);">\u2212 R$ ${fm(c.inssAmt)}</span></div></div></div>`);
@@ -3260,7 +3261,7 @@ function renderFech() {
     return ['fgts','inssPatronal','prov13','provFerias','irrf'].indexOf(a.type)<0;
   });
   if(!adjDisplay.length)adjL.push('<p class="tip">Nenhum ajuste lan\u00e7ado.</p>');
-  else adjDisplay.forEach(a=>{const isD=['advance','discount','loan','other'].includes(a.type);adjL.push(`<div class="ep"><div><div style="font-size:13px;">${AL[a.type]||a.type}${a.desc?' \u00b7 '+a.desc:''}</div><div class="tip">${fd(a.date)}</div></div><div class="fi" style="gap:8px;flex-shrink:0;"><span class="money" style="font-size:16px;color:${isD?'var(--danger)':'var(--sage)'};">${isD?'\u2212':'+'}R$ ${fm(a.value)}</span>${canAct?`<button onclick="delA('${emp.id}',${wy},${wm},'${a.id}')" style="background:none;border:none;cursor:pointer;color:var(--danger);">\xd7</button>`:''}</div></div>`);});
+  else adjDisplay.forEach(a=>{const isD=['advance','discount','loan','other','antecipacao'].includes(a.type);adjL.push(`<div class="ep"><div><div style="font-size:13px;">${AL[a.type]||a.type}${a.desc?' \u00b7 '+a.desc:''}</div><div class="tip">${fd(a.date)}</div></div><div class="fi" style="gap:8px;flex-shrink:0;"><span class="money" style="font-size:16px;color:${isD?'var(--danger)':'var(--sage)'};">${isD?'\u2212':'+'}R$ ${fm(a.value)}</span>${canAct?`<button onclick="delA('${emp.id}',${wy},${wm},'${a.id}')" style="background:none;border:none;cursor:pointer;color:var(--danger);">\xd7</button>`:''}</div></div>`);});
   if(adjDisplay && adjDisplay.length){
     var _totAdj=adjDisplay.reduce(function(s,a){
       return ['advance','discount','loan','other','antecipacao'].indexOf(a.type)>=0?s-a.value:s+a.value;
@@ -4134,6 +4135,7 @@ async function initApp() {
       + '</div>';
   }
 }
+
 
 
 
