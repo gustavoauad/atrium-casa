@@ -572,6 +572,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 function mp(n){return 'R$ '+fm(n||0);}
 
 // ── Onboarding ──────────────────────────────────────────
@@ -2648,7 +2649,7 @@ function calc(eid, ry, rm) {
   const avPaid=avs.filter(e=>e.paidDate).reduce((a,e)=>a+e.value,0);
   const avTot=avs.reduce((a,e)=>a+e.value,0), gross=salBase+recTot+avTot;
   let deds=0,bons=0;
-  for (const a of adjs) { if(['advance','discount','loan','other'].includes(a.type))deds+=a.value; else if(a.type==='bonus')bons+=a.value; }
+  for (const a of adjs) { if(['advance','discount','loan','other','antecipacao'].includes(a.type))deds+=a.value; else if(a.type==='bonus')bons+=a.value; }
   const inssAmt=emp.inss==='yes'?inssCalc(gross):0, netSal=gross+bons-deds-inssAmt;
   const vtY=rm===11?ry+1:ry, vtM=rm===11?0:rm+1, vtDays=mdays(vtY,vtM), vtH=allH(), vtSet={};
   for (const d of vtDays) { if((emp.workDays||[]).includes(d.dow)&&!vtH[d.iso])vtSet[d.iso]=1; }
@@ -2677,7 +2678,7 @@ function calc(eid, ry, rm) {
   }
   // Se pro-rata ativo, sobrepõe o total e netSal com o valor proporcional
   const finalNetSal = proRataActive ? proRataSal : netSal;
-  const finalTotal  = proRataActive ? r2(proRataSal + vtNet - avPaid) : r2(netSal + vtNet - avPaid);
+  const finalTotal  = proRataActive ? r2(proRataSal + vtNet) : r2(netSal + vtNet);
   // ── Encargos patronais e provisões (LC 150/2015) ──────────
   const _baseEnc    = gross; // base de cálculo = salário bruto
   const fgts        = r2(_baseEnc * 0.08);          // FGTS 8%
@@ -4177,6 +4178,7 @@ async function initApp() {
       + '</div>';
   }
 }
+
 
 
 
