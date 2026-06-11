@@ -556,6 +556,8 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
+
 function mp(n){return 'R$ '+fm(n||0);}
 
 // ── Onboarding ──────────────────────────────────────────
@@ -3125,6 +3127,38 @@ function renderFech() {
   const canAct=canWrite()&&!isPaid;
   const canEdit=canWrite();
   const empHeader=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">${avt(emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:300;color:var(--text);word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(emp.name)}</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">${escapeHTML(emp.role)}${emp.admissao?' &nbsp;&middot;&nbsp; Adm. '+fd(emp.admissao):''}${isPaid?' &nbsp;&middot;&nbsp; <span style="color:var(--sage);">&#10003; Pago</span>':' &nbsp;&middot;&nbsp; <span style="color:var(--warn);">Pendente</span>'}</div></div><div style="margin-left:auto;text-align:right;flex-shrink:0;"><div style="font-size:10px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;">Compet\u00eancia</div><div style="font-family:'Playfair Display',serif;font-size:20px;color:var(--a2);">${wl}</div><div style="font-size:11px;color:var(--muted);">Pgto em ${pl}</div></div></div>`;
+
+  // Resumo compacto: componentes do envelope
+  const AL2 = { advance:'Adiantamento', discount:'Desconto/Falta', bonus:'Bonus',
+    loan:'Parcela emprest.', other:'Outro desc.',
+    fgts:'FGTS (8%)', inssPatronal:'INSS Patronal', prov13:'Provis. 13o',
+    provFerias:'Provis. Ferias', irrf:'IRRF' };
+  // Separa ajustes por tipo
+  const adjDeds = c.adjs.filter(a=>['advance','discount','loan','other'].includes(a.type));
+  const adjBons = c.adjs.filter(a=>a.type==='bonus');
+  const adjEnc  = c.adjs.filter(a=>['fgts','inssPatronal','prov13','provFerias','irrf'].includes(a.type));
+  const resumoRows = [];
+  resumoRows.push(`<div class='mr'><span>Sal. base</span><span></span><span class='money' style='text-align:right;color:var(--text);'>R$ ${fm(c.salBase)}</span></div>`);
+  if(c.recTot>0) resumoRows.push(`<div class='mr'><span>Recorrencias (${c.recs.length}x)</span><span></span><span class='money' style='text-align:right;color:var(--sage);'>+ R$ ${fm(c.recTot)}</span></div>`);
+  if(c.avTot>0) resumoRows.push(`<div class='mr'><span>Diarias avulsas (${c.avs.length}x)</span><span></span><span class='money' style='text-align:right;color:var(--blue);'>+ R$ ${fm(c.avTot)}</span></div>`);
+  if(c.inssAmt>0) resumoRows.push(`<div class='mr'><span>INSS funcionario</span><span></span><span class='money' style='text-align:right;color:var(--danger);'>- R$ ${fm(c.inssAmt)}</span></div>`);
+  adjDeds.forEach(a=>resumoRows.push(`<div class='mr'><span>${AL2[a.type]||a.type}${a.desc?' · '+a.desc:''}</span><span style='font-size:10px;color:var(--muted);'>${fd(a.date)}</span><span class='money' style='text-align:right;color:var(--danger);'>- R$ ${fm(a.value)}</span></div>`));
+  adjBons.forEach(a=>resumoRows.push(`<div class='mr'><span>${AL2[a.type]||a.type}${a.desc?' · '+a.desc:''}</span><span style='font-size:10px;color:var(--muted);'>${fd(a.date)}</span><span class='money' style='text-align:right;color:var(--sage);'>+ R$ ${fm(a.value)}</span></div>`));
+  if(c.avPaid>0) resumoRows.push(`<div class='mr'><span>Diarias ja pagas</span><span></span><span class='money' style='text-align:right;color:var(--muted);'>- R$ ${fm(c.avPaid)}</span></div>`);
+  if(c.vtNet>0) resumoRows.push(`<div class='mr'><span>Vale transporte</span><span></span><span class='money' style='text-align:right;color:var(--blue);'>+ R$ ${fm(c.vtNet)}</span></div>`);
+  const resumoCard = resumoRows.length ? 
+    `<div class='card' style='margin-bottom:12px;'>
+      <div class='fb' style='margin-bottom:10px;'>
+        <span style='font-size:13px;font-weight:400;'>Resumo do envelope</span>
+        <span class='money' style='font-size:16px;color:var(--accent);'>R$ ${fm(c.total)}</span>
+      </div>
+      <div class='mt2' style='margin-bottom:0;'>${resumoRows.join('')}</div>
+      <div style='border-top:1px solid var(--border);margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;align-items:center;'>
+        <span style='font-size:12px;color:var(--muted);'>Total liquido</span>
+        <span class='money' style='font-size:18px;font-weight:500;color:var(--accent);'>R$ ${fm(c.total)}</span>
+      </div>
+    </div>` : '';
+
   const calParts=['<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:4px;"><span style="font-size:13px;font-weight:400;">'+wl+'</span><div class="fi" style="gap:8px;"><button class="btn btn-gh btn-sm" onclick="openReg()">&#128467; Feriados regionais</button>'+(canAct?`<button class="btn btn-gh btn-sm" onclick="openEvM('${emp.id}','${td}')">+ Di\u00e1ria avulsa</button>`:'')+`</div></div><div class="cg">`];
   DP.forEach(d=>calParts.push(`<div class="ch">${d}</div>`));
   for(let z=0;z<fdow;z++)calParts.push('<div class="cd ce"></div>');
@@ -3248,8 +3282,8 @@ function renderFech() {
   const cta=canAct?`<div class="fe" style="margin-top:16px;"><button class="btn btn-gh" onclick="openAM('${emp.id}',${wy},${wm})">+ Ajuste</button><button class="btn btn-sg" onclick="openPayM('${emp.id}',${wy},${wm})">Ver mem\u00f3ria &amp; confirmar</button></div>`:'';
   // Após pagamento: mostra apenas o resumo do pagamento
   const fechContent = isPaid
-    ? [selH, empHeader, paidB].join('')
-    : [selH, empHeader, rescBar.join(''), calParts.join(''), avL.join(''), adjL.join(''), memoHTML(c), cta].join('');
+    ? [selH, empHeader, resumoCard, paidB].join('')
+    : [selH, empHeader, resumoCard, rescBar.join(''), calParts.join(''), avL.join(''), adjL.join(''), memoHTML(c), cta].join('');
   document.getElementById('tab-fech').innerHTML = fechContent;
 }
 
@@ -4029,6 +4063,8 @@ async function initApp() {
       + '</div>';
   }
 }
+
+
 
 
 
