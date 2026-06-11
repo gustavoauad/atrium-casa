@@ -570,6 +570,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 function mp(n){return 'R$ '+fm(n||0);}
 
 // ── Onboarding ──────────────────────────────────────────
@@ -3263,22 +3264,55 @@ function renderFech() {
     avL.push(evCard);
   });
   avL.push('</div>');
-  const adjL=['<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:10px;"><span style="font-size:13px;font-weight:400;">Ajustes &amp; Descontos</span>'+(canAct?`<button class="btn btn-gh btn-sm" onclick="openAM('${emp.id}',${wy},${wm})">+ Adicionar</button>`:'')+`</div>`];
-  var adjDisplay=c.adjs.filter(function(a){
-    return ['fgts','inssPatronal','prov13','provFerias','irrf'].indexOf(a.type)<0;
-  });
-  if(!adjDisplay.length)adjL.push('<p class="tip">Nenhum ajuste lan\u00e7ado.</p>');
-  else adjDisplay.forEach(a=>{const isD=['advance','discount','loan','other','antecipacao'].includes(a.type);adjL.push(`<div class="ep"><div><div style="font-size:13px;">${AL[a.type]||a.type}${a.desc?' \u00b7 '+a.desc:''}</div><div class="tip">${fd(a.date)}</div></div><div class="fi" style="gap:8px;flex-shrink:0;"><span class="money" style="font-size:16px;color:${isD?'var(--danger)':'var(--sage)'};">${isD?'\u2212':'+'}R$ ${fm(a.value)}</span>${canAct?`<button onclick="delA('${emp.id}',${wy},${wm},'${a.id}')" style="background:none;border:none;cursor:pointer;color:var(--danger);">\xd7</button>`:''}</div></div>`);});
-  if(adjDisplay && adjDisplay.length){
-    var _totAdj=adjDisplay.reduce(function(s,a){
-      return ['advance','discount','loan','other','antecipacao'].indexOf(a.type)>=0?s-a.value:s+a.value;
-    },0);
-    var _tColor=_totAdj>=0?'var(--sage)':'var(--danger)';
-    var _tSign=_totAdj>=0?'+':'-';
+    var _adjPay  = c.adjs.filter(function(a){ return ['advance','discount','loan','other','bonus','antecipacao'].indexOf(a.type)>=0; });
+  var _adjEnc  = c.adjs.filter(function(a){ return ['fgts','inssPatronal','prov13','provFerias','irrf'].indexOf(a.type)>=0; });
+  var _adjDisp = _adjPay; // alias para compatibilidade com total
+  // Total de ajustes que afetam pagamento
+  var _totAdj = _adjPay.reduce(function(s,a){
+    return ['advance','discount','loan','other','antecipacao'].indexOf(a.type)>=0 ? s-a.value : s+a.value;
+  },0);
+  var _na = _totAdj; // para o header
+  // ── Card ④ Ajustes ─────────────────────────────────────
+  const adjL=['<div class="card" style="margin-bottom:12px;">']
+  // Header com total
+  adjL.push(`<div class="fb" style="margin-bottom:10px;">`
+    +`<p class="lbl">&#9315; Ajustes</p>`
+    +`<span class="money" style="font-size:16px;color:${_na>=0?'var(--sage)':'var(--danger)'}">${_na>=0?'+':'\u2212'}R$ ${fm(Math.abs(_na))}</span>`
+    +(canAct?`<button class="btn btn-gh btn-sm" onclick="openAM('${emp.id}',${wy},${wm})">+ Adicionar</button>`:'')
+    +`</div>`);
+  // Seção 1: Ajustes que afetam o pagamento
+  if(!_adjPay.length){
+    adjL.push('<p class="tip">Nenhum ajuste lan\u00e7ado.</p>');
+  } else {
+    _adjPay.forEach(a=>{
+      const isD=['advance','discount','loan','other','antecipacao'].includes(a.type);
+      const nSign=isD?'\u2212':'+';
+      const nColor=isD?'var(--danger)':'var(--sage)';
+      adjL.push(`<div class="ep"><div><div style="font-size:13px;color:${nColor};">${AL[a.type]||a.type}${a.desc?' \u00b7 '+a.desc:''}</div><div class="tip">${fd(a.date)}</div></div>`
+        +`<div class="fi" style="gap:8px;"><span class="money" style="font-size:15px;color:${nColor};">${nSign} R$ ${fm(a.value)}</span>`
+        +(canAct&&a.type!=='antecipacao'?`<button onclick="openAM('${emp.id}',${wy},${wm},'${a.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);">&#9998;</button>`:'')
+        +(canAct&&a.type!=='antecipacao'?`<button onclick="delA('${emp.id}',${wy},${wm},'${a.id}')" style="background:none;border:none;cursor:pointer;color:var(--danger);">&#215;</button>`:'')
+        +(canAct&&a.type==='antecipacao'?`<button onclick="delA('${emp.id}',${wy},${wm},'${a.id}')" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:10px;">desfazer</button>`:'')
+        +`</div></div>`);
+    });
+    // Total linha
+    var _tC=_totAdj>=0?'var(--sage)':'var(--danger)';
+    var _tS=_totAdj>=0?'+':'\u2212';
     adjL.push('<div class="ep" style="border-top:2px solid var(--border);margin-top:4px;padding-top:10px;">'
       +'<span style="font-size:12px;color:var(--muted);font-weight:500;">Total</span>'
-      +'<span class="money" style="font-size:15px;color:'+_tColor+';font-weight:500;">'
-      +_tSign+' R$ '+fm(Math.abs(_totAdj))+'</span></div>');
+      +'<span class="money" style="font-size:15px;color:'+_tC+';font-weight:500;">'
+      +_tS+' R$ '+fm(Math.abs(_totAdj))+'</span></div>');
+  }
+  // Seção 2: Encargos registrados (informativo)
+  if(_adjEnc.length){
+    adjL.push('<div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border);">'
+      +'<p style="font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Encargos registrados</p></div>');
+    _adjEnc.forEach(a=>{
+      adjL.push(`<div class="ep"><div><div style="font-size:13px;">${AL[a.type]||a.type}${a.desc?' \u00b7 '+a.desc:''}</div><div class="tip">${fd(a.date)}</div></div>`
+        +`<div class="fi" style="gap:8px;"><span class="money" style="font-size:15px;">R$ ${fm(a.value)}</span>`
+        +(canAct?`<button onclick="delA('${emp.id}',${wy},${wm},'${a.id}')" style="background:none;border:none;cursor:pointer;color:var(--danger);">&#215;</button>`:'')
+        +`</div></div>`);
+    });
   }
   adjL.push('</div>');
   const rescKey='resc_'+eid+'_'+MK(wy,wm), rescData=JSON.parse(localStorage.getItem(rescKey)||'null'), isResc=!!rescData;
@@ -4142,6 +4176,7 @@ async function initApp() {
       + '</div>';
   }
 }
+
 
 
 
