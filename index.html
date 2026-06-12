@@ -581,6 +581,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 function mp(n){return 'R$ '+fm(n||0);}
 
 // ── Onboarding ──────────────────────────────────────────
@@ -3245,10 +3246,29 @@ function renderDash() {
   calcs.forEach(c=>{
     const isPaid=!!c.payment, hw=c.holWarns.length>0;
     out.push(`<div class="card" style="border:1px solid ${isPaid?'rgba(138,155,138,.4)':hw?'rgba(196,151,58,.4)':'var(--border)'};">`);
-    out.push(`<div class="fb" style="margin-bottom:14px;"><div class="fi" style="gap:12px;flex:1;min-width:0;">${avt(c.emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-size:14px;font-weight:400;word-break:break-word;overflow-wrap:anywhere;line-height:1.3;">${escapeHTML(c.emp.name)}</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">${escapeHTML(c.emp.role)}</div></div></div><div style="text-align:right;flex-shrink:0;"><div class="money" style="font-size:22px;color:${isPaid?'var(--sage)':' var(--accent)'};">${isPaid?'&#10003; ':''}R$ ${fm(c.total)}</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Base R$ ${fm(c.salBase)}${c.vtNet>0?' · VT R$ '+fm(c.vtNet):''}${c.deds>0?' · Desc −R$ '+fm(c.deds):''}</div>${isPaid?'<div style="font-size:10px;color:var(--sage);margin-top:2px;">Pago</div>':'' }</div></div>`);
+    out.push(`<div class="fb" style="margin-bottom:14px;"><div class="fi" style="gap:12px;flex:1;min-width:0;">${avt(c.emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-size:14px;font-weight:400;word-break:break-word;overflow-wrap:anywhere;line-height:1.3;">${escapeHTML(c.emp.name)}</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">${escapeHTML(c.emp.role)}</div></div></div><div style="text-align:right;flex-shrink:0;">${(function(){var _e=c.adjs.filter(function(a){return ['fgts','inssPatronal','prov13','provFerias','irrf'].indexOf(a.type)>=0;});var _te=_e.reduce(function(s,a){return s+a.value;},0);var _gt=r2(c.total+_te);return '<div class="money" style="font-size:22px;color:'+(isPaid?'var(--sage)':' var(--accent)')+';white-space:nowrap;">'+(isPaid?'&#10003; ':'')+'R$ '+fm(_gt)+'</div>'+'<div style="font-size:10px;color:var(--muted);margin-top:2px;">Sal. R$ '+fm(c.finalNetSal)+(c.vtNet>0?' · VT R$ '+fm(c.vtNet):'')+(_te>0?' · Enc R$ '+fm(_te):'')+(c.deds>0?' · Desc \u2212R$ '+fm(c.deds):'')+'</div>'+(isPaid?'<div style="font-size:10px;color:var(--sage);">&#10003; Pago</div>':'');})()}</div></div>`);
     if(hw)out.push(`<div class="alert aw" style="margin-bottom:12px;"><span style="font-size:11px;color:var(--warn);">&#9888;&#65039; ${c.holWarns.length} feriado(s) sem di\u00e1ria &nbsp;<button onclick="goFech('${c.emp.id}')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;text-decoration:underline;">ver detalhes</button></span></div>`);
-    out.push('<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;min-width:0;">');
-    [['Base','R$ '+fm(c.proRataActive?c.proRataSalBase:c.salBase)+(c.proRataActive?' (PR)':''),'var(--text)'],['Di\u00e1rias','R$ '+fm(c.recTot+c.avTot),'var(--sage)'],['Descontos','R$ '+fm(c.deds+c.inssAmt),'var(--danger)'],[MP[c.vtM].slice(0,3)+' VT','R$ '+fm(c.vtNet),'var(--blue)']].forEach(k=>out.push(`<div style="background:var(--cream);border-radius:9px;padding:10px;text-align:center;"><div class="lbl" style="margin-bottom:4px;">${k[0]}</div><div class="money" style="font-size:14px;color:${k[2]};">${k[1]}</div></div>`));
+    // Grid 4 colunas com encargos
+    (function(){
+      var _encG=c.adjs.filter(function(a){return ['fgts','inssPatronal','prov13','provFerias','irrf'].indexOf(a.type)>=0;});
+      var _totEncG=_encG.reduce(function(s,a){return s+a.value;},0);
+      var _acr=r2(c.recTot+c.avTot+c.bons);
+      var _des=r2(c.deds+c.inssAmt);
+      var _cells=[
+        ['Base','R$ '+fm(c.proRataActive?c.proRataSalBase:c.salBase)+(c.proRataActive?' (PR)':''),'var(--text)'],
+        ['Acrésci.','R$ '+fm(_acr),'var(--sage)'],
+        ['Descontos','\u2212R$ '+fm(_des),'var(--danger)'],
+        _totEncG>0?['Encargos','R$ '+fm(_totEncG),'var(--muted)']:['VT '+MP[c.vtM].slice(0,3),'R$ '+fm(c.vtNet),'var(--blue)']
+      ];
+      out.push('<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;min-width:0;">');
+      _cells.forEach(function(k){
+        out.push('<div style="background:var(--cream);border-radius:9px;padding:10px;text-align:center;">'
+          +'<div class="lbl" style="margin-bottom:4px;">'+k[0]+'</div>'
+          +'<div class="money" style="font-size:14px;color:'+k[2]+';white-space:nowrap;">'+k[1]+'</div>'
+          +'</div>');
+      });
+      out.push('</div>');
+    })();
         out.push(`</div><div class="fi" style="gap:8px;flex-wrap:wrap;"><button class="btn btn-gh btn-sm" onclick="goFech('${c.emp.id}')">Ver memória</button><button class=\"btn btn-gh btn-sm\" onclick=\"editPayment(\'${c.emp.id}\',${c.ry},${c.rm})\">&#9998; Editar pgto</button>`);
     out.push(isPaid?`<span style="margin-left:auto;font-size:11px;color:var(--sage);">&#10003; Pago em ${fd(c.payment.paidDate)} via ${c.payment.method}${c.payment?.isRescisao?'<span style=\"margin-left:6px;color:var(--danger);font-size:10px;\">&#128197; Rescis\u00e3o</span>':''}</span>`:canWrite()?`<button class="btn btn-sg btn-sm write-only" style="margin-left:auto;" onclick="openPayM('${c.emp.id}',${wy},${wm})">Confirmar pagamento</button>`:'');
     out.push('</div></div>');
@@ -3434,7 +3454,7 @@ function renderFech() {
         +`<div class="fi" style="gap:8px;"><span class="money" style="font-size:15px;color:${nColor};">${nSign} R$ ${fm(a.value)}</span>`
         +(canAct&&a.type!=='antecipacao'?`<button onclick="openAM('${emp.id}',${wy},${wm},'${a.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);">&#9998;</button>`:'')
         +(canAct&&a.type!=='antecipacao'?`<button onclick="delA('${emp.id}',${wy},${wm},'${a.id}')" style="background:none;border:none;cursor:pointer;color:var(--danger);">&#215;</button>`:'')
-        +(canAct&&a.type==='antecipacao'?`<button onclick="delA('${emp.id}',${wy},${wm},'${a.id}')" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:10px;">desfazer</button>`:'')
+        +(canAct&&a.type==='antecipacao'?`<button onclick="delA('${emp.id}',${wy},${wm},'${a.id}')" title="Desfazer" style="background:var(--cream);border:1px solid var(--border);border-radius:8px;padding:5px 9px;cursor:pointer;font-size:13px;color:var(--danger);line-height:1;">&#215;</button>`:'')
         +`</div></div>`);
     });
     // Total linha
@@ -4328,6 +4348,7 @@ async function initApp() {
       + '</div>';
   }
 }
+
 
 
 
