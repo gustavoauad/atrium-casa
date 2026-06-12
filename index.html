@@ -580,6 +580,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 function mp(n){return 'R$ '+fm(n||0);}
 
 // ── Onboarding ──────────────────────────────────────────
@@ -3083,111 +3084,151 @@ function gerarAcordo(emp,adm,data,e){docWindow('Acordo M\u00fatuo',`<h1>TERMO DE
 function buildDashCharts(calcs, wy, wm) {
   if(!calcs.length) return '';
   const active=getActiveMonths();
-  // Últimos 6 meses de referência disponíveis
   const last6=active.slice(-6);
   if(!last6.length) return '';
-
   const allEmps=sortEmps(db.employees.filter(e=>e.status!=='desligado'));
 
-  // Dados por mês
-  const byMonth=last6.map(({y,m})=>{
+  // ── Dados por mês ─────────────────────────────────────────
+  const byMonth=last6.map(function({y,m}){
     const cs=allEmps.map(e=>calc(e.id,y,m));
-    const tot=cs.reduce((s,c)=>s+c.total,0);
-    const sal=cs.reduce((s,c)=>s+c.finalNetSal,0);
-    const vt=cs.reduce((s,c)=>s+c.vtNet,0);
-    const paid=cs.filter(c=>c.payment).length;
-    return {y,m,tot,sal,vt,paid,total:allEmps.length,label:MP[m].slice(0,3)};
+    return {
+      y,m,
+      tot:   cs.reduce((s,c)=>s+c.total,0),
+      sal:   cs.reduce((s,c)=>s+c.finalNetSal,0),
+      vt:    cs.reduce((s,c)=>s+c.vtNet,0),
+      deds:  cs.reduce((s,c)=>s+c.deds,0),
+      paid:  cs.filter(c=>c.payment).length,
+      n:     allEmps.length,
+      label: MP[m].slice(0,3)+' '+String(y).slice(2)
+    };
   });
-
   const maxTot=Math.max(...byMonth.map(b=>b.tot),1);
 
-  // ── Gráfico 1: Total a pagar por mês (barras) ──────────────
-  const barW=`100%`;
-  let chart1=`<div class="card" style="margin-bottom:12px;">
-    <p class="lbl" style="margin-bottom:14px;">&#128200; Total a pagar — últimos ${last6.length} meses</p>
-    <div style="display:flex;align-items:flex-end;gap:4px;height:80px;padding-bottom:24px;position:relative;overflow-x:auto;">`;
+  // ── Cores para pizza ──────────────────────────────────────
+  const PIE_COLORS=['#8B6F47','#6B8F71','#8ABDD8','#C4973A','#A0856B','#7BA882','#5A9EBF','#B8860B','#9CAF88','#6B9CB4'];
 
-  byMonth.forEach(b=>{
-    const pct=Math.max(Math.round((b.tot/maxTot)*90),2);
+  // ── Gráfico 1: Total a pagar — barras mensais ─────────────
+  let g1='<div class="card" style="margin-bottom:12px;">';
+  g1+='<p class="lbl" style="margin-bottom:12px;">Total a pagar — últimos '+last6.length+' meses</p>';
+  g1+='<div style="display:flex;align-items:flex-end;gap:4px;height:72px;padding-bottom:22px;position:relative;">';
+  byMonth.forEach(function(b){
+    const pct=Math.max(Math.round((b.tot/maxTot)*66),3);
     const isCur=(b.y===wy&&b.m===wm);
-    chart1+=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;">
-      <div style="width:100%;background:${isCur?'var(--accent)':'var(--a2)'};border-radius:4px 4px 0 0;
-        height:${pct}px;min-height:4px;transition:height .3s;opacity:${isCur?1:0.6};" title="R$ ${fm(b.tot)}"></div>
-      <span style="font-size:9px;color:${isCur?'var(--accent)':'var(--muted)'};font-weight:${isCur?500:400};
-        white-space:nowrap;position:absolute;bottom:-20px;">${b.label}</span>
-    </div>`;
+    g1+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;position:relative;">'
+      +'<div style="width:100%;background:'+(isCur?'var(--accent)':'var(--a2)')+';border-radius:3px 3px 0 0;'
+      +'height:'+pct+'px;min-height:3px;opacity:'+(isCur?1:0.55)+';cursor:default;" title="R$ '+fm(b.tot)+' · '+b.label+'"></div>'
+      +'<span style="font-size:8px;color:'+(isCur?'var(--accent)':'var(--muted)')+';font-weight:'+(isCur?600:400)+';'
+      +'white-space:nowrap;position:absolute;bottom:-18px;">'+b.label+'</span>'
+      +'</div>';
   });
-  chart1+=`</div></div>`;
+  g1+='</div>';
+  // Legenda valores
+  g1+='<div style="display:flex;gap:12px;margin-top:6px;flex-wrap:wrap;">';
+  g1+='<span style="font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px;">'
+     +'<span style="width:8px;height:8px;background:var(--accent);border-radius:2px;display:inline-block;"></span>Mês atual</span>';
+  g1+='<span style="font-size:10px;color:var(--muted);">Maior: R$ '+fm(maxTot)+'</span>';
+  const curTot=byMonth.find(function(b){return b.y===wy&&b.m===wm;});
+  if(curTot) g1+='<span style="font-size:10px;color:var(--accent);font-weight:500;">Este mês: R$ '+fm(curTot.tot)+'</span>';
+  g1+='</div></div>';
 
-  // ── Gráfico 2: Status de pagamentos (rosca simples) ──────────
+  // ── Gráfico 2: Status pagamentos — donut ──────────────────
   const totalFuncs=allEmps.length;
-  const paidCount=calcs.filter(c=>c.payment).length;
+  const paidCount=calcs.filter(function(c){return c.payment;}).length;
   const pendCount=totalFuncs-paidCount;
   const paidPct=totalFuncs>0?Math.round((paidCount/totalFuncs)*100):0;
-  // SVG donut
-  const r=30,cx=40,cy=40,circ=2*Math.PI*r;
-  const paidArc=circ*(paidCount/Math.max(totalFuncs,1));
-  const donut=`<svg width="80" height="80" viewBox="0 0 80 80">
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="10"/>
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--sage)" stroke-width="10"
-      stroke-dasharray="${paidArc} ${circ}" stroke-dashoffset="${circ/4}" stroke-linecap="round"/>
-    <text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="13" font-weight="500"
-      fill="var(--text)">${paidPct}%</text>
-  </svg>`;
+  const r2d=36,cx2=44,cy2=44,circ2=2*Math.PI*r2d;
+  const paidArc2=circ2*(paidCount/Math.max(totalFuncs,1));
+  const donut2='<svg width="88" height="88" viewBox="0 0 88 88">'
+    +'<circle cx="'+cx2+'" cy="'+cy2+'" r="'+r2d+'" fill="none" stroke="var(--border)" stroke-width="12"/>'
+    +'<circle cx="'+cx2+'" cy="'+cy2+'" r="'+r2d+'" fill="none" stroke="var(--sage)" stroke-width="12"'
+    +' stroke-dasharray="'+paidArc2+' '+circ2+'" stroke-dashoffset="'+circ2/4+'" stroke-linecap="round"/>'
+    +'<text x="'+cx2+'" y="'+(cy2+4)+'" text-anchor="middle" font-size="14" font-weight="600" fill="var(--text)">'+paidPct+'%</text>'
+    +'</svg>';
+  const g2='<div class="card" style="margin-bottom:12px;">'
+    +'<p class="lbl" style="margin-bottom:10px;">Pagamentos — '+MP[wm]+' '+wy+'</p>'
+    +'<div style="display:flex;align-items:center;gap:16px;">'
+    +donut2
+    +'<div style="display:flex;flex-direction:column;gap:5px;">'
+    +'<div style="font-size:13px;"><span style="color:var(--sage);font-weight:600;">'+paidCount+'</span>'
+    +'<span style="color:var(--muted);font-size:11px;"> pagos</span></div>'
+    +'<div style="font-size:13px;"><span style="color:var(--warn);font-weight:600;">'+pendCount+'</span>'
+    +'<span style="color:var(--muted);font-size:11px;"> pendentes</span></div>'
+    +'<div style="font-size:11px;color:var(--muted);">'+totalFuncs+' funcionário'+(totalFuncs!==1?'s':'')+'</div>'
+    +'</div></div></div>';
 
-  // ── Gráfico 3: Composição sal vs VT (barras empilhadas) ──────
-  let chart3=`<div class="card" style="margin-bottom:12px;">
-    <p class="lbl" style="margin-bottom:14px;">&#128184; Composição por mês</p>
-    <div style="display:flex;align-items:flex-end;gap:6px;height:80px;padding-bottom:28px;">`;
-  const maxComp=Math.max(...byMonth.map(b=>b.sal+b.vt),1);
-  byMonth.forEach(b=>{
-    const salH=Math.max(Math.round((b.sal/maxComp)*72),1);
-    const vtH=Math.max(Math.round((b.vt/maxComp)*72),1);
+  // ── Gráfico 3: Pizza — fatia por funcionário ──────────────
+  const totMes=calcs.reduce(function(s,c){return s+c.total;},0);
+  let g3='<div class="card" style="margin-bottom:12px;">';
+  g3+='<p class="lbl" style="margin-bottom:10px;">Distribuição da folha — '+MP[wm]+' '+wy+'</p>';
+  if(totMes>0){
+    // SVG pie chart
+    const PIE_R=50, PIE_CX=60, PIE_CY=60;
+    let pieSlices='', legendItems='', angle=0;
+    calcs.forEach(function(cal,idx){
+      if(!cal.total) return;
+      const pct=cal.total/totMes;
+      const startA=angle, endA=angle+pct*2*Math.PI;
+      const x1=PIE_CX+PIE_R*Math.sin(startA), y1=PIE_CY-PIE_R*Math.cos(startA);
+      const x2=PIE_CX+PIE_R*Math.sin(endA),   y2=PIE_CY-PIE_R*Math.cos(endA);
+      const large=pct>0.5?1:0;
+      const col=PIE_COLORS[idx%PIE_COLORS.length];
+      pieSlices+='<path d="M '+PIE_CX+' '+PIE_CY+' L '+x1.toFixed(1)+' '+y1.toFixed(1)
+        +' A '+PIE_R+' '+PIE_R+' 0 '+large+' 1 '+x2.toFixed(1)+' '+y2.toFixed(1)+' Z"'
+        +' fill="'+col+'" opacity="0.85" title="'+escapeHTML(cal.emp.name)+': R$ '+fm(cal.total)+'">';
+      pieSlices+='<title>'+escapeHTML(cal.emp.name)+': R$ '+fm(cal.total)+' ('+Math.round(pct*100)+'%)</title></path>';
+      const nameParts=cal.emp.name.split(' ');
+      const shortName=nameParts[0]+(nameParts.length>1?' '+nameParts[nameParts.length-1]:'');
+      legendItems+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+        +'<span style="width:10px;height:10px;border-radius:50%;background:'+col+';flex-shrink:0;display:inline-block;"></span>'
+        +'<span style="font-size:11px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escapeHTML(shortName)+'</span>'
+        +'<span style="font-size:11px;color:var(--text);font-weight:500;flex-shrink:0;">'+Math.round(pct*100)+'%</span>'
+        +'</div>';
+      angle=endA;
+    });
+    g3+='<div style="display:flex;align-items:center;gap:14px;">'
+      +'<svg width="120" height="120" viewBox="0 0 120 120" style="flex-shrink:0;">'+pieSlices+'</svg>'
+      +'<div style="flex:1;min-width:0;">'+legendItems
+      +'<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;">'
+      +'<span style="font-size:11px;color:var(--muted);">Total: </span>'
+      +'<span style="font-size:12px;font-weight:500;color:var(--accent);">R$ '+fm(totMes)+'</span>'
+      +'</div></div></div>';
+  }
+  g3+='</div>';
+
+  // ── Gráfico 4: Composição Sal+VT por mês — barras empilhadas ──
+  const maxComp=Math.max(...byMonth.map(function(b){return b.sal+b.vt;}),1);
+  let g4='<div class="card" style="margin-bottom:12px;">';
+  g4+='<p class="lbl" style="margin-bottom:12px;">Composição mensal</p>';
+  g4+='<div style="display:flex;align-items:flex-end;gap:4px;height:64px;padding-bottom:22px;">';
+  byMonth.forEach(function(b){
+    const salH=Math.max(Math.round((b.sal/maxComp)*58),2);
+    const vtH=Math.max(Math.round((b.vt/maxComp)*58),1);
     const isCur=(b.y===wy&&b.m===wm);
-    chart3+=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;position:relative;">
-      <div style="width:100%;display:flex;flex-direction:column;align-items:stretch;gap:1px;">
-        <div style="background:var(--blue);border-radius:3px 3px 0 0;height:${vtH}px;opacity:${isCur?1:.55};"></div>
-        <div style="background:${isCur?'var(--accent)':'var(--a2)'};height:${salH}px;border-radius:0 0 3px 3px;opacity:${isCur?1:.55};"></div>
-      </div>
-      <span style="font-size:9px;color:${isCur?'var(--accent)':'var(--muted)'};white-space:nowrap;
-        position:absolute;bottom:-20px;">${b.label}</span>
-    </div>`;
+    const op=isCur?1:0.5;
+    g4+='<div style="flex:1;display:flex;flex-direction:column;align-items:stretch;gap:1px;position:relative;">'
+      +'<div style="background:var(--blue);border-radius:2px 2px 0 0;height:'+vtH+'px;opacity:'+op+';cursor:default;" title="VT R$ '+fm(b.vt)+'"></div>'
+      +'<div style="background:'+(isCur?'var(--accent)':'var(--a2)')+';height:'+salH+'px;border-radius:0 0 2px 2px;opacity:'+op+';cursor:default;" title="Sal R$ '+fm(b.sal)+'"></div>'
+      +'<span style="font-size:8px;color:'+(isCur?'var(--accent)':'var(--muted)')+';white-space:nowrap;position:absolute;bottom:-18px;font-weight:'+(isCur?600:400)+';">'+b.label+'</span>'
+      +'</div>';
   });
-  chart3+=`</div>
-    <div style="display:flex;gap:12px;margin-top:6px;">
-      <span style="font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px;">
-        <span style="width:10px;height:10px;background:var(--accent);border-radius:2px;display:inline-block;"></span>Salário
-      </span>
-      <span style="font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px;">
-        <span style="width:10px;height:10px;background:var(--blue);border-radius:2px;display:inline-block;"></span>VT
-      </span>
-    </div>
-  </div>`;
+  g4+='</div>';
+  g4+='<div style="display:flex;gap:14px;margin-top:6px;">';
+  g4+='<span style="font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;background:var(--accent);border-radius:2px;display:inline-block;"></span>Salário</span>';
+  g4+='<span style="font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;background:var(--blue);border-radius:2px;display:inline-block;"></span>VT</span>';
+  g4+='</div></div>';
 
-  const chart2=`<div class="card" style="margin-bottom:12px;">
-    <p class="lbl" style="margin-bottom:10px;">&#10003; Status — ${MP[wm]} ${wy}</p>
-    <div style="display:flex;align-items:center;gap:16px;">
-      ${donut}
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        <div style="font-size:13px;"><span style="color:var(--sage);font-weight:500;">${paidCount}</span>
-          <span style="color:var(--muted);font-size:11px;"> pagos</span></div>
-        <div style="font-size:13px;"><span style="color:var(--warn);font-weight:500;">${pendCount}</span>
-          <span style="color:var(--muted);font-size:11px;"> pendentes</span></div>
-        <div style="font-size:11px;color:var(--muted);">${totalFuncs} funcionário${totalFuncs!==1?'s':''}</div>
-      </div>
-    </div>
-  </div>`;
-
-  return `<div style="margin-top:8px;">
-    <p style="font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;
-      font-weight:500;margin-bottom:10px;">Gráficos</p>
-    <div class="g2" style="gap:12px;margin-bottom:0;">
-      ${chart2}
-      ${chart1}
-    </div>
-    ${chart3}
-  </div>`;
+  // ── Layout: 2 colunas no mobile-friendly grid ─────────────
+  return '<div style="margin-top:8px;">'
+    +'<p style="font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:500;margin-bottom:10px;">Gráficos</p>'
+    +'<div class="g2" style="gap:10px;margin-bottom:0;">'
+    +g2  // donut pagamentos
+    +g3  // pizza distribuição
+    +'</div>'
+    +g1  // barras mensais
+    +g4  // composição empilhada
+    +'</div>';
 }
+
 function renderDash() {
   const wy=SM===0?SY-1:SY, wm=SM===0?11:SM-1, wl=MP[wm]+' '+wy;
   const _monthClosed=isMonthClosed(wy,wm);
@@ -3204,7 +3245,7 @@ function renderDash() {
   calcs.forEach(c=>{
     const isPaid=!!c.payment, hw=c.holWarns.length>0;
     out.push(`<div class="card" style="border:1px solid ${isPaid?'rgba(138,155,138,.4)':hw?'rgba(196,151,58,.4)':'var(--border)'};">`);
-    out.push(`<div class="fb" style="margin-bottom:14px;"><div class="fi" style="gap:12px;flex:1;min-width:0;">${avt(c.emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-size:14px;font-weight:400;word-break:break-word;overflow-wrap:anywhere;line-height:1.3;">${escapeHTML(c.emp.name)}</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">${escapeHTML(c.emp.role)}</div></div></div><div style="text-align:right;flex-shrink:0;"><div class="money" style="font-size:24px;color:var(--accent);">R$ ${fm(c.total)}</div><div style="font-size:10px;color:var(--muted);">sal. R$ ${fm(c.netSal)} + VT R$ ${fm(c.vtNet)}</div></div></div>`);
+    out.push(`<div class="fb" style="margin-bottom:14px;"><div class="fi" style="gap:12px;flex:1;min-width:0;">${avt(c.emp.name,44)}<div style="min-width:0;flex:1;"><div style="font-size:14px;font-weight:400;word-break:break-word;overflow-wrap:anywhere;line-height:1.3;">${escapeHTML(c.emp.name)}</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">${escapeHTML(c.emp.role)}</div></div></div><div style="text-align:right;flex-shrink:0;"><div class="money" style="font-size:22px;color:${isPaid?'var(--sage)':' var(--accent)'};">${isPaid?'&#10003; ':''}R$ ${fm(c.total)}</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Base R$ ${fm(c.salBase)}${c.vtNet>0?' · VT R$ '+fm(c.vtNet):''}${c.deds>0?' · Desc −R$ '+fm(c.deds):''}</div>${isPaid?'<div style="font-size:10px;color:var(--sage);margin-top:2px;">Pago</div>':'' }</div></div>`);
     if(hw)out.push(`<div class="alert aw" style="margin-bottom:12px;"><span style="font-size:11px;color:var(--warn);">&#9888;&#65039; ${c.holWarns.length} feriado(s) sem di\u00e1ria &nbsp;<button onclick="goFech('${c.emp.id}')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;text-decoration:underline;">ver detalhes</button></span></div>`);
     out.push('<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;min-width:0;">');
     [['Base','R$ '+fm(c.proRataActive?c.proRataSalBase:c.salBase)+(c.proRataActive?' (PR)':''),'var(--text)'],['Di\u00e1rias','R$ '+fm(c.recTot+c.avTot),'var(--sage)'],['Descontos','R$ '+fm(c.deds+c.inssAmt),'var(--danger)'],[MP[c.vtM].slice(0,3)+' VT','R$ '+fm(c.vtNet),'var(--blue)']].forEach(k=>out.push(`<div style="background:var(--cream);border-radius:9px;padding:10px;text-align:center;"><div class="lbl" style="margin-bottom:4px;">${k[0]}</div><div class="money" style="font-size:14px;color:${k[2]};">${k[1]}</div></div>`));
@@ -4287,6 +4328,7 @@ async function initApp() {
       + '</div>';
   }
 }
+
 
 
 
