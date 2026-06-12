@@ -578,6 +578,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 function mp(n){return 'R$ '+fm(n||0);}
 
 // ── Onboarding ──────────────────────────────────────────
@@ -3358,10 +3359,12 @@ function renderFech() {
   var _adjDisp = _adjPay; // alias para compatibilidade com total
   // Total de ajustes que afetam pagamento
   var _totAdj = _adjPay.reduce(function(s,a){
-    return ['advance','discount','loan','other','antecipacao'].indexOf(a.type)>=0 ? s-a.value : s+a.value;
+    if(['advance','discount','loan','other','antecipacao'].indexOf(a.type)>=0) return s-a.value;
+    if(a.type==='bonus') return s+a.value;
+    return s;
   },0);
   var _totEnc2 = _adjEnc.reduce(function(s,a){ return s+a.value; }, 0);
-  var _na = _totAdj - _totEnc2; // inclui encargos como custo adicional
+  var _na = _totAdj + _totEnc2;
   // ── Card ④ Ajustes ─────────────────────────────────────
   const adjL=['<div class="card" style="margin-bottom:12px;">']
   // Header com total
@@ -3486,9 +3489,17 @@ function renderFech() {
   const paidB=isPaid?buildPaidSummary(c.payment,eid,wy,wm,canEdit,isRescPaid):'';
   const cta=canAct?`<div class="fe" style="margin-top:16px;"><button class="btn btn-gh" onclick="openAM('${emp.id}',${wy},${wm})">+ Ajuste</button><button class="btn btn-sg" onclick="openPayM('${emp.id}',${wy},${wm})">Ver mem\u00f3ria &amp; confirmar</button></div>`:'';
   // Após pagamento: mostra apenas o resumo do pagamento
+  const secEntradas = [
+    '<div style="margin:16px 0 8px;"><p style="font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-weight:500;">① Entradas</p></div>',
+    calParts.join(''), avL.join(''), adjL.join('')
+  ].join('');
+  const secApuracao = [
+    '<div style="margin:20px 0 8px;"><p style="font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-weight:500;">② Apuração</p></div>',
+    rescBar.join(''), memoHTML(c)
+  ].join('');
   const fechContent = isPaid
     ? [selH, empHeader, paidB].join('')
-    : [selH, empHeader, rescBar.join(''), calParts.join(''), avL.join(''), adjL.join(''), memoHTML(c), cta].join('');
+    : [selH, empHeader, secEntradas, secApuracao, cta].join('');
   document.getElementById('tab-fech').innerHTML = fechContent;
 }
 
@@ -4268,6 +4279,7 @@ async function initApp() {
       + '</div>';
   }
 }
+
 
 
 
