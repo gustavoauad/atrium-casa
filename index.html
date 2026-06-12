@@ -579,6 +579,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 function mp(n){return 'R$ '+fm(n||0);}
 
 // ── Onboarding ──────────────────────────────────────────
@@ -2726,7 +2727,7 @@ function memoHTML(c) {
     const prKey='prorata_'+String(c.emp.id)+'_'+c.key;
     const canToggle=canWrite()&&!c.payment;
     out.push(`<div class="card" style="margin-bottom:12px;border:1px solid ${c.proRataActive?'rgba(196,151,58,.4)':'var(--border)'};">`);
-    out.push(`<div class="fb" style="margin-bottom:10px;"><p class="lbl">&#9312; Sal\u00e1rio \u2014 ${rl}</p><span class="badge" style="background:rgba(196,151,58,.12);color:var(--warn);">Pro Rata</span></div>`);
+    out.push(`<div class="fb" style="margin-bottom:10px;"><p class="lbl">Sal\u00e1rio \u2014 ${rl}</p><span class="badge" style="background:rgba(196,151,58,.12);color:var(--warn);">Pro Rata</span></div>`);
     out.push(`<div class="g2" style="gap:10px;margin-bottom:12px;">`);
     out.push(`<div style="background:var(--cream);border-radius:10px;padding:12px;"><div class="lbl" style="margin-bottom:4px;">Integral</div><div class="money" style="font-size:18px;">R$ ${fm(c.netSal)}</div><div class="tip" style="margin-top:4px;">M\u00eas completo</div></div>`);
     out.push(`<div style="background:${c.proRataActive?'rgba(196,151,58,.08)':'var(--cream)'};border:1px solid ${c.proRataActive?'var(--warn)':'transparent'};border-radius:10px;padding:12px;"><div class="lbl" style="margin-bottom:4px;">Pro Rata (${c.proRataDias}/${dim(c.ry,c.rm)} dias)</div><div class="money" style="font-size:18px;color:var(--warn);">R$ ${fm(c.proRataSal)}</div><div class="tip" style="margin-top:4px;">Admiss\u00e3o em ${fd(c.emp.admissao)}</div></div>`);
@@ -2739,17 +2740,17 @@ function memoHTML(c) {
     }
     out.push('</div>');
   } else {
-    out.push(`<div class="card" style="margin-bottom:12px;"><p class="lbl" style="margin-bottom:12px;">&#9312; Sal\u00e1rio Base \u2014 ${rl}</p><div class="fb"><span style="font-size:13px;">Sal\u00e1rio contratual</span><span class="money" style="font-size:20px;">R$ ${fm(c.salBase)}</span></div></div>`);
+    out.push(`<div class="card" style="margin-bottom:12px;"><p class="lbl" style="margin-bottom:12px;">Sal\u00e1rio Base \u2014 ${rl}</p><div class="fb"><span style="font-size:13px;">Sal\u00e1rio contratual</span><span class="money" style="font-size:20px;">R$ ${fm(c.salBase)}</span></div></div>`);
   }
   if (c.recs.length) {
     const grp={};
     c.recs.forEach(r=>{const k=r.desc+'|'+r.value;if(!grp[k])grp[k]={desc:r.desc,value:r.value,items:[]};grp[k].items.push({day:r.iso.slice(8),autoHol:r.autoHol});});
-    out.push(`<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:12px;"><p class="lbl">&#9313; Di\u00e1rias Recorrentes</p><span class="money" style="font-size:18px;color:var(--sage);">+ R$ ${fm(c.recTot)}</span></div><div class="mt2"><div class="mr mrh"><span>Tipo/Dia</span><span>Datas</span><span style="text-align:right;">Subtotal</span></div>`);
+    out.push(`<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:12px;"><p class="lbl">Di\u00e1rias Recorrentes</p><span class="money" style="font-size:18px;color:var(--sage);">+ R$ ${fm(c.recTot)}</span></div><div class="mt2"><div class="mr mrh"><span>Tipo/Dia</span><span>Datas</span><span style="text-align:right;">Subtotal</span></div>`);
     Object.values(grp).forEach(g=>{const dl=g.items.map(it=>it.day+(it.autoHol?' &#127881;':'')).join(', ');out.push(`<div class="mr"><span>${g.desc}</span><span style="color:var(--muted);font-size:11px;">${g.items.length}\u00d7 (${dl})</span><span class="money" style="text-align:right;">${g.items.length} \u00d7 R$ ${fm(g.value)} = <strong>R$ ${fm(g.value*g.items.length)}</strong></span></div>`);});
     out.push('</div></div>');
   }
   if (c.avs.length) {
-    out.push(`<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:12px;"><p class="lbl">&#9314; Di\u00e1rias Avulsas</p><span class="money" style="font-size:18px;color:var(--blue);">+ R$ ${fm(c.avTot)}</span></div><div class="mt2"><div class="mr mrh"><span>Data</span><span>Tipo</span><span style="text-align:right;">Valor</span></div>`);
+    out.push(`<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:12px;"><p class="lbl">Di\u00e1rias Avulsas</p><span class="money" style="font-size:18px;color:var(--blue);">+ R$ ${fm(c.avTot)}</span></div><div class="mt2"><div class="mr mrh"><span>Data</span><span>Tipo</span><span style="text-align:right;">Valor</span></div>`);
     c.avs.forEach(e=>out.push(`<div class="mr"><span>${fd(e.date)}${e.hn?` <span class="badge" style="background:rgba(196,151,58,.15);color:var(--warn);">&#127881;</span>`:''}</span><span style="color:var(--muted);">${e.duration||'\u2014'}${e.notes?' \u00b7 '+e.notes:''}</span><span class="money" style="text-align:right;">R$ ${fm(e.value)}</span></div>`));
     out.push('</div></div>');
   }
@@ -2758,14 +2759,21 @@ function memoHTML(c) {
     const _adjDisp=c.adjs.filter(function(a){
       return ['fgts','inssPatronal','prov13','provFerias','irrf'].indexOf(a.type)<0;
     });
-    const na=_adjDisp.reduce(function(s,a){
-      return ['advance','discount','loan','other','antecipacao'].indexOf(a.type)>=0?s-a.value:s+a.value;
-    },0);
-    out.push(`<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:12px;"><p class="lbl">&#9315; Ajustes</p><span class="money" style="font-size:18px;color:${na>=0?'var(--sage)':'var(--danger)'};">${na>=0?'+':'\u2212'}R$ ${fm(Math.abs(na))}</span></div><div class="mt2"><div class="mr mrh"><span>Tipo</span><span>Descri\u00e7\u00e3o</span><span style="text-align:right;">Valor</span></div>`);
+    // na: descontos subtraem, bônus e encargos somam
+    var _adjEncMemo = c.adjs.filter(function(a){
+      return ['fgts','inssPatronal','prov13','provFerias','irrf'].indexOf(a.type)>=0;
+    });
+    var _totEncMemo = _adjEncMemo.reduce(function(s,a){ return s+a.value; }, 0);
+    const na = _adjDisp.reduce(function(s,a){
+      if(['advance','discount','loan','other','antecipacao'].indexOf(a.type)>=0) return s-a.value;
+      if(a.type==='bonus') return s+a.value;
+      return s;
+    },0) + _totEncMemo;
+    out.push(`<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:12px;"><p class="lbl">Ajustes</p><span class="money" style="font-size:18px;color:${na>=0?'var(--sage)':'var(--danger)'};">${na>=0?'+':'\u2212'}R$ ${fm(Math.abs(na))}</span></div><div class="mt2"><div class="mr mrh"><span>Tipo</span><span>Descri\u00e7\u00e3o</span><span style="text-align:right;">Valor</span></div>`);
     c.adjs.forEach(a=>{const isD=['advance','discount','loan','other','antecipacao'].includes(a.type);out.push(`<div class="mr"><span>${AL[a.type]||a.type}</span><span style="color:var(--muted);">${a.desc||'\u2014'} \u00b7 ${fd(a.date)}</span><span class="money" style="text-align:right;color:${isD?'var(--danger)':'var(--sage)'};">${isD?'\u2212':'+'}R$ ${fm(a.value)}</span></div>`);});
     out.push('</div></div>');
   }
-  if (c.inssAmt>0) out.push(`<div class="card" style="margin-bottom:12px;"><p class="lbl" style="margin-bottom:10px;">&#9316; INSS</p><div class="mt2"><div class="mr mrh"><span>Item</span><span>Refer\u00eancia</span><span style="text-align:right;">Valor</span></div><div class="mr"><span>Base</span><span style="color:var(--muted);">Sal\u00e1rio bruto</span><span class="money" style="text-align:right;">R$ ${fm(c.gross)}</span></div><div class="mr"><span>Al\u00edquota</span><span style="color:var(--muted);">Tabela progressiva 2024</span><span class="money" style="text-align:right;">${((c.inssAmt/c.gross)*100).toFixed(2)}%</span></div><div class="mr"><span>Desconto INSS</span><span style="color:var(--muted);">Deduzido do sal\u00e1rio</span><span class="money" style="text-align:right;color:var(--danger);">\u2212 R$ ${fm(c.inssAmt)}</span></div></div></div>`);
+  if (c.inssAmt>0) out.push(`<div class="card" style="margin-bottom:12px;"><p class="lbl" style="margin-bottom:10px;">INSS</p><div class="mt2"><div class="mr mrh"><span>Item</span><span>Refer\u00eancia</span><span style="text-align:right;">Valor</span></div><div class="mr"><span>Base</span><span style="color:var(--muted);">Sal\u00e1rio bruto</span><span class="money" style="text-align:right;">R$ ${fm(c.gross)}</span></div><div class="mr"><span>Al\u00edquota</span><span style="color:var(--muted);">Tabela progressiva 2024</span><span class="money" style="text-align:right;">${((c.inssAmt/c.gross)*100).toFixed(2)}%</span></div><div class="mr"><span>Desconto INSS</span><span style="color:var(--muted);">Deduzido do sal\u00e1rio</span><span class="money" style="text-align:right;color:var(--danger);">\u2212 R$ ${fm(c.inssAmt)}</span></div></div></div>`);
   const isMan=c.vtManualDays!==null, vtDL=c.emp.vtDiscount==='none'?'Sem desconto \u2014 integral':'Desconto legal (6% sal. base) \u2014 m\u00e1x R$ '+fm(c.vtGross);
   const canEditVT=canWrite(); // VT ajustável mesmo após pagamento registrado
   out.push(`<div class="card" style="margin-bottom:12px;"><div class="fb" style="margin-bottom:10px;"><p class="lbl">&#9317; Vale-Transporte \u2014 ${vl}</p><div class="fi" style="gap:6px;">${isMan?'<span class="badge" style="background:rgba(196,151,58,.15);color:var(--warn);">ajustado</span>':'<span class="badge" style="background:rgba(107,159,191,.15);color:var(--blue);">autom\u00e1tico</span>'}<span class="badge" style="background:rgba(107,159,191,.1);color:var(--blue);">m\u00eas seguinte</span></div></div><div class="mt2"><div class="mr mrh"><span>Item</span><span>Mem\u00f3ria</span><span style="text-align:right;">Valor</span></div><div class="mr"><span>Dias em ${vl}</span><span style="color:var(--muted);">Sugerido: ${c.vtWdAuto}${isMan?' \u2192 Ajustado: '+c.vtWd:''} dias \u00fateis</span><span class="money" style="text-align:right;">${c.vtWd}${isMan?' <span style="color:var(--warn);font-size:9px;">&#9998;</span>':''}</span></div><div class="mr"><span>VT bruto</span><span style="color:var(--muted);">${c.vtWd} \u00d7 R$ ${fm(c.emp.vtDaily||0)}</span><span class="money" style="text-align:right;">R$ ${fm(c.vtGross)}</span></div><div class="mr"><span>Desconto</span><span style="color:var(--muted);">${vtDL}</span><span class="money" style="text-align:right;color:${c.vtDisc>0?'var(--danger)':'var(--sage)'};">${c.vtDisc>0?'\u2212 R$ '+fm(c.vtDisc):'R$ 0,00 \u2014 integral'}</span></div></div>${c.payment?`<div class="fb" style="padding-top:10px;"><span>VT pago</span><span class="money" style="font-size:18px;color:var(--blue);">R$ ${fm(c.vtNet)}</span></div>`:canEditVT?`<div class="fi" style="gap:8px;padding-top:12px;flex-wrap:wrap;"><span style="font-size:11px;color:var(--muted);">Ajustar dias VT:</span><input type="number" min="0" max="31" value="${c.vtWd}" oninput="setVTDays('${c.vtOK}',this.value)" style="width:60px;padding:5px 8px;border-radius:7px;border:1px solid var(--border);font-size:12px;text-align:center;">${isMan?`<button onclick="resetVTDays('${c.vtOK}')" class="btn btn-gh btn-sm" style="padding:5px 10px;font-size:10px;">&#8634; Usar sugerido (${c.vtWdAuto})</button>`:''}<span class="money" style="font-size:18px;color:var(--blue);margin-left:auto;">R$ ${fm(c.vtNet)}</span></div>`:`<div class="fb" style="padding-top:10px;"><span>VT (somente leitura)</span><span class="money" style="font-size:18px;color:var(--blue);">R$ ${fm(c.vtNet)}</span></div>`}</div>`);
@@ -3369,7 +3377,7 @@ function renderFech() {
   const adjL=['<div class="card" style="margin-bottom:12px;">']
   // Header com total
   adjL.push(`<div class="fb" style="margin-bottom:10px;">`
-    +`<p class="lbl">&#9315; Ajustes</p>`
+    +`<p class="lbl">Ajustes</p>`
     +`<span class="money" style="font-size:16px;color:${_na>=0?'var(--sage)':'var(--danger)'}">${_na>=0?'+':'\u2212'}R$ ${fm(Math.abs(_na))}</span>`
     +(canAct?`<button class="btn btn-gh btn-sm" onclick="openAM('${emp.id}',${wy},${wm})">+ Adicionar</button>`:'')
     +`</div>`);
@@ -3490,11 +3498,11 @@ function renderFech() {
   const cta=canAct?`<div class="fe" style="margin-top:16px;"><button class="btn btn-gh" onclick="openAM('${emp.id}',${wy},${wm})">+ Ajuste</button><button class="btn btn-sg" onclick="openPayM('${emp.id}',${wy},${wm})">Ver mem\u00f3ria &amp; confirmar</button></div>`:'';
   // Após pagamento: mostra apenas o resumo do pagamento
   const secEntradas = [
-    '<div style="margin:16px 0 8px;"><p style="font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-weight:500;">① Entradas</p></div>',
+    '<div style="margin:20px 0 10px;padding:10px 14px;background:var(--cream);border-radius:10px;border-left:3px solid var(--accent);"><p style="font-size:11px;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;font-weight:600;margin:0;">① Entradas do Usuário</p></div>',
     calParts.join(''), avL.join(''), adjL.join('')
   ].join('');
   const secApuracao = [
-    '<div style="margin:20px 0 8px;"><p style="font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-weight:500;">② Apuração</p></div>',
+    '<div style="margin:24px 0 10px;padding:10px 14px;background:var(--cream);border-radius:10px;border-left:3px solid var(--sage);"><p style="font-size:11px;color:var(--sage);letter-spacing:.12em;text-transform:uppercase;font-weight:600;margin:0;">② Apuração</p></div>',
     rescBar.join(''), memoHTML(c)
   ].join('');
   const fechContent = isPaid
@@ -4279,6 +4287,7 @@ async function initApp() {
       + '</div>';
   }
 }
+
 
 
 
