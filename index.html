@@ -576,6 +576,7 @@ body.role-viewer .viewer-badge { display: inline-flex !important; }
 
 
 
+
 function mp(n){return 'R$ '+fm(n||0);}
 
 // ── Onboarding ──────────────────────────────────────────
@@ -2854,7 +2855,10 @@ function memoHTML(c) {
     }
 
     // ── Total a pagar ─────────────────────────────────────
-    out2.push(bTotal('&#128179; Total a pagar', c.total, '#fff'));
+    // Total a pagar = c.total + encargos registrados
+    var _totEncFinal = adjEnc.reduce(function(s,a){ return s+a.value; }, 0);
+    var _grandTotal  = r2(c.total + _totEncFinal);
+    out2.push(bTotal('&#128179; Total a pagar', _grandTotal, '#fff'));
     out2.push('</div>');
     return out2.join('');
   })());
@@ -4262,6 +4266,7 @@ async function initApp() {
       + '</div>';
   }
 }
+
 
 
 
