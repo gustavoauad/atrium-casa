@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+/* ── LIGHT MODE (padrão) ──────────────────────── */
+@theme {
+  --color-bg: #F6F3EF;
+  --color-surface: #FDFCFA;
+  --color-card: #FFFFFF;
+  --color-border: #E8E2D9;
+  --color-text: #1C1917;
+  --color-muted: #8C8278;
+  --color-stone: #B5ADA4;
+  --color-accent: #8B6F47;
+  --color-accent-2: #C4A070;
+  --color-cream: #F0E9DC;
+  --color-sage: #6B8F71;
+  --color-warn: #C47A2A;
+  --color-danger: #B04A4A;
+  --color-blue: #5B8FAF;
+  --color-gold: #C4973A;
+}
+
+/* ── DARK MODE — classe explícita (maior prioridade) ── */
+:root.dark {
+  --color-bg: #1A1612;
+  --color-surface: #211C18;
+  --color-card: #2A2420;
+  --color-border: #3D3830;
+  --color-text: #F0EBE3;
+  --color-muted: #B0A898;
+  --color-stone: #706860;
+  --color-accent: #C4A070;
+  --color-accent-2: #D4B890;
+  --color-cream: #2E2820;
+  --color-sage: #8FBB95;
+  --color-warn: #E0A84A;
+  --color-danger: #E07070;
+  --color-blue: #8ABDD8;
+  --color-gold: #D4A840;
+  color-scheme: dark;
+}
+
+/* ── PREFERÊNCIA DO SISTEMA — só quando sem escolha manual ── */
+@media (prefers-color-scheme: dark) {
+  :root:not(.dark):not(.light) {
+    --color-bg: #1A1612;
+    --color-surface: #211C18;
+    --color-card: #2A2420;
+    --color-border: #3D3830;
+    --color-text: #F0EBE3;
+    --color-muted: #B0A898;
+    --color-stone: #706860;
+    --color-accent: #C4A070;
+    --color-accent-2: #D4B890;
+    --color-cream: #2E2820;
+    --color-sage: #8FBB95;
+    --color-warn: #E0A84A;
+    --color-danger: #E07070;
+    --color-blue: #8ABDD8;
+    --color-gold: #D4A840;
+    color-scheme: dark;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+@layer components {
+  .input {
+    @apply w-full px-3 py-2.5 rounded-lg border border-border bg-surface text-sm outline-none;
+    @apply focus:border-accent;
+  }
+  .btn-primary {
+    @apply py-2.5 rounded-lg bg-accent text-white text-sm font-medium disabled:opacity-60;
+  }
+}
