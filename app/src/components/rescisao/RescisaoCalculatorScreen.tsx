@@ -3,8 +3,9 @@ import type { House } from '../../types/house'
 import type { Employee } from '../../types/employee'
 import { loadEmployees } from '../../hooks/useEmployees'
 import { calcVerbas, MOTIVO_LABELS, AVISO_LABELS, type MotivoRescisao, type AvisoTipo, type VerbasResult } from '../../lib/payroll/rescisao'
-import { fm, tod } from '../../lib/payroll/format'
+import { fd, tod } from '../../lib/payroll/format'
 import { VerbasBreakdown } from './VerbasBreakdown'
+import { PrintableView } from '../ui/PrintableView'
 
 export function RescisaoCalculatorScreen({ house }: { house: House }) {
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -17,6 +18,7 @@ export function RescisaoCalculatorScreen({ house }: { house: House }) {
   const [aviso, setAviso] = useState<AvisoTipo>('trabalhado')
   const [result, setResult] = useState<VerbasResult | null>(null)
   const [error, setError] = useState('')
+  const [showPrint, setShowPrint] = useState(false)
 
   useEffect(() => {
     loadEmployees(house.id).then(setEmployees).catch((e) => setError(e instanceof Error ? e.message : String(e)))
@@ -40,29 +42,8 @@ export function RescisaoCalculatorScreen({ house }: { house: House }) {
     setResult(calcVerbas(salario, motivo, admissao, dataDesc, fgts, aviso))
   }
 
-  function handlePrint() {
-    if (!result) return
-    const emp = employees.find((e) => e.id === empId)
-    const nome = emp?.name || 'Funcionário'
-    const w = window.open('', '_blank', 'width=700,height=800')
-    if (!w) return
-    const rows = result.itens
-      .map(
-        (it) =>
-          `<tr style="border-bottom:1px solid #E8E3DC;"><td style="padding:8px 0;font-size:13px;">${it.l}</td><td style="padding:8px 0;text-align:right;font-size:15px;color:${it.pos ? '#8A9B8A' : '#B85C5C'}">${it.pos ? '+' : '−'} R$ ${fm(it.v)}</td></tr>`,
-      )
-      .join('')
-    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rescisão — ${nome}</title>
-      <style>body{font-family:sans-serif;color:#2A2520;max-width:600px;margin:32px auto;padding:0 24px;}
-      h1{font-size:24px;font-weight:500;}table{width:100%;border-collapse:collapse;margin-top:16px;}
-      .tot{background:#F0EBE0;font-weight:600;}@media print{button{display:none!important;}}</style></head>
-      <body><h1>Cálculo de Rescisão</h1><p>${nome} — ${MOTIVO_LABELS[result.motivo]}</p>
-      <p style="font-size:12px;color:#9C9087;">Admissão: ${result.admissaoISO} · Desligamento: ${result.desligamentoISO}</p>
-      <table>${rows}<tr class="tot"><td style="padding:10px 0;">TOTAL LÍQUIDO</td><td style="padding:10px 0;text-align:right;">R$ ${fm(result.total)}</td></tr></table>
-      <div style="margin-top:24px;text-align:center;"><button onclick="window.print()" style="padding:10px 24px;background:#2A2520;color:#fff;border:none;border-radius:8px;cursor:pointer;">Imprimir / Salvar PDF</button></div>
-      </body></html>`)
-    w.document.close()
-  }
+  const emp = employees.find((e) => e.id === empId)
+  const nome = emp?.name || 'Funcionário'
 
   return (
     <div className="w-full max-w-xl mx-auto p-4">
@@ -131,12 +112,25 @@ export function RescisaoCalculatorScreen({ house }: { house: House }) {
         {result && (
           <>
             <VerbasBreakdown r={result} />
-            <button type="button" onClick={handlePrint} className="w-full px-4 py-2 rounded-lg border border-accent text-accent text-sm">
+            <button type="button" onClick={() => setShowPrint(true)} className="w-full px-4 py-2 rounded-lg border border-accent text-accent text-sm">
               🖨 Imprimir
             </button>
           </>
         )}
       </div>
+
+      {showPrint && result && (
+        <PrintableView title={`Cálculo de Rescisão — ${nome}`} onClose={() => setShowPrint(false)}>
+          <h1 className="text-2xl font-medium mb-1">Cálculo de Rescisão</h1>
+          <p className="text-sm mb-1">
+            {nome} — {MOTIVO_LABELS[result.motivo]}
+          </p>
+          <p className="text-xs text-muted mb-4">
+            Admissão: {fd(result.admissaoISO)} · Desligamento: {fd(result.desligamentoISO)}
+          </p>
+          <VerbasBreakdown r={result} />
+        </PrintableView>
+      )}
     </div>
   )
 }

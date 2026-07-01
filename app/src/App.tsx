@@ -16,12 +16,15 @@ const RegionalHolidaysScreen = lazy(() =>
 const RescisaoCalculatorScreen = lazy(() =>
   import('./components/rescisao/RescisaoCalculatorScreen').then((m) => ({ default: m.RescisaoCalculatorScreen })),
 )
+const DocumentTemplatesScreen = lazy(() =>
+  import('./components/documents/DocumentTemplatesScreen').then((m) => ({ default: m.DocumentTemplatesScreen })),
+)
 const ReportsScreen = lazy(() => import('./components/reports/ReportsScreen').then((m) => ({ default: m.ReportsScreen })))
 const HouseSettingsScreen = lazy(() =>
   import('./components/house-settings/HouseSettingsScreen').then((m) => ({ default: m.HouseSettingsScreen })),
 )
 
-type Tab = 'dashboard' | 'folha' | 'funcionarios' | 'relatorios' | 'rescisao' | 'feriados' | 'casa'
+type Tab = 'dashboard' | 'folha' | 'funcionarios' | 'relatorios' | 'rescisao' | 'templates' | 'feriados' | 'casa'
 
 function AppShell() {
   const { user, loading } = useAuth()
@@ -89,6 +92,9 @@ function AppShell() {
         <TabButton active={tab === 'rescisao'} onClick={() => setTab('rescisao')}>
           Rescisão
         </TabButton>
+        <TabButton active={tab === 'templates'} onClick={() => setTab('templates')}>
+          Templates
+        </TabButton>
         <TabButton active={tab === 'feriados'} onClick={() => setTab('feriados')}>
           Feriados Regionais
         </TabButton>
@@ -103,6 +109,7 @@ function AppShell() {
         {tab === 'funcionarios' && <EmployeesScreen house={house} />}
         {tab === 'relatorios' && <ReportsScreen house={house} />}
         {tab === 'rescisao' && <RescisaoCalculatorScreen house={house} />}
+        {tab === 'templates' && <DocumentTemplatesScreen house={house} />}
         {tab === 'feriados' && <RegionalHolidaysScreen house={house} />}
         {tab === 'casa' && <HouseSettingsScreen house={house} />}
       </Suspense>

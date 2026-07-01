@@ -10,6 +10,7 @@ import type { Payment } from '../../types/payment'
 import { EventModal } from './EventModal'
 import { AdjustmentModal } from './AdjustmentModal'
 import { PaymentModal } from './PaymentModal'
+import { PaymentReceipt } from './PaymentReceipt'
 
 interface Props {
   c: PayrollCalc
@@ -39,6 +40,7 @@ export function EmployeeMonthCard({
     defaultDesc?: string
   } | null>(null)
   const [showPayment, setShowPayment] = useState(false)
+  const [showReceipt, setShowReceipt] = useState(false)
   const [vtInput, setVtInput] = useState<string>(c.vtManualDays !== null ? String(c.vtManualDays) : '')
 
   const recGroups = groupRecurring(c.recs)
@@ -245,11 +247,18 @@ export function EmployeeMonthCard({
             <span className="font-medium text-lg text-accent">R$ {fm(c.total)}</span>
           </div>
 
-          {canWrite && (
-            <button type="button" onClick={() => setShowPayment(true)} className="btn-primary w-full">
-              {c.payment ? 'Editar pagamento' : 'Confirmar pagamento'}
-            </button>
-          )}
+          <div className="flex gap-2">
+            {c.payment && (
+              <button type="button" onClick={() => setShowReceipt(true)} className="flex-1 px-4 py-2.5 rounded-lg border border-border text-sm">
+                📄 Recibo
+              </button>
+            )}
+            {canWrite && (
+              <button type="button" onClick={() => setShowPayment(true)} className="btn-primary flex-1">
+                {c.payment ? 'Editar pagamento' : 'Confirmar pagamento'}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -307,6 +316,10 @@ export function EmployeeMonthCard({
             setShowPayment(false)
           }}
         />
+      )}
+
+      {showReceipt && c.payment && (
+        <PaymentReceipt payment={c.payment} vtDaily={c.emp.vtDaily} onClose={() => setShowReceipt(false)} />
       )}
     </div>
   )

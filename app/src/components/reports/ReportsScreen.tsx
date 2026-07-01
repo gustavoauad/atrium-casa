@@ -13,6 +13,7 @@ import { loadEventsForEmployee } from '../../hooks/useEvents'
 import { loadAdjustmentsForEmployee } from '../../hooks/useAdjustments'
 import { loadPaymentsForEmployee } from '../../hooks/usePayments'
 import { loadRegionalHolidays, loadOverrides } from '../../hooks/useSettings'
+import { PrintableView } from '../ui/PrintableView'
 
 type SubTab = 'mensal' | 'acumulado'
 
@@ -195,6 +196,7 @@ interface MonthlyProps {
 }
 
 function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth, empFilter, setEmpFilter, inclDes, setInclDes, calcFor }: MonthlyProps) {
+  const [showPrint, setShowPrint] = useState(false)
   const calcs = filteredEmps.map((e) => calcFor(e, month.y, month.m))
   const totSal = calcs.reduce((a, c) => a + c.finalNetSal, 0)
   const totVT = calcs.reduce((a, c) => a + c.vtNet, 0)
@@ -218,37 +220,6 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
       ]),
     )
     downloadCSV(`atrium_relatorio_${MP[month.m]}_${month.y}.csv`, rows)
-  }
-
-  function printReport() {
-    const w = window.open('', '_blank', 'width=900,height=800')
-    if (!w) return
-    const rows = calcs
-      .map(
-        (c) =>
-          `<tr style="border-bottom:1px solid #E8E3DC;"><td style="padding:10px 12px;font-size:13px;">${c.emp.name}<br><span style="font-size:11px;color:#9C9087;">${c.emp.role}</span></td>` +
-          `<td style="padding:10px 12px;text-align:right;">R$ ${fm(c.salBase)}</td>` +
-          `<td style="padding:10px 12px;text-align:right;color:#8A9B8A;">R$ ${fm(c.recTot + c.avTot)}</td>` +
-          `<td style="padding:10px 12px;text-align:right;color:#B85C5C;">R$ ${fm(c.deds + c.inssAmt)}</td>` +
-          `<td style="padding:10px 12px;text-align:right;font-weight:500;">R$ ${fm(c.netSal)}</td>` +
-          `<td style="padding:10px 12px;text-align:right;color:#6B9FBF;">R$ ${fm(c.vtNet)}</td>` +
-          `<td style="padding:10px 12px;text-align:right;font-size:16px;color:#8B7355;font-weight:500;">R$ ${fm(c.total)}</td>` +
-          `<td style="padding:10px 12px;text-align:center;font-size:12px;color:${c.payment ? '#8A9B8A' : '#C4973A'}">${c.payment ? '✓ Pago' : '⏳ Pendente'}</td></tr>`,
-      )
-      .join('')
-    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório ${refLabel}</title>
-      <style>body{font-family:sans-serif;color:#2A2520;max-width:900px;margin:32px auto;padding:0 24px;}
-      h1{font-size:28px;font-weight:500;}.sub{font-size:13px;color:#9C9087;margin-bottom:28px;}
-      table{width:100%;border-collapse:collapse;}th{padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;color:#9C9087;background:#F0EBE0;}
-      @media print{button{display:none!important;}}</style></head><body>
-      <h1>Relatório de Pagamentos</h1><div class="sub">Competência: <strong>${refLabel}</strong> · Pagamento: <strong>${payLabel}</strong></div>
-      <table><tr><th>Funcionário</th><th style="text-align:right;">Sal. Base</th><th style="text-align:right;">Diárias</th><th style="text-align:right;">Descontos</th><th style="text-align:right;">Sal. Líq.</th><th style="text-align:right;">VT</th><th style="text-align:right;">Total</th><th style="text-align:center;">Status</th></tr>
-      ${rows}
-      <tr style="background:#F0EBE0;font-weight:600;"><td style="padding:12px;">TOTAL</td><td colspan="4"></td><td style="padding:12px;text-align:right;color:#6B9FBF;">R$ ${fm(totVT)}</td><td style="padding:12px;text-align:right;font-size:20px;color:#8B7355;">R$ ${fm(totAll)}</td><td></td></tr>
-      </table>
-      <div style="margin-top:24px;text-align:center;"><button onclick="window.print()" style="padding:10px 24px;background:#2A2520;color:#fff;border:none;border-radius:8px;cursor:pointer;">Imprimir / Salvar PDF</button></div>
-      </body></html>`)
-    w.document.close()
   }
 
   return (
@@ -278,7 +249,7 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
           Desligados
         </label>
         <div className="ml-auto flex gap-2">
-          <button type="button" onClick={printReport} className="px-3 py-1.5 rounded-lg bg-accent text-white text-xs">
+          <button type="button" onClick={() => setShowPrint(true)} className="px-3 py-1.5 rounded-lg bg-accent text-white text-xs">
             🖨 PDF
           </button>
           <button type="button" onClick={exportCSV} className="px-3 py-1.5 rounded-lg border border-border text-xs">
@@ -342,6 +313,57 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
             </table>
           </div>
         </>
+      )}
+
+      {showPrint && (
+        <PrintableView title={`Relatório de Pagamentos — ${refLabel}`} onClose={() => setShowPrint(false)}>
+          <h1 className="text-2xl font-medium mb-1">Relatório de Pagamentos</h1>
+          <p className="text-xs text-muted mb-6">
+            Competência: <strong>{refLabel}</strong> · Pagamento: <strong>{payLabel}</strong>
+          </p>
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-cream">
+                <th className="text-left px-3 py-2 uppercase text-[10px] text-muted">Funcionário</th>
+                <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Sal. Base</th>
+                <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Diárias</th>
+                <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Descontos</th>
+                <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Sal. Líq.</th>
+                <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">VT</th>
+                <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Total</th>
+                <th className="text-center px-3 py-2 uppercase text-[10px] text-muted">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {calcs.map((c) => (
+                <tr key={c.emp.id} className="border-b border-border">
+                  <td className="px-3 py-2.5">
+                    {c.emp.name}
+                    <br />
+                    <span className="text-[11px] text-muted">{c.emp.role}</span>
+                  </td>
+                  <td className="text-right px-3 py-2.5">R$ {fm(c.salBase)}</td>
+                  <td className="text-right px-3 py-2.5 text-sage">R$ {fm(c.recTot + c.avTot)}</td>
+                  <td className="text-right px-3 py-2.5 text-danger">R$ {fm(c.deds + c.inssAmt)}</td>
+                  <td className="text-right px-3 py-2.5 font-medium">R$ {fm(c.netSal)}</td>
+                  <td className="text-right px-3 py-2.5 text-blue">R$ {fm(c.vtNet)}</td>
+                  <td className="text-right px-3 py-2.5 text-base text-accent font-medium">R$ {fm(c.total)}</td>
+                  <td className="text-center px-3 py-2.5 text-[11px]">
+                    {c.payment ? <span className="text-sage">✓ Pago</span> : <span className="text-warn">⏳ Pendente</span>}
+                  </td>
+                </tr>
+              ))}
+              <tr className="bg-cream font-medium">
+                <td className="px-3 py-3">TOTAL</td>
+                <td colSpan={3} />
+                <td />
+                <td className="text-right px-3 py-3 text-blue">R$ {fm(totVT)}</td>
+                <td className="text-right px-3 py-3 text-lg text-accent">R$ {fm(totAll)}</td>
+                <td />
+              </tr>
+            </tbody>
+          </table>
+        </PrintableView>
       )}
     </div>
   )
