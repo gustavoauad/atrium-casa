@@ -156,7 +156,7 @@ export function DashboardScreen({ house }: { house: House }) {
             <StackedBarChart title="Composição mensal (salário vs. VT)" months={stackedData} />
           </div>
 
-          <div className="border border-border rounded-xl overflow-x-auto">
+          <div className="border border-border rounded-xl overflow-x-auto overflow-y-hidden">
             <table className="w-full text-xs min-w-[420px]">
               <thead>
                 <tr className="border-b-2 border-border text-muted uppercase text-[10px]">

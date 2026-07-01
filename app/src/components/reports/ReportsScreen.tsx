@@ -276,7 +276,7 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
             <TotalCard label="Total INSS" value={totInss} colorClass="text-muted" />
           </div>
 
-          <div className="border border-border rounded-xl overflow-x-auto">
+          <div className="border border-border rounded-xl overflow-x-auto overflow-y-hidden">
             <table className="w-full text-xs min-w-[480px]">
               <thead>
                 <tr className="border-b-2 border-border text-muted uppercase text-[10px]">
@@ -452,7 +452,7 @@ function AccumulatedReport({ employees, activeMonths, calcFor }: AccProps) {
         <p className="text-sm text-muted">Intervalo sem dados.</p>
       ) : (
         <>
-          <div className="border border-border rounded-xl overflow-x-auto mb-4">
+          <div className="border border-border rounded-xl overflow-x-auto overflow-y-hidden mb-4">
             <table className="w-full text-xs min-w-[500px]">
               <thead>
                 <tr className="border-b-2 border-border text-muted uppercase text-[10px]">
@@ -492,7 +492,7 @@ function AccumulatedReport({ employees, activeMonths, calcFor }: AccProps) {
 
           <div className="border border-border rounded-xl p-4">
             <p className="text-[11px] uppercase tracking-wider text-muted mb-3">Envelope por mês</p>
-            <div className="flex items-end gap-2 h-32 overflow-x-auto pb-6">
+            <div className="flex items-end gap-2 h-32 overflow-x-auto overflow-y-hidden pb-6">
               {inRange.map(({ y, m }) => {
                 const tot = employees.reduce((s, e) => s + calcFor(e, y, m).total, 0)
                 const h = Math.max(4, (tot / maxTotal) * 100)

@@ -76,7 +76,7 @@ function AppShell() {
         </div>
       </header>
 
-      <nav className="flex gap-1 px-3 sm:px-4 pt-3 border-b border-border overflow-x-auto">
+      <nav className="flex gap-1 px-3 sm:px-4 pt-3 border-b border-border overflow-x-auto overflow-y-hidden">
         <TabButton active={tab === 'dashboard'} onClick={() => setTab('dashboard')}>
           Visão Geral
         </TabButton>

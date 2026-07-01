@@ -13,7 +13,7 @@ export function BarChart({ title, bars }: { title: string; bars: MonthBar[] }) {
   return (
     <div className="border border-border rounded-xl p-4">
       <p className="text-[11px] uppercase tracking-wider text-muted font-medium mb-4">{title}</p>
-      <div className="flex items-end gap-2 h-32 overflow-x-auto">
+      <div className="flex items-end gap-2 h-32 overflow-x-auto overflow-y-hidden">
         {bars.map((b, i) => {
           const h = Math.max(Math.round((b.value / max) * 100), 3)
           return (
@@ -120,7 +120,7 @@ export function StackedBarChart({ title, months }: { title: string; months: Stac
   return (
     <div className="border border-border rounded-xl p-4">
       <p className="text-[11px] uppercase tracking-wider text-muted font-medium mb-4">{title}</p>
-      <div className="flex items-end gap-2 h-32 mb-2 overflow-x-auto">
+      <div className="flex items-end gap-2 h-32 mb-2 overflow-x-auto overflow-y-hidden">
         {months.map((m, i) => {
           const salH = Math.max(Math.round((m.salario / max) * 100), m.salario > 0 ? 3 : 0)
           const vtH = Math.max(Math.round((m.vt / max) * 100), m.vt > 0 ? 2 : 0)
