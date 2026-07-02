@@ -5,10 +5,12 @@ import type { WorkEvent } from '../../types/event'
 import type { Adjustment } from '../../types/adjustment'
 import type { Payment } from '../../types/payment'
 import type { RegionalHoliday } from '../../lib/payroll/holidays'
+import { bday5 } from '../../lib/payroll/holidays'
 import { calc, MK, type PayrollCalc } from '../../lib/payroll/calc'
 import { MP } from '../../lib/payroll/constants'
 import { fm, fd } from '../../lib/payroll/format'
 import { activeMonthsFor, type MonthRef } from '../../lib/payroll/activeMonths'
+import { defaultReferenceMonth } from '../../lib/payroll/referenceMonth'
 import { loadEmployees } from '../../hooks/useEmployees'
 import { loadEventsForEmployee } from '../../hooks/useEvents'
 import { loadAdjustmentsForEmployee } from '../../hooks/useAdjustments'
@@ -29,7 +31,7 @@ export function DashboardScreen({ house }: { house: House }) {
 
   const [mode, setMode] = useState<Mode>('mes')
   const now = new Date()
-  const [selMonth, setSelMonth] = useState<MonthRef>({ y: now.getFullYear(), m: now.getMonth() })
+  const [selMonth, setSelMonth] = useState<MonthRef>(() => defaultReferenceMonth([]))
   const activeMonths = useMemo(() => activeMonthsFor(employees), [employees])
   const [from, setFrom] = useState<MonthRef | null>(null)
   const [to, setTo] = useState<MonthRef | null>(null)
@@ -142,6 +144,9 @@ export function DashboardScreen({ house }: { house: House }) {
     const totAPagar = totAll - totPago
     const paidCount = calcs.filter((c) => c.payment).length
     const monthLabel = `${MP[selMonth.m]} ${selMonth.y}`
+    const pyY = selMonth.m === 11 ? selMonth.y + 1 : selMonth.y
+    const pyM = selMonth.m === 11 ? 0 : selMonth.m + 1
+    const p5 = bday5(pyY, pyM, regional)
 
     const barData = last6.map(({ y, m }) => ({
       label: `${MP[m].slice(0, 3)}/${String(y).slice(2)}`,
@@ -172,6 +177,12 @@ export function DashboardScreen({ house }: { house: House }) {
           setFrom={setFrom}
           setTo={setTo}
         />
+
+        <div className="text-xs text-muted bg-cream rounded-lg px-3 py-2">
+          <strong>{monthLabel}</strong> é o <strong>mês de referência</strong> (o mês trabalhado). O pagamento deve
+          ocorrer até o 5º dia útil de <strong>{MP[pyM]} {pyY}</strong>
+          {p5 ? ` — até ${fd(p5.iso)}` : ''}.
+        </div>
 
         {error && <p className="text-xs text-danger bg-danger/10 border border-danger/30 rounded-lg px-3 py-2">{error}</p>}
 
