@@ -16,21 +16,58 @@ import { loadPaymentsForMonth, savePayment as savePaymentApi } from '../../hooks
 import { loadRegionalHolidays, loadOverrides, saveOverride } from '../../hooks/useSettings'
 import { EmployeeMonthCard } from './EmployeeMonthCard'
 
-/** Um funcionário desligado ainda conta como ativo nos meses anteriores ao desligamento. */
-function wasActiveInMonth(emp: Employee, y: number, m: number): boolean {
-  if (emp.status !== 'desligado') return true
+/**
+ * Um funcionário desligado só é relevante para a folha até o mês do desligamento (inclusive):
+ * conta como ativo nos meses anteriores, aparece em "Desligados" no mês exato do desligamento,
+ * e some da tela nos meses seguintes (não há mais folha a processar para ele).
+ */
+function monthStatus(emp: Employee, y: number, m: number): 'ativo' | 'desligado' | 'oculto' {
+  if (emp.status !== 'desligado') return 'ativo'
   const descISO = emp.desligamento || emp.dataBaixa
-  if (!descISO) return false
+  if (!descISO) return 'desligado'
   const d = parseLocalDate(descISO)
-  const termY = d.getFullYear()
-  const termM = d.getMonth()
-  return y < termY || (y === termY && m <= termM)
+  const termIdx = d.getFullYear() * 12 + d.getMonth()
+  const refIdx = y * 12 + m
+  if (refIdx < termIdx) return 'ativo'
+  if (refIdx === termIdx) return 'desligado'
+  return 'oculto'
+}
+
+function localISO(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/** Mês corrente do calendário e se hoje já passou do seu 5º dia útil (prazo de pagamento do mês anterior). */
+function calendarState(regional: RegionalHoliday[]) {
+  const now = new Date()
+  const cy = now.getFullYear()
+  const cm = now.getMonth()
+  const p5 = bday5(cy, cm, regional)
+  const pastDeadline = p5 ? localISO(now) > p5.iso : true
+  const py = cm === 0 ? cy - 1 : cy
+  const pm = cm === 0 ? 11 : cm - 1
+  return { cy, cm, pastDeadline, py, pm }
+}
+
+/**
+ * Mês de referência ativo por padrão: o mês trabalhado permanece "ativo" até o 5º dia útil
+ * do mês seguinte (prazo de pagamento). Depois disso, o mês ativo passa a ser o mês corrente.
+ */
+function defaultReferenceMonth(regional: RegionalHoliday[]): { y: number; m: number } {
+  const { cy, cm, pastDeadline, py, pm } = calendarState(regional)
+  return pastDeadline ? { y: cy, m: cm } : { y: py, m: pm }
+}
+
+interface LateWarning {
+  y: number
+  m: number
+  missing: number
+  total: number
 }
 
 export function PayrollScreen({ house }: { house: House }) {
-  const now = new Date()
-  const [year, setYear] = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth())
+  const [year, setYear] = useState(() => defaultReferenceMonth([]).y)
+  const [month, setMonth] = useState(() => defaultReferenceMonth([]).m)
 
   const [employees, setEmployees] = useState<Employee[] | null>(null)
   const [eventsByEmp, setEventsByEmp] = useState<Record<string, WorkEvent[]>>({})
@@ -39,6 +76,7 @@ export function PayrollScreen({ house }: { house: House }) {
   const [regional, setRegional] = useState<RegionalHoliday[]>([])
   const [overrides, setOverrides] = useState<Record<string, unknown>>({})
   const [error, setError] = useState('')
+  const [lateWarning, setLateWarning] = useState<LateWarning | null>(null)
 
   const canWrite = house.role === 'admin' || house.role === 'editor' || house.role === 'member'
   const monthKey = MK(year, month)
@@ -47,6 +85,29 @@ export function PayrollScreen({ house }: { house: House }) {
     refresh()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [house.id, monthKey])
+
+  useEffect(() => {
+    checkLatePayroll()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [house.id])
+
+  async function checkLatePayroll() {
+    try {
+      const [emps, reg] = await Promise.all([loadEmployees(house.id), loadRegionalHolidays(house.id)])
+      const { pastDeadline, py, pm } = calendarState(reg)
+      if (!pastDeadline) {
+        setLateWarning(null)
+        return
+      }
+      const prevKey = MK(py, pm)
+      const payments = await loadPaymentsForMonth(house.id, prevKey)
+      const relevant = emps.filter((e) => monthStatus(e, py, pm) !== 'oculto')
+      const missing = relevant.filter((e) => !payments[e.id])
+      setLateWarning(missing.length > 0 ? { y: py, m: pm, missing: missing.length, total: relevant.length } : null)
+    } catch {
+      // aviso é best-effort — não deve quebrar a tela em caso de falha
+    }
+  }
 
   async function refresh() {
     try {
@@ -141,14 +202,15 @@ export function PayrollScreen({ house }: { house: House }) {
   async function handleConfirmPayment(empId: string, payment: Payment) {
     const saved = await savePaymentApi(house.id, empId, monthKey, payment)
     setPaymentByEmp((prev) => ({ ...prev, [empId]: saved }))
+    checkLatePayroll()
   }
 
   const pyY = month === 11 ? year + 1 : year
   const pyM = month === 11 ? 0 : month + 1
   const p5 = bday5(pyY, pyM, regional)
 
-  const activeCalcs = calcs?.filter((c) => wasActiveInMonth(c.emp, year, month)) ?? null
-  const terminatedCalcs = calcs?.filter((c) => !wasActiveInMonth(c.emp, year, month)) ?? null
+  const activeCalcs = calcs?.filter((c) => monthStatus(c.emp, year, month) === 'ativo') ?? null
+  const terminatedCalcs = calcs?.filter((c) => monthStatus(c.emp, year, month) === 'desligado') ?? null
 
   return (
     <div className="w-full max-w-3xl mx-auto p-4">
@@ -172,6 +234,26 @@ export function PayrollScreen({ house }: { house: House }) {
         ocorrer até o 5º dia útil de <strong>{MP[pyM]} {pyY}</strong>
         {p5 ? ` — até ${fd(p5.iso)}` : ''}.
       </div>
+
+      {lateWarning && (lateWarning.y !== year || lateWarning.m !== month) && (
+        <div className="flex items-center justify-between gap-2 flex-wrap text-xs bg-warn/10 border border-warn/30 rounded-lg px-3 py-2 mb-4">
+          <span className="text-warn">
+            ⚠️ O prazo de pagamento de <strong>{MP[lateWarning.m]} {lateWarning.y}</strong> já passou e {lateWarning.missing}{' '}
+            de {lateWarning.total} funcionário{lateWarning.total !== 1 ? 's' : ''} ainda{' '}
+            {lateWarning.missing !== 1 ? 'não foram pagos' : 'não foi pago'}.
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setYear(lateWarning.y)
+              setMonth(lateWarning.m)
+            }}
+            className="px-2 py-1 rounded-md border border-warn/40 text-warn text-[11px] shrink-0"
+          >
+            Ver mês
+          </button>
+        </div>
+      )}
 
       {error && <p className="text-xs text-danger bg-danger/10 border border-danger/30 rounded-lg px-3 py-2 mb-3">{error}</p>}
 
