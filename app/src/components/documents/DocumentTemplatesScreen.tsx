@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { House } from '../../types/house'
 import type { Employee } from '../../types/employee'
 import { loadEmployees } from '../../hooks/useEmployees'
+import { getCurrentContract } from '../../lib/payroll/contracts'
 import { fd, fm, tod } from '../../lib/payroll/format'
 import { PrintableView } from '../ui/PrintableView'
 
@@ -164,6 +165,7 @@ function DocumentBody({
   dataDesc: string
   empregador: string
 }) {
+  const contract = getCurrentContract(emp)
   if (docType === 'aviso_previo') {
     return (
       <div className="leading-relaxed">
@@ -171,7 +173,7 @@ function DocumentBody({
         <p className="text-center text-xs text-muted mb-6">Lei Complementar nº 150/2015</p>
         <p className="text-justify mb-3">
           Eu, <Campo>{empregador}</Campo>, empregador(a), comunico ao(a) <Campo>{emp.name}</Campo>, admitido(a) em{' '}
-          <Campo>{fd(admissao)}</Campo>, função <Campo>{emp.role}</Campo>, a rescisão do contrato com início em{' '}
+          <Campo>{fd(admissao)}</Campo>, função <Campo>{contract.role}</Campo>, a rescisão do contrato com início em{' '}
           <Campo>{fd(dataDesc)}</Campo>.
         </p>
         <p className="text-justify mb-3">Por ser expressão da verdade, firmamos o presente.</p>
@@ -192,10 +194,10 @@ function DocumentBody({
           <strong>EMPREGADOR(A):</strong> <Campo>{empregador}</Campo>
         </p>
         <p className="mb-3">
-          <strong>EMPREGADO(A):</strong> <Campo>{emp.name}</Campo> &nbsp;&nbsp; <strong>FUNÇÃO:</strong> <Campo>{emp.role}</Campo>
+          <strong>EMPREGADO(A):</strong> <Campo>{emp.name}</Campo> &nbsp;&nbsp; <strong>FUNÇÃO:</strong> <Campo>{contract.role}</Campo>
         </p>
         <p className="mb-3">
-          <strong>SALÁRIO:</strong> <Campo>R$ {fm(emp.salary)}</Campo> &nbsp;&nbsp; <strong>ADMISSÃO:</strong>{' '}
+          <strong>SALÁRIO:</strong> <Campo>R$ {fm(contract.salary)}</Campo> &nbsp;&nbsp; <strong>ADMISSÃO:</strong>{' '}
           <Campo>{fd(admissao)}</Campo> &nbsp;&nbsp; <strong>DESLIGAMENTO:</strong> <Campo>{fd(dataDesc)}</Campo>
         </p>
         <p className="text-justify mb-3">
@@ -258,7 +260,7 @@ function DocumentBody({
       <p className="text-center text-xs text-muted mb-6">Artigo 484-A da CLT</p>
       <p className="text-justify mb-3">
         De um lado, <Campo>{empregador}</Campo>, empregador(a), e de outro, <Campo>{emp.name}</Campo>, função{' '}
-        <Campo>{emp.role}</Campo>, salário <Campo>R$ {fm(emp.salary)}</Campo>, admitido(a) em <Campo>{fd(admissao)}</Campo>;
+        <Campo>{contract.role}</Campo>, salário <Campo>R$ {fm(contract.salary)}</Campo>, admitido(a) em <Campo>{fd(admissao)}</Campo>;
       </p>
       <p className="text-justify mb-3">
         Resolvem, de comum acordo, rescindir o contrato com base no art. 484-A da CLT a partir de <Campo>{fd(dataDesc)}</Campo>,

@@ -26,7 +26,7 @@ export function PaymentModal({ c, onClose, onConfirm }: Props) {
         id: c.payment?.id || uid(),
         empId: c.emp.id,
         empName: c.emp.name,
-        empRole: c.emp.role,
+        empRole: c.role,
         monthKey: c.key,
         ry: c.ry,
         rm: c.rm,

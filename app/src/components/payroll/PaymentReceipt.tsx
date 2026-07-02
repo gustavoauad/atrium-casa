@@ -3,9 +3,12 @@ import { MP } from '../../lib/payroll/constants'
 import type { Payment } from '../../types/payment'
 import { PrintableView } from '../ui/PrintableView'
 
-export function PaymentReceipt({ payment, vtDaily, onClose }: { payment: Payment; vtDaily: number; onClose: () => void }) {
+export function PaymentReceipt({ payment, onClose }: { payment: Payment; onClose: () => void }) {
   const p = payment
   const vtLabel = `${MP[p.vtM]} ${p.vtY}`
+  // Deriva o valor diário do próprio pagamento (não do cadastro atual do funcionário),
+  // para o recibo permanecer correto mesmo que o VT diário mude depois.
+  const vtDaily = p.vtWd > 0 ? p.vtGross / p.vtWd : 0
 
   return (
     <PrintableView title={`Recibo — ${p.empName}`} onClose={onClose}>

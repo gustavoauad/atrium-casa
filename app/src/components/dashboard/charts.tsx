@@ -2,6 +2,11 @@ import { fm } from '../../lib/payroll/format'
 
 const PIE_COLORS = ['#8B6F47', '#6B8F71', '#8ABDD8', '#C47A2A', '#B04A4A', '#C4973A', '#8C8278', '#5B8FAF']
 
+function fmShort(v: number): string {
+  if (v >= 1000) return `${(v / 1000).toFixed(1).replace('.', ',')}k`
+  return v.toFixed(0)
+}
+
 export interface MonthBar {
   label: string
   value: number
@@ -13,12 +18,12 @@ export function BarChart({ title, bars }: { title: string; bars: MonthBar[] }) {
   return (
     <div className="border border-border rounded-xl p-4">
       <p className="text-[11px] uppercase tracking-wider text-muted font-medium mb-4">{title}</p>
-      <div className="flex items-end gap-2 h-32 overflow-x-auto overflow-y-hidden">
+      <div className="flex items-end gap-2 h-40 overflow-x-auto overflow-y-hidden">
         {bars.map((b, i) => {
           const h = Math.max(Math.round((b.value / max) * 100), 3)
           return (
-            <div key={i} className="flex flex-col items-center gap-1.5 w-11 shrink-0">
-              <span className="text-[9px] text-muted whitespace-nowrap">{b.value > 0 ? `R$ ${fm(b.value)}` : ''}</span>
+            <div key={i} className="flex flex-col items-center gap-1.5 w-11 shrink-0" title={b.value > 0 ? `R$ ${fm(b.value)}` : undefined}>
+              <span className="text-[9px] text-muted whitespace-nowrap">{b.value > 0 ? `R$ ${fmShort(b.value)}` : ''}</span>
               <div
                 className={`w-full rounded-t ${b.current ? 'bg-accent' : 'bg-accent-2/60'}`}
                 style={{ height: `${h}px` }}

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Employee } from '../../types/employee'
 import { calcVerbas, MOTIVO_LABELS, type MotivoRescisao, type VerbasResult } from '../../lib/payroll/rescisao'
+import { getCurrentContract } from '../../lib/payroll/contracts'
 import { tod } from '../../lib/payroll/format'
 import { VerbasBreakdown } from '../rescisao/VerbasBreakdown'
 
@@ -11,10 +12,11 @@ interface Props {
 }
 
 export function BaixaModal({ emp, onClose, onConfirm }: Props) {
-  const [motivo, setMotivo] = useState<MotivoRescisao>('pedido')
+  const isEditing = emp.status === 'desligado'
+  const [motivo, setMotivo] = useState<MotivoRescisao>((emp.motivoBaixa as MotivoRescisao) || 'pedido')
   const [admissao, setAdmissao] = useState(emp.admissao)
-  const [dataDesc, setDataDesc] = useState(tod())
-  const [obs, setObs] = useState('')
+  const [dataDesc, setDataDesc] = useState(emp.dataBaixa || tod())
+  const [obs, setObs] = useState(emp.obsBaixa || '')
   const [result, setResult] = useState<VerbasResult | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -25,7 +27,7 @@ export function BaixaModal({ emp, onClose, onConfirm }: Props) {
       setError('Preencha as datas.')
       return
     }
-    setResult(calcVerbas(emp.salary, motivo, admissao, dataDesc, 0, 'indenizado'))
+    setResult(calcVerbas(getCurrentContract(emp).salary, motivo, admissao, dataDesc, 0, 'indenizado'))
   }
 
   async function handleConfirm() {
@@ -55,7 +57,7 @@ export function BaixaModal({ emp, onClose, onConfirm }: Props) {
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50" onClick={onClose}>
       <div className="w-full max-w-md bg-card border border-border rounded-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h2 className="font-medium">Baixa de Funcionário</h2>
+          <h2 className="font-medium">{isEditing ? 'Editar Desligamento' : 'Baixa de Funcionário'}</h2>
           <button type="button" onClick={onClose} className="text-muted text-xl leading-none">×</button>
         </div>
 
@@ -99,7 +101,7 @@ export function BaixaModal({ emp, onClose, onConfirm }: Props) {
             Cancelar
           </button>
           <button type="button" disabled={saving} onClick={handleConfirm} className="px-4 py-2 rounded-lg bg-danger text-white text-sm disabled:opacity-60">
-            {saving ? 'Confirmando…' : 'Confirmar baixa'}
+            {saving ? 'Salvando…' : isEditing ? 'Salvar alterações' : 'Confirmar baixa'}
           </button>
         </div>
       </div>

@@ -11,7 +11,7 @@ export function PayrollDetailCard({ c }: { c: PayrollCalc }) {
       <div className="flex items-center justify-between">
         <div>
           <div className="font-medium text-sm">{c.emp.name}</div>
-          <div className="text-xs text-muted">{c.emp.role}</div>
+          <div className="text-xs text-muted">{c.role}</div>
         </div>
         <div className="text-right">
           <div className="font-medium text-accent">R$ {fm(c.total)}</div>
@@ -80,7 +80,7 @@ export function PayrollDetailCard({ c }: { c: PayrollCalc }) {
       <Row label="INSS empregado" value={-c.inssAmt} negative />
 
       <div className="text-xs text-muted">
-        Vale-Transporte: {c.vtWd} dia(s) × R$ {fm(c.emp.vtDaily)} = R$ {fm(c.vtGross)} − desconto R$ {fm(c.vtDisc)} ={' '}
+        Vale-Transporte: {c.vtWd} dia(s) × R$ {fm(c.vtDaily)} = R$ {fm(c.vtGross)} − desconto R$ {fm(c.vtDisc)} ={' '}
         <strong className="text-blue">R$ {fm(c.vtNet)}</strong>
       </div>
 

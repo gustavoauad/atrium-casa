@@ -3,6 +3,7 @@ import type { House } from '../../types/house'
 import type { Employee } from '../../types/employee'
 import { loadEmployees } from '../../hooks/useEmployees'
 import { calcVerbas, MOTIVO_LABELS, AVISO_LABELS, type MotivoRescisao, type AvisoTipo, type VerbasResult } from '../../lib/payroll/rescisao'
+import { getCurrentContract } from '../../lib/payroll/contracts'
 import { fd, tod } from '../../lib/payroll/format'
 import { VerbasBreakdown } from './VerbasBreakdown'
 import { PrintableView } from '../ui/PrintableView'
@@ -28,7 +29,7 @@ export function RescisaoCalculatorScreen({ house }: { house: House }) {
     setEmpId(id)
     const emp = employees.find((e) => e.id === id)
     if (emp) {
-      setSalario(emp.salary)
+      setSalario(getCurrentContract(emp).salary)
       setAdmissao(emp.admissao)
     }
   }

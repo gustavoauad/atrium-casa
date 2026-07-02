@@ -138,6 +138,8 @@ export function DashboardScreen({ house }: { house: House }) {
     const totSal = calcs.reduce((a, c) => a + c.finalNetSal, 0)
     const totVT = calcs.reduce((a, c) => a + c.vtNet, 0)
     const totAll = calcs.reduce((a, c) => a + c.total, 0)
+    const totPago = calcs.reduce((a, c) => a + (c.payment?.total ?? 0), 0)
+    const totAPagar = totAll - totPago
     const paidCount = calcs.filter((c) => c.payment).length
     const monthLabel = `${MP[selMonth.m]} ${selMonth.y}`
 
@@ -173,11 +175,13 @@ export function DashboardScreen({ house }: { house: House }) {
 
         {error && <p className="text-xs text-danger bg-danger/10 border border-danger/30 rounded-lg px-3 py-2">{error}</p>}
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           <SummaryCard label="Funcionários ativos" value={String(active.length)} sub="" colorClass="text-accent" />
           <SummaryCard label="Total salários" value={`R$ ${fm(totSal)}`} sub={monthLabel} colorClass="text-sage" />
           <SummaryCard label="Total VT" value={`R$ ${fm(totVT)}`} sub={monthLabel} colorClass="text-blue" />
           <SummaryCard label="Total a pagar" value={`R$ ${fm(totAll)}`} sub="sal. + VT" colorClass="text-accent" />
+          <SummaryCard label="Valor pago" value={`R$ ${fm(totPago)}`} sub={monthLabel} colorClass="text-sage" />
+          <SummaryCard label="Saldo a pagar" value={`R$ ${fm(totAPagar)}`} sub="total − pago" colorClass="text-warn" />
         </div>
 
         {calcs.length === 0 ? (
@@ -207,6 +211,8 @@ export function DashboardScreen({ house }: { house: House }) {
   const totSal = flatCalcs.reduce((a, c) => a + c.finalNetSal, 0)
   const totVT = flatCalcs.reduce((a, c) => a + c.vtNet, 0)
   const totAll = flatCalcs.reduce((a, c) => a + c.total, 0)
+  const totPago = flatCalcs.reduce((a, c) => a + (c.payment?.total ?? 0), 0)
+  const totAPagar = totAll - totPago
   const paidCount = flatCalcs.filter((c) => c.payment).length
   const rangeLabel = `${MP[rangeFrom.m]} ${rangeFrom.y} → ${MP[rangeTo.m]} ${rangeTo.y}`
 
@@ -246,11 +252,13 @@ export function DashboardScreen({ house }: { house: House }) {
 
       {error && <p className="text-xs text-danger bg-danger/10 border border-danger/30 rounded-lg px-3 py-2">{error}</p>}
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         <SummaryCard label="Funcionários ativos" value={String(active.length)} sub="" colorClass="text-accent" />
         <SummaryCard label="Total salários" value={`R$ ${fm(totSal)}`} sub={rangeLabel} colorClass="text-sage" />
         <SummaryCard label="Total VT" value={`R$ ${fm(totVT)}`} sub={rangeLabel} colorClass="text-blue" />
         <SummaryCard label="Total a pagar" value={`R$ ${fm(totAll)}`} sub="sal. + VT" colorClass="text-accent" />
+        <SummaryCard label="Valor pago" value={`R$ ${fm(totPago)}`} sub={rangeLabel} colorClass="text-sage" />
+        <SummaryCard label="Saldo a pagar" value={`R$ ${fm(totAPagar)}`} sub="total − pago" colorClass="text-warn" />
       </div>
 
       {flatCalcs.length === 0 ? (
@@ -372,12 +380,12 @@ function EmployeeStatusTable({ calcs }: { calcs: PayrollCalc[] }) {
         <tbody>
           {calcs.map((c) => (
             <tr key={c.emp.id} className="border-b border-border last:border-0">
-              <td className="px-3 py-2">
+              <td className="px-3 py-2 whitespace-nowrap">
                 <div>{c.emp.name}</div>
-                <div className="text-muted text-[10px]">{c.emp.role}</div>
+                <div className="text-muted text-[10px]">{c.role}</div>
               </td>
-              <td className="text-right px-3 py-2 font-medium text-accent">R$ {fm(c.total)}</td>
-              <td className="text-center px-3 py-2">
+              <td className="text-right px-3 py-2 font-medium text-accent whitespace-nowrap">R$ {fm(c.total)}</td>
+              <td className="text-center px-3 py-2 whitespace-nowrap">
                 {c.payment ? (
                   <span className="text-sage">✓ Pago em {fd(c.payment.paidDate)}</span>
                 ) : c.holWarns.length > 0 ? (

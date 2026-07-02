@@ -187,7 +187,7 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
     ]
     calcs.forEach((c) =>
       rows.push([
-        c.emp.name, c.emp.role, c.salBase.toFixed(2), c.recTot.toFixed(2), c.avTot.toFixed(2), c.bons.toFixed(2),
+        c.emp.name, c.role, c.salBase.toFixed(2), c.recTot.toFixed(2), c.avTot.toFixed(2), c.bons.toFixed(2),
         c.deds.toFixed(2), c.inssAmt.toFixed(2), c.netSal.toFixed(2), c.vtWd, c.vtNet.toFixed(2), c.total.toFixed(2),
         c.payment?.paidDate || '', c.payment?.method || '', c.payment ? 'Pago' : 'Pendente',
       ]),
@@ -289,7 +289,7 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
                   <tr key={c.emp.id} className="border-b border-border">
                     <td className="px-2 py-2">
                       <div>{c.emp.name}</div>
-                      <div className="text-muted text-[10px]">{c.emp.role}</div>
+                      <div className="text-muted text-[10px]">{c.role}</div>
                     </td>
                     <td className="text-right px-2 py-2">R$ {fm(c.finalNetSal)}</td>
                     <td className="text-right px-2 py-2 text-blue">R$ {fm(c.vtNet)}</td>
@@ -345,7 +345,7 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
                     <td className="px-3 py-2.5">
                       {c.emp.name}
                       <br />
-                      <span className="text-[11px] text-muted">{c.emp.role}</span>
+                      <span className="text-[11px] text-muted">{c.role}</span>
                     </td>
                     <td className="text-right px-3 py-2.5">R$ {fm(c.salBase)}</td>
                     <td className="text-right px-3 py-2.5 text-sage">R$ {fm(c.recTot + c.avTot)}</td>
@@ -396,6 +396,7 @@ function AccumulatedReport({ employees, activeMonths, calcFor }: AccProps) {
       let totInss = 0
       let total = 0
       let paid = 0
+      let role = ''
       for (const { y, m } of inRange) {
         const c = calcFor(emp, y, m)
         totSal += c.finalNetSal
@@ -403,8 +404,9 @@ function AccumulatedReport({ employees, activeMonths, calcFor }: AccProps) {
         totInss += c.inssAmt
         total += c.total
         if (c.payment) paid++
+        role = c.role
       }
-      return { emp, months: inRange.length, totSal, totVT, totInss, total, paid }
+      return { emp, role, months: inRange.length, totSal, totVT, totInss, total, paid }
     })
     .filter((r) => r.months > 0)
     .sort((a, b) => a.emp.name.localeCompare(b.emp.name, 'pt-BR'))
@@ -418,7 +420,7 @@ function AccumulatedReport({ employees, activeMonths, calcFor }: AccProps) {
 
   function exportCSV() {
     const rowsOut: (string | number)[][] = [['Funcionário', 'Função', 'Meses', 'Sal. Total', 'VT Total', 'INSS Total', 'Total']]
-    rows.forEach((r) => rowsOut.push([r.emp.name, r.emp.role, r.months, fm(r.totSal), fm(r.totVT), fm(r.totInss), fm(r.total)]))
+    rows.forEach((r) => rowsOut.push([r.emp.name, r.role, r.months, fm(r.totSal), fm(r.totVT), fm(r.totInss), fm(r.total)]))
     downloadCSV('acumulado.csv', rowsOut)
   }
 
@@ -475,7 +477,7 @@ function AccumulatedReport({ employees, activeMonths, calcFor }: AccProps) {
                   <tr key={r.emp.id} className="border-b border-border">
                     <td className="px-2 py-2">
                       <div>{r.emp.name}</div>
-                      <div className="text-muted text-[10px]">{r.emp.role}</div>
+                      <div className="text-muted text-[10px]">{r.role}</div>
                     </td>
                     <td className="text-right px-2 py-2 text-muted">{r.paid}/{r.months}</td>
                     <td className="text-right px-2 py-2">R$ {fm(r.totSal)}</td>

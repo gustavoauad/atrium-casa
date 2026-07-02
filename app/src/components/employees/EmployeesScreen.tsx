@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { deleteEmployee, loadEmployees, saveEmployee } from '../../hooks/useEmployees'
 import type { Employee } from '../../types/employee'
 import type { House } from '../../types/house'
+import { getCurrentContract } from '../../lib/payroll/contracts'
 import { EmployeeModal } from './EmployeeModal'
 import { BaixaModal } from './BaixaModal'
 
@@ -73,6 +74,7 @@ export function EmployeesScreen({ house }: { house: House }) {
       <ul className="space-y-2">
         {employees?.map((emp) => {
           const desligado = emp.status === 'desligado'
+          const contract = getCurrentContract(emp)
           return (
             <li key={emp.id} className="flex items-center justify-between px-4 py-3 rounded-xl border border-border bg-card">
               <div>
@@ -85,7 +87,7 @@ export function EmployeesScreen({ house }: { house: House }) {
                   )}
                 </div>
                 <div className="text-xs text-muted mt-0.5">
-                  {emp.role} · R$ {emp.salary.toFixed(2)} · {emp.contract === 'mensalista' ? 'Mensalista' : 'Diarista'}
+                  {contract.role} · R$ {contract.salary.toFixed(2)} · {contract.contract === 'mensalista' ? 'Mensalista' : 'Diarista'}
                 </div>
               </div>
               <div className="flex gap-2">
@@ -94,13 +96,13 @@ export function EmployeesScreen({ house }: { house: House }) {
                     Editar
                   </button>
                 )}
-                {canWrite && !desligado && (
+                {canWrite && (
                   <button
                     type="button"
                     onClick={() => setBaixaTarget(emp)}
                     className="px-3 py-1.5 rounded-lg border border-warn/40 text-warn text-xs"
                   >
-                    Dar baixa
+                    {desligado ? 'Editar desligamento' : 'Dar baixa'}
                   </button>
                 )}
                 {canDelete && (

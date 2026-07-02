@@ -1,8 +1,9 @@
 import type { Adjustment } from '../../types/adjustment'
 import { DEDUCTION_TYPES } from '../../types/adjustment'
-import type { Employee } from '../../types/employee'
+import type { Contract, Employee } from '../../types/employee'
 import type { WorkEvent } from '../../types/event'
 import type { Payment, RecurringOccurrence } from '../../types/payment'
+import { getContractForMonth } from './contracts'
 import { parseLocalDate, r2 } from './format'
 import { allHolidays, bday1, bday5, mdays, type RegionalHoliday } from './holidays'
 import { inssCalc, irrfCalc } from './inss'
@@ -24,6 +25,10 @@ export interface CalcInput {
 
 export interface PayrollCalc {
   emp: Employee
+  /** Contrato vigente no mês de referência (ry, rm) — use para função/salário/etc históricos. */
+  contract: Contract
+  role: string
+  vtDaily: number
   ry: number
   rm: number
   key: string
@@ -74,15 +79,16 @@ export function MK(y: number, m: number): string {
 
 export function calc(input: CalcInput): PayrollCalc {
   const { emp, ry, rm, events, adjustments, payment, regionalHolidays, vtManualDays } = input
+  const contract = getContractForMonth(emp, ry, rm)
   const h = allHolidays(regionalHolidays)
   const days = mdays(ry, rm)
   const key = MK(ry, rm)
 
-  const salBase = emp.salary || 0
+  const salBase = contract.salary || 0
   const recs: RecurringOccurrence[] = []
   const holWarns: { iso: string; hn: string; desc: string; val: number }[] = []
 
-  for (const rec of emp.recurring || []) {
+  for (const rec of contract.recurring || []) {
     for (const d of days.filter((d) => d.dow === rec.dow)) {
       const hn = h[d.iso] || null
       const hasEv = events.some((e) => e.date === d.iso)
@@ -114,7 +120,7 @@ export function calc(input: CalcInput): PayrollCalc {
     if (DEDUCTION_TYPES.includes(a.type)) deds += a.value
     else if (a.type === 'bonus') bons += a.value
   }
-  const inssAmt = emp.inss === 'yes' ? inssCalc(gross) : 0
+  const inssAmt = contract.inss === 'yes' ? inssCalc(gross) : 0
   const netSal = gross + bons - deds - inssAmt
 
   const vtY = rm === 11 ? ry + 1 : ry
@@ -122,15 +128,15 @@ export function calc(input: CalcInput): PayrollCalc {
   const vtDays = mdays(vtY, vtM)
   const vtSet: Record<string, 1> = {}
   for (const d of vtDays) {
-    if ((emp.workDays || []).includes(d.dow) && !h[d.iso]) vtSet[d.iso] = 1
+    if ((contract.workDays || []).includes(d.dow) && !h[d.iso]) vtSet[d.iso] = 1
   }
-  for (const rec of emp.recurring || []) {
+  for (const rec of contract.recurring || []) {
     for (const d of vtDays.filter((d) => d.dow === rec.dow && !h[d.iso])) vtSet[d.iso] = 1
   }
   const vtWdAuto = Object.keys(vtSet).length
   const vtWd = vtManualDays !== null ? vtManualDays : vtWdAuto
-  const vtGross = vtWd * (emp.vtDaily || 0)
-  const vtDisc = emp.vtDiscount === 'none' ? 0 : Math.min(salBase * 0.06, vtGross)
+  const vtGross = vtWd * (contract.vtDaily || 0)
+  const vtDisc = contract.vtDiscount === 'none' ? 0 : Math.min(salBase * 0.06, vtGross)
   const vtNet = Math.max(0, vtGross - vtDisc)
 
   const pyY = rm === 11 ? ry + 1 : ry
@@ -169,7 +175,8 @@ export function calc(input: CalcInput): PayrollCalc {
   const irrf = irrfCalc(irrfBase)
 
   return {
-    emp, ry, rm, key, payment, salBase, recs, recTot, avs, avTot, avPaid, holWarns, gross, adjs: sortedAdjustments,
+    emp, contract, role: contract.role, vtDaily: contract.vtDaily || 0, ry, rm, key, payment, salBase, recs, recTot,
+    avs, avTot, avPaid, holWarns, gross, adjs: sortedAdjustments,
     deds, bons, inssAmt, netSal, vtY, vtM, vtWd, vtWdAuto, vtManualDays, vtGross, vtDisc, vtNet,
     pay1: bday1(pyY, pyM, regionalHolidays), pay5: bday5(pyY, pyM, regionalHolidays), pyY, pyM,
     total: finalTotal, isFirstMonth, proRataDias, proRataSal, proRataSalBase, proRataActive, finalNetSal,

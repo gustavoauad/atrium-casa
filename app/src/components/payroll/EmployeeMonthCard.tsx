@@ -89,7 +89,7 @@ export function EmployeeMonthCard({
         <div>
           <div className="font-medium text-sm">{c.emp.name}</div>
           <div className="text-xs text-muted mt-0.5">
-            {c.emp.role}
+            {c.role}
             {c.payment && <span className="ml-2 text-sage">✓ Pago em {fd(c.payment.paidDate)}</span>}
           </div>
         </div>
@@ -256,7 +256,7 @@ export function EmployeeMonthCard({
               <span className="text-xs">R$ {fm(c.vtNet)}</span>
             </div>
             <div className="text-[11px] text-muted mb-2">
-              {c.vtWd} dia(s) × R$ {fm(c.emp.vtDaily)} = R$ {fm(c.vtGross)} − desconto R$ {fm(c.vtDisc)}
+              {c.vtWd} dia(s) × R$ {fm(c.vtDaily)} = R$ {fm(c.vtGross)} − desconto R$ {fm(c.vtDisc)}
             </div>
             {canWrite && (
               <div className="flex gap-2 items-center">
@@ -373,7 +373,7 @@ export function EmployeeMonthCard({
       )}
 
       {showReceipt && c.payment && (
-        <PaymentReceipt payment={c.payment} vtDaily={c.emp.vtDaily} onClose={() => setShowReceipt(false)} />
+        <PaymentReceipt payment={c.payment} onClose={() => setShowReceipt(false)} />
       )}
 
       {payEventModal && (
