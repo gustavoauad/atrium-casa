@@ -8,12 +8,15 @@ import type { RegionalHoliday } from '../../lib/payroll/holidays'
 import { calc, MK, type PayrollCalc } from '../../lib/payroll/calc'
 import { MP } from '../../lib/payroll/constants'
 import { fm, fd } from '../../lib/payroll/format'
+import { activeMonthsFor, type MonthRef } from '../../lib/payroll/activeMonths'
 import { loadEmployees } from '../../hooks/useEmployees'
 import { loadEventsForEmployee } from '../../hooks/useEvents'
 import { loadAdjustmentsForEmployee } from '../../hooks/useAdjustments'
 import { loadPaymentsForEmployee } from '../../hooks/usePayments'
 import { loadRegionalHolidays, loadOverrides } from '../../hooks/useSettings'
 import { BarChart, DonutChart, PieChart, StackedBarChart } from './charts'
+
+type Mode = 'mes' | 'periodo'
 
 export function DashboardScreen({ house }: { house: House }) {
   const [employees, setEmployees] = useState<Employee[] | null>(null)
@@ -23,6 +26,13 @@ export function DashboardScreen({ house }: { house: House }) {
   const [regional, setRegional] = useState<RegionalHoliday[]>([])
   const [overrides, setOverrides] = useState<Record<string, unknown>>({})
   const [error, setError] = useState('')
+
+  const [mode, setMode] = useState<Mode>('mes')
+  const now = new Date()
+  const [selMonth, setSelMonth] = useState<MonthRef>({ y: now.getFullYear(), m: now.getMonth() })
+  const activeMonths = useMemo(() => activeMonthsFor(employees), [employees])
+  const [from, setFrom] = useState<MonthRef | null>(null)
+  const [to, setTo] = useState<MonthRef | null>(null)
 
   useEffect(() => {
     refresh()
@@ -78,14 +88,30 @@ export function DashboardScreen({ house }: { house: House }) {
     })
   }
 
-  const now = new Date()
-  const curY = now.getFullYear()
-  const curM = now.getMonth()
+  const rangeFrom = from ?? activeMonths[0] ?? selMonth
+  const rangeTo = to ?? activeMonths[activeMonths.length - 1] ?? selMonth
+  const inRange = useMemo(() => {
+    const months: MonthRef[] = []
+    let y = rangeFrom.y
+    let m = rangeFrom.m
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      months.push({ y, m })
+      if (y === rangeTo.y && m === rangeTo.m) break
+      m++
+      if (m > 11) {
+        m = 0
+        y++
+      }
+      if (months.length > 240) break // guarda-corpo
+    }
+    return months
+  }, [rangeFrom.y, rangeFrom.m, rangeTo.y, rangeTo.m])
 
   const last6 = useMemo(() => {
-    const months: { y: number; m: number }[] = []
-    let y = curY
-    let m = curM
+    const months: MonthRef[] = []
+    let y = selMonth.y
+    let m = selMonth.m
     for (let i = 0; i < 6; i++) {
       months.unshift({ y, m })
       m--
@@ -95,8 +121,7 @@ export function DashboardScreen({ house }: { house: House }) {
       }
     }
     return months
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [curY, curM])
+  }, [selMonth.y, selMonth.m])
 
   if (employees === null) {
     return (
@@ -107,91 +132,264 @@ export function DashboardScreen({ house }: { house: House }) {
   }
 
   const active = employees.filter((e) => e.status !== 'desligado')
-  const calcs = active.map((e) => calcFor(e, curY, curM))
-  const totSal = calcs.reduce((a, c) => a + c.finalNetSal, 0)
-  const totVT = calcs.reduce((a, c) => a + c.vtNet, 0)
-  const totAll = calcs.reduce((a, c) => a + c.total, 0)
-  const paidCount = calcs.filter((c) => c.payment).length
-  const monthLabel = `${MP[curM]} ${curY}`
 
-  const barData = last6.map(({ y, m }) => ({
-    label: `${MP[m].slice(0, 3)}/${String(y).slice(2)}`,
-    value: active.reduce((s, e) => s + calcFor(e, y, m).total, 0),
-    current: y === curY && m === curM,
+  if (mode === 'mes') {
+    const calcs = active.map((e) => calcFor(e, selMonth.y, selMonth.m))
+    const totSal = calcs.reduce((a, c) => a + c.finalNetSal, 0)
+    const totVT = calcs.reduce((a, c) => a + c.vtNet, 0)
+    const totAll = calcs.reduce((a, c) => a + c.total, 0)
+    const paidCount = calcs.filter((c) => c.payment).length
+    const monthLabel = `${MP[selMonth.m]} ${selMonth.y}`
+
+    const barData = last6.map(({ y, m }) => ({
+      label: `${MP[m].slice(0, 3)}/${String(y).slice(2)}`,
+      value: active.reduce((s, e) => s + calcFor(e, y, m).total, 0),
+      current: y === selMonth.y && m === selMonth.m,
+    }))
+    const stackedData = last6.map(({ y, m }) => ({
+      label: `${MP[m].slice(0, 3)}/${String(y).slice(2)}`,
+      salario: active.reduce((s, e) => s + calcFor(e, y, m).finalNetSal, 0),
+      vt: active.reduce((s, e) => s + calcFor(e, y, m).vtNet, 0),
+      current: y === selMonth.y && m === selMonth.m,
+    }))
+    const pieSlices = calcs
+      .filter((c) => c.total > 0)
+      .sort((a, b) => b.total - a.total)
+      .map((c) => ({ label: firstLast(c.emp.name), value: c.total }))
+
+    return (
+      <div className="w-full max-w-3xl mx-auto p-4 space-y-4">
+        <Header
+          mode={mode}
+          setMode={setMode}
+          activeMonths={activeMonths}
+          selMonth={selMonth}
+          setSelMonth={setSelMonth}
+          from={rangeFrom}
+          to={rangeTo}
+          setFrom={setFrom}
+          setTo={setTo}
+        />
+
+        {error && <p className="text-xs text-danger bg-danger/10 border border-danger/30 rounded-lg px-3 py-2">{error}</p>}
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <SummaryCard label="Funcionários ativos" value={String(active.length)} sub="" colorClass="text-accent" />
+          <SummaryCard label="Total salários" value={`R$ ${fm(totSal)}`} sub={monthLabel} colorClass="text-sage" />
+          <SummaryCard label="Total VT" value={`R$ ${fm(totVT)}`} sub={monthLabel} colorClass="text-blue" />
+          <SummaryCard label="Total a pagar" value={`R$ ${fm(totAll)}`} sub="sal. + VT" colorClass="text-accent" />
+        </div>
+
+        {calcs.length === 0 ? (
+          <p className="text-sm text-muted">Nenhum funcionário cadastrado ainda.</p>
+        ) : (
+          <>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <BarChart title="Total a pagar — últimos 6 meses" bars={barData} />
+              <DonutChart title={`Pagamentos — ${monthLabel}`} paid={paidCount} total={calcs.length} />
+              <PieChart title={`Distribuição da folha — ${monthLabel}`} slices={pieSlices} total={totAll} />
+              <StackedBarChart title="Composição mensal (salário vs. VT)" months={stackedData} />
+            </div>
+
+            <EmployeeStatusTable calcs={calcs} />
+            <p className="text-xs text-muted">
+              Para lançar diárias, ajustes ou confirmar pagamentos, use a aba <strong>Folha de Pagamento</strong>.
+            </p>
+          </>
+        )}
+      </div>
+    )
+  }
+
+  // ── modo período ──────────────────────────────────────────
+  const perCalcs = inRange.map((mr) => active.map((e) => calcFor(e, mr.y, mr.m)))
+  const flatCalcs = perCalcs.flat()
+  const totSal = flatCalcs.reduce((a, c) => a + c.finalNetSal, 0)
+  const totVT = flatCalcs.reduce((a, c) => a + c.vtNet, 0)
+  const totAll = flatCalcs.reduce((a, c) => a + c.total, 0)
+  const paidCount = flatCalcs.filter((c) => c.payment).length
+  const rangeLabel = `${MP[rangeFrom.m]} ${rangeFrom.y} → ${MP[rangeTo.m]} ${rangeTo.y}`
+
+  const barData = inRange.map((mr, i) => ({
+    label: `${MP[mr.m].slice(0, 3)}/${String(mr.y).slice(2)}`,
+    value: perCalcs[i].reduce((s, c) => s + c.total, 0),
+    current: mr.y === now.getFullYear() && mr.m === now.getMonth(),
   }))
-
-  const stackedData = last6.map(({ y, m }) => ({
-    label: `${MP[m].slice(0, 3)}/${String(y).slice(2)}`,
-    salario: active.reduce((s, e) => s + calcFor(e, y, m).finalNetSal, 0),
-    vt: active.reduce((s, e) => s + calcFor(e, y, m).vtNet, 0),
-    current: y === curY && m === curM,
+  const stackedData = inRange.map((mr, i) => ({
+    label: `${MP[mr.m].slice(0, 3)}/${String(mr.y).slice(2)}`,
+    salario: perCalcs[i].reduce((s, c) => s + c.finalNetSal, 0),
+    vt: perCalcs[i].reduce((s, c) => s + c.vtNet, 0),
+    current: mr.y === now.getFullYear() && mr.m === now.getMonth(),
   }))
-
-  const pieSlices = calcs
-    .filter((c) => c.total > 0)
-    .sort((a, b) => b.total - a.total)
-    .map((c) => ({ label: firstLast(c.emp.name), value: c.total }))
+  const byEmp: Record<string, { label: string; value: number }> = {}
+  for (const c of flatCalcs) {
+    if (!byEmp[c.emp.id]) byEmp[c.emp.id] = { label: firstLast(c.emp.name), value: 0 }
+    byEmp[c.emp.id].value += c.total
+  }
+  const pieSlices = Object.values(byEmp)
+    .filter((s) => s.value > 0)
+    .sort((a, b) => b.value - a.value)
 
   return (
     <div className="w-full max-w-3xl mx-auto p-4 space-y-4">
-      <h2 className="text-lg font-medium">Visão Geral</h2>
+      <Header
+        mode={mode}
+        setMode={setMode}
+        activeMonths={activeMonths}
+        selMonth={selMonth}
+        setSelMonth={setSelMonth}
+        from={rangeFrom}
+        to={rangeTo}
+        setFrom={setFrom}
+        setTo={setTo}
+      />
 
       {error && <p className="text-xs text-danger bg-danger/10 border border-danger/30 rounded-lg px-3 py-2">{error}</p>}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <SummaryCard label="Funcionários ativos" value={String(active.length)} sub="" colorClass="text-accent" />
-        <SummaryCard label="Total salários" value={`R$ ${fm(totSal)}`} sub={monthLabel} colorClass="text-sage" />
-        <SummaryCard label="Total VT" value={`R$ ${fm(totVT)}`} sub={monthLabel} colorClass="text-blue" />
+        <SummaryCard label="Total salários" value={`R$ ${fm(totSal)}`} sub={rangeLabel} colorClass="text-sage" />
+        <SummaryCard label="Total VT" value={`R$ ${fm(totVT)}`} sub={rangeLabel} colorClass="text-blue" />
         <SummaryCard label="Total a pagar" value={`R$ ${fm(totAll)}`} sub="sal. + VT" colorClass="text-accent" />
       </div>
 
-      {calcs.length === 0 ? (
+      {flatCalcs.length === 0 ? (
         <p className="text-sm text-muted">Nenhum funcionário cadastrado ainda.</p>
       ) : (
         <>
           <div className="grid sm:grid-cols-2 gap-4">
-            <BarChart title={`Total a pagar — últimos 6 meses`} bars={barData} />
-            <DonutChart title={`Pagamentos — ${monthLabel}`} paid={paidCount} total={calcs.length} />
-            <PieChart title={`Distribuição da folha — ${monthLabel}`} slices={pieSlices} total={totAll} />
-            <StackedBarChart title="Composição mensal (salário vs. VT)" months={stackedData} />
-          </div>
-
-          <div className="border border-border rounded-xl overflow-x-auto overflow-y-hidden">
-            <table className="w-full text-xs min-w-[420px]">
-              <thead>
-                <tr className="border-b-2 border-border text-muted uppercase text-[10px]">
-                  <th className="text-left px-3 py-2">Funcionário</th>
-                  <th className="text-right px-3 py-2">Total</th>
-                  <th className="text-center px-3 py-2">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {calcs.map((c) => (
-                  <tr key={c.emp.id} className="border-b border-border last:border-0">
-                    <td className="px-3 py-2">
-                      <div>{c.emp.name}</div>
-                      <div className="text-muted text-[10px]">{c.emp.role}</div>
-                    </td>
-                    <td className="text-right px-3 py-2 font-medium text-accent">R$ {fm(c.total)}</td>
-                    <td className="text-center px-3 py-2">
-                      {c.payment ? (
-                        <span className="text-sage">✓ Pago em {fd(c.payment.paidDate)}</span>
-                      ) : c.holWarns.length > 0 ? (
-                        <span className="text-warn">⚠️ {c.holWarns.length} feriado(s)</span>
-                      ) : (
-                        <span className="text-muted">○ Pendente</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <BarChart title={`Total a pagar — ${rangeLabel}`} bars={barData} />
+            <DonutChart title={`Pagamentos — ${rangeLabel}`} paid={paidCount} total={flatCalcs.length} />
+            <PieChart title={`Distribuição da folha — ${rangeLabel}`} slices={pieSlices} total={totAll} />
+            <StackedBarChart title="Composição por mês (salário vs. VT)" months={stackedData} />
           </div>
           <p className="text-xs text-muted">
             Para lançar diárias, ajustes ou confirmar pagamentos, use a aba <strong>Folha de Pagamento</strong>.
           </p>
         </>
       )}
+    </div>
+  )
+}
+
+function Header({
+  mode, setMode, activeMonths, selMonth, setSelMonth, from, to, setFrom, setTo,
+}: {
+  mode: Mode
+  setMode: (m: Mode) => void
+  activeMonths: MonthRef[]
+  selMonth: MonthRef
+  setSelMonth: (m: MonthRef) => void
+  from: MonthRef
+  to: MonthRef
+  setFrom: (m: MonthRef) => void
+  setTo: (m: MonthRef) => void
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 flex-wrap">
+      <h2 className="text-lg font-medium">Visão Geral</h2>
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={() => setMode('mes')}
+            className={`px-2.5 py-1 rounded-lg text-[11px] border ${mode === 'mes' ? 'bg-accent text-white border-accent' : 'border-border text-muted'}`}
+          >
+            Mês
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('periodo')}
+            className={`px-2.5 py-1 rounded-lg text-[11px] border ${mode === 'periodo' ? 'bg-accent text-white border-accent' : 'border-border text-muted'}`}
+          >
+            Período
+          </button>
+        </div>
+        {mode === 'mes' ? (
+          <select
+            className="input w-auto"
+            value={`${selMonth.y}-${selMonth.m}`}
+            onChange={(e) => {
+              const [y, m] = e.target.value.split('-').map(Number)
+              setSelMonth({ y, m })
+            }}
+          >
+            {activeMonths.map(({ y, m }) => (
+              <option key={`${y}-${m}`} value={`${y}-${m}`}>
+                {MP[m]} {y}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <>
+            <select
+              className="input w-auto"
+              value={`${from.y}-${from.m}`}
+              onChange={(e) => {
+                const [y, m] = e.target.value.split('-').map(Number)
+                setFrom({ y, m })
+              }}
+            >
+              {activeMonths.map(({ y, m }) => (
+                <option key={`${y}-${m}`} value={`${y}-${m}`}>
+                  {MP[m]} {y}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-muted">até</span>
+            <select
+              className="input w-auto"
+              value={`${to.y}-${to.m}`}
+              onChange={(e) => {
+                const [y, m] = e.target.value.split('-').map(Number)
+                setTo({ y, m })
+              }}
+            >
+              {activeMonths.map(({ y, m }) => (
+                <option key={`${y}-${m}`} value={`${y}-${m}`}>
+                  {MP[m]} {y}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function EmployeeStatusTable({ calcs }: { calcs: PayrollCalc[] }) {
+  return (
+    <div className="border border-border rounded-xl overflow-x-auto overflow-y-hidden">
+      <table className="w-full text-xs min-w-[420px]">
+        <thead>
+          <tr className="border-b-2 border-border text-muted uppercase text-[10px]">
+            <th className="text-left px-3 py-2">Funcionário</th>
+            <th className="text-right px-3 py-2">Total</th>
+            <th className="text-center px-3 py-2">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {calcs.map((c) => (
+            <tr key={c.emp.id} className="border-b border-border last:border-0">
+              <td className="px-3 py-2">
+                <div>{c.emp.name}</div>
+                <div className="text-muted text-[10px]">{c.emp.role}</div>
+              </td>
+              <td className="text-right px-3 py-2 font-medium text-accent">R$ {fm(c.total)}</td>
+              <td className="text-center px-3 py-2">
+                {c.payment ? (
+                  <span className="text-sage">✓ Pago em {fd(c.payment.paidDate)}</span>
+                ) : c.holWarns.length > 0 ? (
+                  <span className="text-warn">⚠️ {c.holWarns.length} feriado(s)</span>
+                ) : (
+                  <span className="text-muted">○ Pendente</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }

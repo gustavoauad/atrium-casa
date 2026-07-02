@@ -8,19 +8,17 @@ import type { RegionalHoliday } from '../../lib/payroll/holidays'
 import { calc, MK, type PayrollCalc } from '../../lib/payroll/calc'
 import { MP } from '../../lib/payroll/constants'
 import { fm } from '../../lib/payroll/format'
+import { activeMonthsFor, type MonthRef } from '../../lib/payroll/activeMonths'
 import { loadEmployees } from '../../hooks/useEmployees'
 import { loadEventsForEmployee } from '../../hooks/useEvents'
 import { loadAdjustmentsForEmployee } from '../../hooks/useAdjustments'
 import { loadPaymentsForEmployee } from '../../hooks/usePayments'
 import { loadRegionalHolidays, loadOverrides } from '../../hooks/useSettings'
 import { PrintableView } from '../ui/PrintableView'
+import { PayrollDetailCard } from './PayrollDetailCard'
 
 type SubTab = 'mensal' | 'acumulado'
-
-interface MonthRef {
-  y: number
-  m: number
-}
+type ReportMode = 'resumido' | 'detalhado'
 
 export function ReportsScreen({ house }: { house: House }) {
   const [subTab, setSubTab] = useState<SubTab>('mensal')
@@ -148,32 +146,6 @@ export function ReportsScreen({ house }: { house: House }) {
   )
 }
 
-function activeMonthsFor(employees: Employee[] | null): MonthRef[] {
-  const now = new Date()
-  let start = { y: now.getFullYear(), m: now.getMonth() }
-  for (const e of employees || []) {
-    if (!e.admissao) continue
-    const d = new Date(e.admissao)
-    if (d.getFullYear() < start.y || (d.getFullYear() === start.y && d.getMonth() < start.m)) {
-      start = { y: d.getFullYear(), m: d.getMonth() }
-    }
-  }
-  const months: MonthRef[] = []
-  let y = start.y
-  let m = start.m
-  const endY = now.getFullYear()
-  const endM = now.getMonth()
-  while (y < endY || (y === endY && m <= endM)) {
-    months.push({ y, m })
-    m++
-    if (m > 11) {
-      m = 0
-      y++
-    }
-  }
-  return months
-}
-
 function downloadCSV(filename: string, rows: (string | number)[][]) {
   const csv = rows.map((r) => r.map((v) => `"${String(v).split('"').join('""')}"`).join(',')).join('\r\n')
   const a = document.createElement('a')
@@ -197,6 +169,7 @@ interface MonthlyProps {
 
 function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth, empFilter, setEmpFilter, inclDes, setInclDes, calcFor }: MonthlyProps) {
   const [showPrint, setShowPrint] = useState(false)
+  const [mode, setMode] = useState<ReportMode>('resumido')
   const calcs = filteredEmps.map((e) => calcFor(e, month.y, month.m))
   const totSal = calcs.reduce((a, c) => a + c.finalNetSal, 0)
   const totVT = calcs.reduce((a, c) => a + c.vtNet, 0)
@@ -224,7 +197,7 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
 
   return (
     <div>
-      <div className="flex gap-2 flex-wrap items-center mb-4">
+      <div className="flex gap-2 flex-wrap items-center mb-3">
         <select className="input w-auto" value={`${month.y}-${month.m}`} onChange={(e) => {
           const [y, m] = e.target.value.split('-').map(Number)
           setMonth({ y, m })
@@ -258,15 +231,39 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
         </div>
       </div>
 
-      <div className="flex items-center gap-2 mb-4 text-xs text-muted">
-        <span>{refLabel} · pago em {payLabel}</span>
-        <span className={`px-2 py-0.5 rounded-full ${paidCount === calcs.length && calcs.length > 0 ? 'bg-sage/15 text-sage' : 'bg-warn/15 text-warn'}`}>
-          {paidCount}/{calcs.length} pagos
-        </span>
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
+        <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={() => setMode('resumido')}
+            className={`px-2.5 py-1 rounded-lg text-[11px] border ${mode === 'resumido' ? 'bg-accent text-white border-accent' : 'border-border text-muted'}`}
+          >
+            Resumido
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('detalhado')}
+            className={`px-2.5 py-1 rounded-lg text-[11px] border ${mode === 'detalhado' ? 'bg-accent text-white border-accent' : 'border-border text-muted'}`}
+          >
+            Detalhado
+          </button>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted">
+          <span>{refLabel} · pago em {payLabel}</span>
+          <span className={`px-2 py-0.5 rounded-full ${paidCount === calcs.length && calcs.length > 0 ? 'bg-sage/15 text-sage' : 'bg-warn/15 text-warn'}`}>
+            {paidCount}/{calcs.length} pagos
+          </span>
+        </div>
       </div>
 
       {calcs.length === 0 ? (
         <p className="text-sm text-muted">Nenhum funcionário encontrado.</p>
+      ) : mode === 'detalhado' ? (
+        <div className="space-y-3">
+          {calcs.map((c) => (
+            <PayrollDetailCard key={c.emp.id} c={c} />
+          ))}
+        </div>
       ) : (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
@@ -321,48 +318,57 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
           <p className="text-xs text-muted mb-6">
             Competência: <strong>{refLabel}</strong> · Pagamento: <strong>{payLabel}</strong>
           </p>
-          <table className="w-full text-xs border-collapse">
-            <thead>
-              <tr className="bg-cream">
-                <th className="text-left px-3 py-2 uppercase text-[10px] text-muted">Funcionário</th>
-                <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Sal. Base</th>
-                <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Diárias</th>
-                <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Descontos</th>
-                <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Sal. Líq.</th>
-                <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">VT</th>
-                <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Total</th>
-                <th className="text-center px-3 py-2 uppercase text-[10px] text-muted">Status</th>
-              </tr>
-            </thead>
-            <tbody>
+
+          {mode === 'detalhado' ? (
+            <div className="space-y-3">
               {calcs.map((c) => (
-                <tr key={c.emp.id} className="border-b border-border">
-                  <td className="px-3 py-2.5">
-                    {c.emp.name}
-                    <br />
-                    <span className="text-[11px] text-muted">{c.emp.role}</span>
-                  </td>
-                  <td className="text-right px-3 py-2.5">R$ {fm(c.salBase)}</td>
-                  <td className="text-right px-3 py-2.5 text-sage">R$ {fm(c.recTot + c.avTot)}</td>
-                  <td className="text-right px-3 py-2.5 text-danger">R$ {fm(c.deds + c.inssAmt)}</td>
-                  <td className="text-right px-3 py-2.5 font-medium">R$ {fm(c.netSal)}</td>
-                  <td className="text-right px-3 py-2.5 text-blue">R$ {fm(c.vtNet)}</td>
-                  <td className="text-right px-3 py-2.5 text-base text-accent font-medium">R$ {fm(c.total)}</td>
-                  <td className="text-center px-3 py-2.5 text-[11px]">
-                    {c.payment ? <span className="text-sage">✓ Pago</span> : <span className="text-warn">⏳ Pendente</span>}
-                  </td>
-                </tr>
+                <PayrollDetailCard key={c.emp.id} c={c} />
               ))}
-              <tr className="bg-cream font-medium">
-                <td className="px-3 py-3">TOTAL</td>
-                <td colSpan={3} />
-                <td />
-                <td className="text-right px-3 py-3 text-blue">R$ {fm(totVT)}</td>
-                <td className="text-right px-3 py-3 text-lg text-accent">R$ {fm(totAll)}</td>
-                <td />
-              </tr>
-            </tbody>
-          </table>
+            </div>
+          ) : (
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="bg-cream">
+                  <th className="text-left px-3 py-2 uppercase text-[10px] text-muted">Funcionário</th>
+                  <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Sal. Base</th>
+                  <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Diárias</th>
+                  <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Descontos</th>
+                  <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Sal. Líq.</th>
+                  <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">VT</th>
+                  <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Total</th>
+                  <th className="text-center px-3 py-2 uppercase text-[10px] text-muted">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {calcs.map((c) => (
+                  <tr key={c.emp.id} className="border-b border-border">
+                    <td className="px-3 py-2.5">
+                      {c.emp.name}
+                      <br />
+                      <span className="text-[11px] text-muted">{c.emp.role}</span>
+                    </td>
+                    <td className="text-right px-3 py-2.5">R$ {fm(c.salBase)}</td>
+                    <td className="text-right px-3 py-2.5 text-sage">R$ {fm(c.recTot + c.avTot)}</td>
+                    <td className="text-right px-3 py-2.5 text-danger">R$ {fm(c.deds + c.inssAmt)}</td>
+                    <td className="text-right px-3 py-2.5 font-medium">R$ {fm(c.netSal)}</td>
+                    <td className="text-right px-3 py-2.5 text-blue">R$ {fm(c.vtNet)}</td>
+                    <td className="text-right px-3 py-2.5 text-base text-accent font-medium">R$ {fm(c.total)}</td>
+                    <td className="text-center px-3 py-2.5 text-[11px]">
+                      {c.payment ? <span className="text-sage">✓ Pago</span> : <span className="text-warn">⏳ Pendente</span>}
+                    </td>
+                  </tr>
+                ))}
+                <tr className="bg-cream font-medium">
+                  <td className="px-3 py-3">TOTAL</td>
+                  <td colSpan={3} />
+                  <td />
+                  <td className="text-right px-3 py-3 text-blue">R$ {fm(totVT)}</td>
+                  <td className="text-right px-3 py-3 text-lg text-accent">R$ {fm(totAll)}</td>
+                  <td />
+                </tr>
+              </tbody>
+            </table>
+          )}
         </PrintableView>
       )}
     </div>

@@ -106,6 +106,8 @@ export function calc(input: CalcInput): PayrollCalc {
   const avTot = avs.reduce((a, e) => a + e.value, 0)
   const gross = salBase + recTot + avTot
 
+  const sortedAdjustments = [...adjustments].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+
   let deds = 0
   let bons = 0
   for (const a of adjustments) {
@@ -167,7 +169,7 @@ export function calc(input: CalcInput): PayrollCalc {
   const irrf = irrfCalc(irrfBase)
 
   return {
-    emp, ry, rm, key, payment, salBase, recs, recTot, avs, avTot, avPaid, holWarns, gross, adjs: adjustments,
+    emp, ry, rm, key, payment, salBase, recs, recTot, avs, avTot, avPaid, holWarns, gross, adjs: sortedAdjustments,
     deds, bons, inssAmt, netSal, vtY, vtM, vtWd, vtWdAuto, vtManualDays, vtGross, vtDisc, vtNet,
     pay1: bday1(pyY, pyM, regionalHolidays), pay5: bday5(pyY, pyM, regionalHolidays), pyY, pyM,
     total: finalTotal, isFirstMonth, proRataDias, proRataSal, proRataSalBase, proRataActive, finalNetSal,

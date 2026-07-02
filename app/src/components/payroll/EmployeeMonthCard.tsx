@@ -11,6 +11,7 @@ import { EventModal } from './EventModal'
 import { AdjustmentModal } from './AdjustmentModal'
 import { PaymentModal } from './PaymentModal'
 import { PaymentReceipt } from './PaymentReceipt'
+import { PayEventModal } from './PayEventModal'
 
 interface Props {
   c: PayrollCalc
@@ -41,6 +42,7 @@ export function EmployeeMonthCard({
   } | null>(null)
   const [showPayment, setShowPayment] = useState(false)
   const [showReceipt, setShowReceipt] = useState(false)
+  const [payEventModal, setPayEventModal] = useState<WorkEvent | null>(null)
   const [vtInput, setVtInput] = useState<string>(c.vtManualDays !== null ? String(c.vtManualDays) : '')
 
   const recGroups = groupRecurring(c.recs)
@@ -52,6 +54,29 @@ export function EmployeeMonthCard({
       defaultValue: val,
       defaultDesc: `${ADJUSTMENT_LABELS[field]} — ${MP[c.rm]} ${c.ry}`,
     })
+  }
+
+  async function handleConfirmPayEvent(paidDate: string, method: string, notes: string) {
+    const ev = payEventModal!
+    await onSaveEvent({ ...ev, paidDate, paidMethod: method, paidNotes: notes })
+    const existing = c.adjs.find((a) => a.id === 'ant_' + ev.id)
+    await onSaveAdjustment({
+      id: 'ant_' + ev.id,
+      evId: ev.id,
+      type: 'antecipacao',
+      value: ev.value,
+      date: paidDate,
+      desc: `Diária ${fd(ev.date)}${method ? ' · ' + method : ''}`,
+      _sbid: existing?._sbid,
+    })
+    setPayEventModal(null)
+  }
+
+  async function handleUnpayEvent(ev: WorkEvent) {
+    if (!confirm('Desfazer o pagamento desta diária?')) return
+    await onSaveEvent({ ...ev, paidDate: undefined, paidMethod: undefined, paidNotes: undefined })
+    const existing = c.adjs.find((a) => a.id === 'ant_' + ev.id)
+    if (existing?._sbid) await onDeleteAdjustment(existing._sbid)
   }
 
   return (
@@ -160,15 +185,39 @@ export function EmployeeMonthCard({
             }
           >
             {c.avs.length === 0 && <p className="text-xs text-muted">Nenhuma diária avulsa lançada.</p>}
-            {c.avs.map((ev) => (
-              <div key={ev.id} className="flex items-center justify-between text-xs py-1">
-                <button type="button" className="text-left underline decoration-dotted" onClick={() => canWrite && setEventModal({ ev, date: ev.date })}>
-                  {fd(ev.date)} — {ev.duration}
-                  {ev.hn && ' 🎉'}
-                </button>
-                <span>R$ {fm(ev.value)}</span>
-              </div>
-            ))}
+            {c.avs.map((ev) => {
+              const isPaid = !!ev.paidDate
+              return (
+                <div key={ev.id} className="flex items-center justify-between gap-2 text-xs py-1">
+                  <button type="button" className="text-left underline decoration-dotted min-w-0" onClick={() => canWrite && setEventModal({ ev, date: ev.date })}>
+                    {fd(ev.date)} — {ev.duration}
+                    {ev.hn && ' 🎉'}
+                    {isPaid && <span className="ml-1.5 text-[10px] text-sage">✓ Pago {fd(ev.paidDate!)}</span>}
+                  </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className={isPaid ? 'text-sage' : 'text-blue'}>R$ {fm(ev.value)}</span>
+                    {canWrite && !isPaid && (
+                      <button
+                        type="button"
+                        onClick={() => setPayEventModal(ev)}
+                        className="px-2 py-0.5 rounded-md bg-sage text-white text-[10px] whitespace-nowrap"
+                      >
+                        $ Pagar
+                      </button>
+                    )}
+                    {canWrite && isPaid && (
+                      <button
+                        type="button"
+                        onClick={() => handleUnpayEvent(ev)}
+                        className="px-2 py-0.5 rounded-md border border-border text-muted text-[10px] whitespace-nowrap"
+                      >
+                        ✕ Pgto
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </Section>
 
           <Section
@@ -299,7 +348,12 @@ export function EmployeeMonthCard({
           onDelete={
             adjModal.adj?._sbid
               ? async () => {
-                  await onDeleteAdjustment(adjModal.adj!._sbid!)
+                  const adj = adjModal.adj!
+                  await onDeleteAdjustment(adj._sbid!)
+                  if (adj.type === 'antecipacao' && adj.evId) {
+                    const ev = c.avs.find((e) => e.id === adj.evId)
+                    if (ev) await onSaveEvent({ ...ev, paidDate: undefined, paidMethod: undefined, paidNotes: undefined })
+                  }
                   setAdjModal(null)
                 }
               : undefined
@@ -320,6 +374,10 @@ export function EmployeeMonthCard({
 
       {showReceipt && c.payment && (
         <PaymentReceipt payment={c.payment} vtDaily={c.emp.vtDaily} onClose={() => setShowReceipt(false)} />
+      )}
+
+      {payEventModal && (
+        <PayEventModal ev={payEventModal} onClose={() => setPayEventModal(null)} onConfirm={handleConfirmPayEvent} />
       )}
     </div>
   )
