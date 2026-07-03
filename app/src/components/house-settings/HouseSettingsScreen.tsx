@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import type { House, HouseRole } from '../../types/house'
-import { changeMemberRole, loadHouseMembers, removeMember, type HouseMember } from '../../hooks/useHouseMembers'
+import { ROLE_COLORS, ROLE_LABELS, isAdminOrOwner, isOwner } from '../../types/house'
+import {
+  changeMemberRole,
+  loadHouseMembers,
+  removeMember,
+  transferOwnership,
+  type HouseMember,
+} from '../../hooks/useHouseMembers'
+import { deleteHouse } from '../../hooks/useHouses'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTheme, type Theme } from '../../contexts/ThemeContext'
 
@@ -17,18 +25,26 @@ const ROLE_OPTS: { v: HouseRole; l: string }[] = [
   { v: 'admin', l: 'Admin' },
 ]
 
-const ROLE_LABELS: Record<string, string> = { admin: 'Admin', member: 'Membro', editor: 'Editor', viewer: 'Visitante' }
-const ROLE_COLORS: Record<string, string> = { admin: 'text-accent', member: 'text-sage', editor: 'text-blue', viewer: 'text-muted' }
+interface Props {
+  house: House
+  onRoleChanged: (role: HouseRole) => void
+  onHouseDeleted: () => void
+}
 
-export function HouseSettingsScreen({ house }: { house: House }) {
+export function HouseSettingsScreen({ house, onRoleChanged, onHouseDeleted }: Props) {
   const { user } = useAuth()
   const { theme, setTheme } = useTheme()
   const [members, setMembers] = useState<HouseMember[] | null>(null)
   const [qrDataUrl, setQrDataUrl] = useState('')
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
+  const [transferTarget, setTransferTarget] = useState('')
+  const [transferring, setTransferring] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
 
-  const isAdmin = house.role === 'admin'
+  const canManage = isAdminOrOwner(house.role)
+  const owner = isOwner(house.role)
 
   useEffect(() => {
     refresh()
@@ -67,6 +83,37 @@ export function HouseSettingsScreen({ house }: { house: House }) {
       await refresh()
     } catch (e) {
       alert(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  async function handleTransfer() {
+    if (!transferTarget) return
+    const target = members?.find((m) => m.user_id === transferTarget)
+    const disp = target?.email || target?.display_name || 'este membro'
+    if (!confirm(`Transferir a propriedade da Casa para ${disp}? Você vira Admin e não poderá desfazer sozinho(a).`)) return
+    setTransferring(true)
+    try {
+      await transferOwnership(house.id, transferTarget)
+      onRoleChanged('admin')
+      setTransferTarget('')
+      await refresh()
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e))
+    } finally {
+      setTransferring(false)
+    }
+  }
+
+  async function handleDeleteHouse() {
+    if (deleteConfirmText.trim() !== house.name) return
+    if (!confirm('Essa ação é irreversível e apaga todos os dados da Casa (funcionários, folha, configurações). Confirma?')) return
+    setDeleting(true)
+    try {
+      await deleteHouse(house.id)
+      onHouseDeleted()
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e))
+      setDeleting(false)
     }
   }
 
@@ -153,7 +200,7 @@ export function HouseSettingsScreen({ house }: { house: House }) {
                     <div className={`text-xs mt-0.5 ${ROLE_COLORS[m.role] || 'text-muted'}`}>{ROLE_LABELS[m.role] || m.role}</div>
                   </div>
                 </div>
-                {isAdmin && !isMe && (
+                {canManage && !isMe && m.role !== 'owner' && (
                   <div className="flex items-center gap-1.5">
                     <select
                       value={m.role}
@@ -180,6 +227,65 @@ export function HouseSettingsScreen({ house }: { house: House }) {
           })}
         </ul>
       </div>
+
+      {owner && (
+        <div className="border border-border rounded-xl p-4">
+          <p className="text-[11px] uppercase tracking-wider text-muted font-medium mb-3">Transferir Propriedade</p>
+          <p className="text-xs text-muted mb-3">
+            Passe o título de Proprietário para outro membro da Casa. Você vira Admin automaticamente.
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            <select
+              value={transferTarget}
+              onChange={(e) => setTransferTarget(e.target.value)}
+              className="input flex-1 min-w-[160px]"
+            >
+              <option value="">Selecione um membro…</option>
+              {members
+                ?.filter((m) => m.user_id !== user?.id)
+                .map((m) => (
+                  <option key={m.user_id} value={m.user_id}>
+                    {m.email || m.display_name || m.user_id.slice(0, 8)} ({ROLE_LABELS[m.role] || m.role})
+                  </option>
+                ))}
+            </select>
+            <button
+              type="button"
+              disabled={!transferTarget || transferring}
+              onClick={handleTransfer}
+              className="btn-primary px-4 whitespace-nowrap"
+            >
+              {transferring ? 'Transferindo…' : 'Transferir'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {owner && (
+        <div className="border border-danger/30 rounded-xl p-4">
+          <p className="text-[11px] uppercase tracking-wider text-danger font-medium mb-3">⚠ Zona de Perigo</p>
+          <p className="text-xs text-muted mb-3">
+            Excluir a Casa apaga permanentemente todos os funcionários, folhas, pagamentos e configurações. Essa ação não
+            pode ser desfeita. Digite <strong>{house.name}</strong> para confirmar.
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            <input
+              className="input flex-1 min-w-[160px]"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder={house.name}
+            />
+            <button
+              type="button"
+              disabled={deleteConfirmText.trim() !== house.name || deleting}
+              onClick={handleDeleteHouse}
+              className="px-4 py-2.5 rounded-lg bg-danger text-white text-sm font-medium disabled:opacity-60 whitespace-nowrap"
+            >
+              {deleting ? 'Excluindo…' : 'Excluir Casa'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

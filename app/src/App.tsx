@@ -1,11 +1,12 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ThemeProvider, useTheme } from './contexts/ThemeContext'
 import { AuthScreen } from './components/auth/AuthScreen'
 import { HousePickerScreen } from './components/house/HousePickerScreen'
 import { Logo } from './components/ui/Logo'
 import { supabase } from './lib/supabase'
-import type { House } from './types/house'
+import type { House, HouseRole } from './types/house'
+import { ROLE_LABELS, isAdminOrOwner } from './types/house'
 
 const DashboardScreen = lazy(() => import('./components/dashboard/DashboardScreen').then((m) => ({ default: m.DashboardScreen })))
 const EmployeesScreen = lazy(() => import('./components/employees/EmployeesScreen').then((m) => ({ default: m.EmployeesScreen })))
@@ -32,6 +33,10 @@ function AppShell() {
   const [house, setHouse] = useState<House | null>(null)
   const [tab, setTab] = useState<Tab>('dashboard')
 
+  useEffect(() => {
+    if (!user) setHouse(null)
+  }, [user])
+
   if (loading) {
     return (
       <div className="min-h-svh flex items-center justify-center">
@@ -42,7 +47,27 @@ function AppShell() {
 
   if (!user) return <AuthScreen />
 
-  if (!house) return <HousePickerScreen onSelect={setHouse} />
+  if (!house) {
+    return (
+      <HousePickerScreen
+        onSelect={(h) => {
+          setHouse(h)
+          setTab('dashboard')
+        }}
+      />
+    )
+  }
+
+  const managesHouse = isAdminOrOwner(house.role)
+
+  function updateHouseRole(role: HouseRole) {
+    setHouse((h) => (h ? { ...h, role } : h))
+  }
+
+  function backToHousePicker() {
+    setHouse(null)
+    setTab('dashboard')
+  }
 
   return (
     <div className="min-h-svh">
@@ -57,11 +82,19 @@ function AppShell() {
           <div className="min-w-0 sm:border-l sm:border-border sm:pl-3">
             <h1 className="font-medium text-accent truncate text-sm sm:text-base">{house.name}</h1>
             <p className="text-[11px] sm:text-xs text-muted truncate">
-              {user.email} — {house.role}
+              {user.email} — {ROLE_LABELS[house.role] || house.role}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={backToHousePicker}
+            title="Trocar de Casa"
+            className="w-8 h-8 flex items-center justify-center rounded-full border border-border text-muted shrink-0"
+          >
+            🏠
+          </button>
           <button
             type="button"
             onClick={cycleTheme}
@@ -98,9 +131,11 @@ function AppShell() {
         <TabButton active={tab === 'feriados'} onClick={() => setTab('feriados')}>
           Feriados Regionais
         </TabButton>
-        <TabButton active={tab === 'casa'} onClick={() => setTab('casa')}>
-          Casa
-        </TabButton>
+        {managesHouse && (
+          <TabButton active={tab === 'casa'} onClick={() => setTab('casa')}>
+            Casa
+          </TabButton>
+        )}
       </nav>
 
       <Suspense fallback={<div className="p-8 text-center text-sm text-muted">Carregando…</div>}>
@@ -111,7 +146,9 @@ function AppShell() {
         {tab === 'rescisao' && <RescisaoCalculatorScreen house={house} />}
         {tab === 'templates' && <DocumentTemplatesScreen house={house} />}
         {tab === 'feriados' && <RegionalHolidaysScreen house={house} />}
-        {tab === 'casa' && <HouseSettingsScreen house={house} />}
+        {tab === 'casa' && managesHouse && (
+          <HouseSettingsScreen house={house} onRoleChanged={updateHouseRole} onHouseDeleted={backToHousePicker} />
+        )}
       </Suspense>
     </div>
   )

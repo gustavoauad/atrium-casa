@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { House } from '../../types/house'
+import { canWrite as canWriteRole } from '../../types/house'
 import type { RegionalHoliday } from '../../lib/payroll/holidays'
 import { fd } from '../../lib/payroll/format'
 import { loadRegionalHolidays, saveRegionalHolidays } from '../../hooks/useSettings'
@@ -11,7 +12,7 @@ export function RegionalHolidaysScreen({ house }: { house: House }) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const canWrite = house.role === 'admin' || house.role === 'editor' || house.role === 'member'
+  const canWrite = canWriteRole(house.role)
 
   useEffect(() => {
     loadRegionalHolidays(house.id)

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { createHouse, joinHouseByInviteCode, loadUserHouses } from '../../hooks/useHouses'
 import type { House } from '../../types/house'
+import { ROLE_LABELS } from '../../types/house'
 
 export function HousePickerScreen({ onSelect }: { onSelect: (house: House) => void }) {
   const { user } = useAuth()
@@ -15,10 +16,7 @@ export function HousePickerScreen({ onSelect }: { onSelect: (house: House) => vo
   useEffect(() => {
     if (!user) return
     loadUserHouses(user.id)
-      .then((list) => {
-        setHouses(list)
-        if (list.length === 1) onSelect(list[0])
-      })
+      .then(setHouses)
       .catch((e) => setError(e.message))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
@@ -72,7 +70,7 @@ export function HousePickerScreen({ onSelect }: { onSelect: (house: House) => vo
                     <div className="text-[11px] text-muted mt-0.5">Código: {h.invite_code}</div>
                   </div>
                   <span className="text-[11px] px-2 py-1 rounded-full bg-accent-2/10 text-accent">
-                    {h.role}
+                    {ROLE_LABELS[h.role] || h.role}
                   </span>
                 </button>
               </li>

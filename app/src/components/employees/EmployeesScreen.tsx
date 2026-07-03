@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { deleteEmployee, loadEmployees, saveEmployee } from '../../hooks/useEmployees'
 import type { Employee } from '../../types/employee'
 import type { House } from '../../types/house'
+import { canWrite as canWriteRole, isAdminOrOwner } from '../../types/house'
 import { getCurrentContract } from '../../lib/payroll/contracts'
 import { EmployeeModal } from './EmployeeModal'
 import { BaixaModal } from './BaixaModal'
@@ -12,8 +13,8 @@ export function EmployeesScreen({ house }: { house: House }) {
   const [editing, setEditing] = useState<Employee | null | undefined>(undefined)
   const [baixaTarget, setBaixaTarget] = useState<Employee | null>(null)
 
-  const canWrite = house.role === 'admin' || house.role === 'editor' || house.role === 'member'
-  const canDelete = house.role === 'admin'
+  const canWrite = canWriteRole(house.role)
+  const canDelete = isAdminOrOwner(house.role)
 
   useEffect(() => {
     refresh()

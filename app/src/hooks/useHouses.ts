@@ -37,10 +37,22 @@ export async function createHouse(userId: string, name: string): Promise<House> 
 
   const { error: mErr } = await supabase
     .from('house_members')
-    .insert({ house_id: houseRow.id, user_id: userId, role: 'admin' })
+    .insert({ house_id: houseRow.id, user_id: userId, role: 'owner' })
   if (mErr) throw new Error('Erro ao associar membro: ' + mErr.message)
 
-  return { id: houseRow.id, name: houseRow.name, invite_code: houseRow.invite_code, role: 'admin' }
+  return { id: houseRow.id, name: houseRow.name, invite_code: houseRow.invite_code, role: 'owner' }
+}
+
+/** Exclui a Casa e todos os dados vinculados. Irreversível — só o Proprietário pode chamar isso. */
+export async function deleteHouse(houseId: string): Promise<void> {
+  await supabase.from('events').delete().eq('house_id', houseId)
+  await supabase.from('adjustments').delete().eq('house_id', houseId)
+  await supabase.from('payments').delete().eq('house_id', houseId)
+  await supabase.from('employees').delete().eq('house_id', houseId)
+  await supabase.from('settings').delete().eq('house_id', houseId)
+  await supabase.from('house_members').delete().eq('house_id', houseId)
+  const { error } = await supabase.from('houses').delete().eq('id', houseId)
+  if (error) throw new Error('Erro ao excluir Casa: ' + error.message)
 }
 
 export async function findHouseByInviteCode(code: string) {

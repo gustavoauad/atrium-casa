@@ -37,3 +37,12 @@ export async function removeMember(houseId: string, userId: string): Promise<voi
   const { error } = await supabase.from('house_members').delete().eq('house_id', houseId).eq('user_id', userId)
   if (error) throw new Error(error.message)
 }
+
+/** Transfere a propriedade da Casa para outro membro (o antigo Proprietário vira Admin). Só o Proprietário pode chamar isso. */
+export async function transferOwnership(houseId: string, newOwnerUserId: string): Promise<void> {
+  const { error } = await supabase.rpc('transfer_house_ownership', {
+    p_house_id: houseId,
+    p_new_owner: newOwnerUserId,
+  })
+  if (error) throw new Error(error.message)
+}

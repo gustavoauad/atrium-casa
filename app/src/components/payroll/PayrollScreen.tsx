@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { House } from '../../types/house'
+import { canWrite as canWriteRole } from '../../types/house'
 import type { Employee } from '../../types/employee'
 import type { WorkEvent } from '../../types/event'
 import type { Adjustment } from '../../types/adjustment'
@@ -54,7 +55,7 @@ export function PayrollScreen({ house }: { house: House }) {
   const [error, setError] = useState('')
   const [lateWarning, setLateWarning] = useState<LateWarning | null>(null)
 
-  const canWrite = house.role === 'admin' || house.role === 'editor' || house.role === 'member'
+  const canWrite = canWriteRole(house.role)
   const monthKey = MK(year, month)
 
   useEffect(() => {
