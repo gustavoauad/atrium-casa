@@ -12,7 +12,7 @@ interface PrintableViewProps {
 export function PrintableView({ title, onClose, children }: PrintableViewProps) {
   return (
     <div className="fixed inset-0 z-50 bg-bg overflow-y-auto">
-      <div className="print:hidden sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 border-b border-border bg-card">
+      <div className="print:hidden sticky top-0 z-10 flex items-center justify-between gap-2 px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 border-b border-border bg-card">
         <button type="button" onClick={onClose} className="px-3 py-1.5 rounded-lg border border-border text-xs shrink-0">
           ← Voltar
         </button>
