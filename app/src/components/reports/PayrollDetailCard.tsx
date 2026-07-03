@@ -7,7 +7,7 @@ export function PayrollDetailCard({ c }: { c: PayrollCalc }) {
   const recGroups = groupRecurring(c.recs)
 
   return (
-    <div className="border border-border rounded-xl bg-card p-4 space-y-3">
+    <div className="border border-border rounded-xl bg-card p-4 space-y-3 break-inside-avoid">
       <div className="flex items-center justify-between">
         <div>
           <div className="font-medium text-sm">{c.emp.name}</div>

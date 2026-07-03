@@ -67,6 +67,42 @@ body {
   color: var(--color-text);
 }
 
+/* ── IMPRESSÃO / PDF ───────────────────────────
+   Independe do tema atual (claro/escuro): documentos impressos sempre usam
+   as cores claras da marca, e cores de fundo (badges, destaques de tabela)
+   são forçadas a aparecer — navegadores omitem background por padrão ao
+   imprimir, a menos que isso seja explicitado. */
+@media print {
+  @page {
+    margin: 14mm 12mm;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  :root {
+    --color-bg: #F6F3EF !important;
+    --color-surface: #FDFCFA !important;
+    --color-card: #FFFFFF !important;
+    --color-border: #E8E2D9 !important;
+    --color-text: #1C1917 !important;
+    --color-muted: #8C8278 !important;
+    --color-stone: #B5ADA4 !important;
+    --color-cream: #F0E9DC !important;
+    --color-sage: #6B8F71 !important;
+    --color-warn: #C47A2A !important;
+    --color-danger: #B04A4A !important;
+    --color-blue: #5B8FAF !important;
+    --color-gold: #C4973A !important;
+  }
+
+  body {
+    background: #ffffff !important;
+  }
+}
+
 @layer components {
   .input {
     @apply w-full px-3 py-2.5 rounded-lg border border-border bg-surface text-sm outline-none;

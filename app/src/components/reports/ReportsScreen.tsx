@@ -197,7 +197,7 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
 
   return (
     <div>
-      <div className="flex gap-2 flex-wrap items-center mb-3">
+      <div className="print:hidden flex gap-2 flex-wrap items-center mb-3">
         <select className="input w-auto" value={`${month.y}-${month.m}`} onChange={(e) => {
           const [y, m] = e.target.value.split('-').map(Number)
           setMonth({ y, m })
@@ -231,7 +231,7 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
         </div>
       </div>
 
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
+      <div className="print:hidden flex items-center gap-3 mb-4 flex-wrap">
         <div className="flex gap-1">
           <button
             type="button"
@@ -256,61 +256,63 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
         </div>
       </div>
 
-      {calcs.length === 0 ? (
-        <p className="text-sm text-muted">Nenhum funcionário encontrado.</p>
-      ) : mode === 'detalhado' ? (
-        <div className="space-y-3">
-          {calcs.map((c) => (
-            <PayrollDetailCard key={c.emp.id} c={c} />
-          ))}
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
-            <TotalCard label="Total salários" value={totSal} colorClass="text-sage" />
-            <TotalCard label="Total VT" value={totVT} colorClass="text-blue" />
-            <TotalCard label="Total a pagar" value={totAll} colorClass="text-accent" />
-            <TotalCard label="Total INSS" value={totInss} colorClass="text-muted" />
+      <div className="print:hidden">
+        {calcs.length === 0 ? (
+          <p className="text-sm text-muted">Nenhum funcionário encontrado.</p>
+        ) : mode === 'detalhado' ? (
+          <div className="space-y-3">
+            {calcs.map((c) => (
+              <PayrollDetailCard key={c.emp.id} c={c} />
+            ))}
           </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+              <TotalCard label="Total salários" value={totSal} colorClass="text-sage" />
+              <TotalCard label="Total VT" value={totVT} colorClass="text-blue" />
+              <TotalCard label="Total a pagar" value={totAll} colorClass="text-accent" />
+              <TotalCard label="Total INSS" value={totInss} colorClass="text-muted" />
+            </div>
 
-          <div className="border border-border rounded-xl overflow-x-auto overflow-y-hidden">
-            <table className="w-full text-xs min-w-[480px]">
-              <thead>
-                <tr className="border-b-2 border-border text-muted uppercase text-[10px]">
-                  <th className="text-left px-2 py-2">Funcionário</th>
-                  <th className="text-right px-2 py-2">Sal. líq.</th>
-                  <th className="text-right px-2 py-2">VT</th>
-                  <th className="text-right px-2 py-2">Total</th>
-                  <th className="text-center px-2 py-2">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {calcs.map((c) => (
-                  <tr key={c.emp.id} className="border-b border-border">
-                    <td className="px-2 py-2">
-                      <div>{c.emp.name}</div>
-                      <div className="text-muted text-[10px]">{c.role}</div>
-                    </td>
-                    <td className="text-right px-2 py-2">R$ {fm(c.finalNetSal)}</td>
-                    <td className="text-right px-2 py-2 text-blue">R$ {fm(c.vtNet)}</td>
-                    <td className="text-right px-2 py-2 font-medium text-accent">R$ {fm(c.total)}</td>
-                    <td className="text-center px-2 py-2">
-                      {c.payment ? <span className="text-sage">✓ Pago</span> : <span className="text-warn">○ Pendente</span>}
-                    </td>
+            <div className="border border-border rounded-xl overflow-x-auto overflow-y-hidden">
+              <table className="w-full text-xs min-w-[480px]">
+                <thead>
+                  <tr className="border-b-2 border-border text-muted uppercase text-[10px]">
+                    <th className="text-left px-2 py-2">Funcionário</th>
+                    <th className="text-right px-2 py-2">Sal. líq.</th>
+                    <th className="text-right px-2 py-2">VT</th>
+                    <th className="text-right px-2 py-2">Total</th>
+                    <th className="text-center px-2 py-2">Status</th>
                   </tr>
-                ))}
-                <tr className="bg-cream font-medium">
-                  <td className="px-2 py-2">TOTAL ({calcs.length})</td>
-                  <td className="text-right px-2 py-2">R$ {fm(totSal)}</td>
-                  <td className="text-right px-2 py-2 text-blue">R$ {fm(totVT)}</td>
-                  <td className="text-right px-2 py-2 text-accent">R$ {fm(totAll)}</td>
-                  <td></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
+                </thead>
+                <tbody>
+                  {calcs.map((c) => (
+                    <tr key={c.emp.id} className="border-b border-border">
+                      <td className="px-2 py-2">
+                        <div>{c.emp.name}</div>
+                        <div className="text-muted text-[10px]">{c.role}</div>
+                      </td>
+                      <td className="text-right px-2 py-2">R$ {fm(c.finalNetSal)}</td>
+                      <td className="text-right px-2 py-2 text-blue">R$ {fm(c.vtNet)}</td>
+                      <td className="text-right px-2 py-2 font-medium text-accent">R$ {fm(c.total)}</td>
+                      <td className="text-center px-2 py-2">
+                        {c.payment ? <span className="text-sage">✓ Pago</span> : <span className="text-warn">○ Pendente</span>}
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="bg-cream font-medium">
+                    <td className="px-2 py-2">TOTAL ({calcs.length})</td>
+                    <td className="text-right px-2 py-2">R$ {fm(totSal)}</td>
+                    <td className="text-right px-2 py-2 text-blue">R$ {fm(totVT)}</td>
+                    <td className="text-right px-2 py-2 text-accent">R$ {fm(totAll)}</td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
 
       {showPrint && (
         <PrintableView title={`Relatório de Pagamentos — ${refLabel}`} onClose={() => setShowPrint(false)}>
@@ -341,7 +343,7 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
               </thead>
               <tbody>
                 {calcs.map((c) => (
-                  <tr key={c.emp.id} className="border-b border-border">
+                  <tr key={c.emp.id} className="border-b border-border break-inside-avoid">
                     <td className="px-3 py-2.5">
                       {c.emp.name}
                       <br />

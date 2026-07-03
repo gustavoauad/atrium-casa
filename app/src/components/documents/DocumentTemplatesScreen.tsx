@@ -60,13 +60,14 @@ export function DocumentTemplatesScreen({ house }: { house: House }) {
 
   return (
     <div className="w-full max-w-xl mx-auto p-4">
-      <h2 className="text-lg font-medium mb-1">Templates Rescisórios</h2>
-      <p className="text-xs text-muted mb-4">
-        Modelos de documentos para formalizar o desligamento. Revise com atenção antes de usar — não substituem orientação
-        jurídica/contábil.
-      </p>
+      <div className="print:hidden">
+        <h2 className="text-lg font-medium mb-1">Templates Rescisórios</h2>
+        <p className="text-xs text-muted mb-4">
+          Modelos de documentos para formalizar o desligamento. Revise com atenção antes de usar — não substituem
+          orientação jurídica/contábil.
+        </p>
 
-      <div className="space-y-3">
+        <div className="space-y-3">
         <Field label="Funcionário">
           <select className="input" value={empId} onChange={(e) => selectEmployee(e.target.value)}>
             {employees.map((e) => (
@@ -105,6 +106,7 @@ export function DocumentTemplatesScreen({ house }: { house: House }) {
         </button>
 
         {error && <p className="text-xs text-danger bg-danger/10 border border-danger/30 rounded-lg px-3 py-2">{error}</p>}
+        </div>
       </div>
 
       {showDoc && emp && (
