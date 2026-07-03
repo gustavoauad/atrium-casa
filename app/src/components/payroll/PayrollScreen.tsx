@@ -14,7 +14,7 @@ import { fd, parseLocalDate } from '../../lib/payroll/format'
 import { loadEmployees } from '../../hooks/useEmployees'
 import { loadEventsForMonth, saveEvent as saveEventApi, deleteEvent as deleteEventApi } from '../../hooks/useEvents'
 import { loadAdjustmentsForMonth, saveAdjustment as saveAdjustmentApi, deleteAdjustment as deleteAdjustmentApi } from '../../hooks/useAdjustments'
-import { loadPaymentsForMonth, savePayment as savePaymentApi } from '../../hooks/usePayments'
+import { loadPaymentsForMonth, savePayment as savePaymentApi, deletePayment as deletePaymentApi } from '../../hooks/usePayments'
 import { loadRegionalHolidays, loadOverrides, saveOverride } from '../../hooks/useSettings'
 import { EmployeeMonthCard } from './EmployeeMonthCard'
 
@@ -182,6 +182,18 @@ export function PayrollScreen({ house }: { house: House }) {
     checkLatePayroll()
   }
 
+  async function handleCancelPayment(empId: string) {
+    const payment = paymentByEmp[empId]
+    if (!payment?._sbid) return
+    await deletePaymentApi(house.id, payment._sbid)
+    setPaymentByEmp((prev) => {
+      const next = { ...prev }
+      delete next[empId]
+      return next
+    })
+    checkLatePayroll()
+  }
+
   const pyY = month === 11 ? year + 1 : year
   const pyM = month === 11 ? 0 : month + 1
   const p5 = bday5(pyY, pyM, regional)
@@ -253,6 +265,7 @@ export function PayrollScreen({ house }: { house: House }) {
               onSetVtOverride={(days) => handleSetVtOverride(c.emp.id, days)}
               onSetProRata={(active) => handleSetProRata(c.emp.id, active)}
               onConfirmPayment={(payment) => handleConfirmPayment(c.emp.id, payment)}
+              onCancelPayment={() => handleCancelPayment(c.emp.id)}
             />
           ))}
         </div>
@@ -274,6 +287,7 @@ export function PayrollScreen({ house }: { house: House }) {
               onSetVtOverride={(days) => handleSetVtOverride(c.emp.id, days)}
               onSetProRata={(active) => handleSetProRata(c.emp.id, active)}
               onConfirmPayment={(payment) => handleConfirmPayment(c.emp.id, payment)}
+              onCancelPayment={() => handleCancelPayment(c.emp.id)}
             />
           ))}
         </div>
