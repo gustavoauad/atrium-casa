@@ -10,6 +10,9 @@ import {
   type HouseMember,
 } from '../../hooks/useHouseMembers'
 import { deleteHouse } from '../../hooks/useHouses'
+import { loadHouseThemeColors, saveHouseThemeColors } from '../../hooks/useSettings'
+import { DEFAULT_ACCENT, type HouseThemeColors } from '../../lib/houseTheme'
+import { isValidHexColor } from '../../lib/color'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTheme, type Theme } from '../../contexts/ThemeContext'
 
@@ -29,9 +32,10 @@ interface Props {
   house: House
   onRoleChanged: (role: HouseRole) => void
   onHouseDeleted: () => void
+  onThemeChanged: (colors: HouseThemeColors | null) => void
 }
 
-export function HouseSettingsScreen({ house, onRoleChanged, onHouseDeleted }: Props) {
+export function HouseSettingsScreen({ house, onRoleChanged, onHouseDeleted, onThemeChanged }: Props) {
   const { user } = useAuth()
   const { theme, setTheme } = useTheme()
   const [members, setMembers] = useState<HouseMember[] | null>(null)
@@ -42,12 +46,17 @@ export function HouseSettingsScreen({ house, onRoleChanged, onHouseDeleted }: Pr
   const [transferring, setTransferring] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deleting, setDeleting] = useState(false)
+  const [accentColor, setAccentColor] = useState(DEFAULT_ACCENT)
+  const [savingTheme, setSavingTheme] = useState(false)
 
   const canManage = isAdminOrOwner(house.role)
   const owner = isOwner(house.role)
 
   useEffect(() => {
     refresh()
+    loadHouseThemeColors(house.id)
+      .then((colors) => setAccentColor(colors?.accent || DEFAULT_ACCENT))
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [house.id])
 
@@ -117,6 +126,38 @@ export function HouseSettingsScreen({ house, onRoleChanged, onHouseDeleted }: Pr
     }
   }
 
+  async function handleSaveThemeColor() {
+    if (!isValidHexColor(accentColor)) {
+      setError('Cor inválida.')
+      return
+    }
+    setSavingTheme(true)
+    setError('')
+    try {
+      const colors: HouseThemeColors = { accent: accentColor }
+      await saveHouseThemeColors(house.id, colors)
+      onThemeChanged(colors)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setSavingTheme(false)
+    }
+  }
+
+  async function handleResetThemeColor() {
+    setSavingTheme(true)
+    setError('')
+    try {
+      await saveHouseThemeColors(house.id, null)
+      setAccentColor(DEFAULT_ACCENT)
+      onThemeChanged(null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setSavingTheme(false)
+    }
+  }
+
   function copyCode() {
     navigator.clipboard.writeText(house.invite_code)
     setCopied(true)
@@ -154,6 +195,45 @@ export function HouseSettingsScreen({ house, onRoleChanged, onHouseDeleted }: Pr
           ))}
         </div>
       </div>
+
+      {canManage && (
+        <div className="border border-border rounded-xl p-4">
+          <p className="text-[11px] uppercase tracking-wider text-muted font-medium mb-3">🎨 Cor da Casa</p>
+          <p className="text-xs text-muted mb-3">
+            Personalize a cor de destaque desta Casa. Vale para todos os membros e visitantes, em qualquer dispositivo.
+          </p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <input
+              type="color"
+              value={isValidHexColor(accentColor) ? accentColor : DEFAULT_ACCENT}
+              onChange={(e) => setAccentColor(e.target.value)}
+              className="w-11 h-11 rounded-lg border border-border p-0.5 bg-transparent cursor-pointer"
+            />
+            <input
+              className="input flex-1 min-w-[120px] max-w-[140px] font-mono"
+              value={accentColor}
+              onChange={(e) => setAccentColor(e.target.value)}
+              placeholder={DEFAULT_ACCENT}
+            />
+            <button
+              type="button"
+              disabled={savingTheme || !isValidHexColor(accentColor)}
+              onClick={handleSaveThemeColor}
+              className="btn-primary px-4 whitespace-nowrap"
+            >
+              {savingTheme ? 'Salvando…' : 'Salvar'}
+            </button>
+            <button
+              type="button"
+              disabled={savingTheme}
+              onClick={handleResetThemeColor}
+              className="px-3 py-2.5 rounded-lg border border-border text-xs whitespace-nowrap"
+            >
+              Restaurar padrão
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="border border-border rounded-xl p-4">
         <p className="text-[11px] uppercase tracking-wider text-muted font-medium mb-3">Código de Convite &amp; QR Code</p>

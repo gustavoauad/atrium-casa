@@ -7,6 +7,8 @@ import { Logo } from './components/ui/Logo'
 import { supabase } from './lib/supabase'
 import type { House, HouseRole } from './types/house'
 import { ROLE_LABELS, isAdminOrOwner } from './types/house'
+import { loadHouseThemeColors } from './hooks/useSettings'
+import { applyHouseTheme, type HouseThemeColors } from './lib/houseTheme'
 
 const DashboardScreen = lazy(() => import('./components/dashboard/DashboardScreen').then((m) => ({ default: m.DashboardScreen })))
 const EmployeesScreen = lazy(() => import('./components/employees/EmployeesScreen').then((m) => ({ default: m.EmployeesScreen })))
@@ -32,10 +34,34 @@ function AppShell() {
   const { resolved, cycleTheme } = useTheme()
   const [house, setHouse] = useState<House | null>(null)
   const [tab, setTab] = useState<Tab>('dashboard')
+  const [houseThemeColors, setHouseThemeColors] = useState<HouseThemeColors | null>(null)
 
   useEffect(() => {
     if (!user) setHouse(null)
   }, [user])
+
+  useEffect(() => {
+    if (!house) {
+      setHouseThemeColors(null)
+      return
+    }
+    let cancelled = false
+    loadHouseThemeColors(house.id)
+      .then((colors) => {
+        if (!cancelled) setHouseThemeColors(colors)
+      })
+      .catch(() => {
+        if (!cancelled) setHouseThemeColors(null)
+      })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [house?.id])
+
+  useEffect(() => {
+    applyHouseTheme(houseThemeColors, resolved)
+  }, [houseThemeColors, resolved])
 
   if (loading) {
     return (
@@ -147,7 +173,12 @@ function AppShell() {
         {tab === 'templates' && <DocumentTemplatesScreen house={house} />}
         {tab === 'feriados' && <RegionalHolidaysScreen house={house} />}
         {tab === 'casa' && managesHouse && (
-          <HouseSettingsScreen house={house} onRoleChanged={updateHouseRole} onHouseDeleted={backToHousePicker} />
+          <HouseSettingsScreen
+            house={house}
+            onRoleChanged={updateHouseRole}
+            onHouseDeleted={backToHousePicker}
+            onThemeChanged={setHouseThemeColors}
+          />
         )}
       </Suspense>
     </div>
