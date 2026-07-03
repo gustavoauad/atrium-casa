@@ -97,7 +97,7 @@ function AppShell() {
 
   return (
     <div className="min-h-svh">
-      <header className="flex items-center justify-between px-3 sm:px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 border-b border-border gap-2">
+      <header className="print:hidden flex items-center justify-between px-3 sm:px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 border-b border-border gap-2">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <div className="hidden sm:block">
             <Logo size={24} withText variant="topbar" />
@@ -135,7 +135,7 @@ function AppShell() {
         </div>
       </header>
 
-      <nav className="flex gap-1 px-3 sm:px-4 pt-3 border-b border-border overflow-x-auto overflow-y-hidden">
+      <nav className="print:hidden flex gap-1 px-3 sm:px-4 pt-3 border-b border-border overflow-x-auto overflow-y-hidden">
         <TabButton active={tab === 'dashboard'} onClick={() => setTab('dashboard')}>
           Visão Geral
         </TabButton>
