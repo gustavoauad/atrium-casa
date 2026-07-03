@@ -24,13 +24,14 @@ interface Props {
   onSetVtOverride: (days: number | null) => Promise<void>
   onSetProRata: (active: boolean) => Promise<void>
   onConfirmPayment: (payment: Payment) => Promise<void>
+  onCancelPayment: () => Promise<void>
 }
 
 type EncargoField = 'fgts' | 'inssPatronal' | 'prov13' | 'provFerias' | 'irrf'
 
 export function EmployeeMonthCard({
   c, canWrite, regionalHolidays, onSaveEvent, onDeleteEvent, onSaveAdjustment, onDeleteAdjustment,
-  onSetVtOverride, onSetProRata, onConfirmPayment,
+  onSetVtOverride, onSetProRata, onConfirmPayment, onCancelPayment,
 }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [eventModal, setEventModal] = useState<{ ev: WorkEvent | null; date: string } | null>(null)
@@ -77,6 +78,11 @@ export function EmployeeMonthCard({
     await onSaveEvent({ ...ev, paidDate: undefined, paidMethod: undefined, paidNotes: undefined })
     const existing = c.adjs.find((a) => a.id === 'ant_' + ev.id)
     if (existing?._sbid) await onDeleteAdjustment(existing._sbid)
+  }
+
+  async function handleCancelPayment() {
+    if (!confirm('Cancelar este pagamento? O mês volta para "não pago" e o recibo deixa de existir.')) return
+    await onCancelPayment()
   }
 
   return (
@@ -305,6 +311,16 @@ export function EmployeeMonthCard({
             {canWrite && (
               <button type="button" onClick={() => setShowPayment(true)} className="btn-primary flex-1">
                 {c.payment ? 'Editar pagamento' : 'Confirmar pagamento'}
+              </button>
+            )}
+            {canWrite && c.payment && (
+              <button
+                type="button"
+                onClick={handleCancelPayment}
+                title="Cancelar pagamento"
+                className="px-3 py-2.5 rounded-lg border border-danger/40 text-danger text-sm shrink-0"
+              >
+                ✕
               </button>
             )}
           </div>

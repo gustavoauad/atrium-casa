@@ -37,3 +37,9 @@ export async function savePayment(houseId: string, empId: string, monthKey: stri
   if (error) throw new Error(error.message)
   return { ...payment, _sbid: data.id }
 }
+
+/** Cancela um pagamento já confirmado, revertendo o mês para "não pago". */
+export async function deletePayment(houseId: string, sbid: string): Promise<void> {
+  const { error } = await supabase.from('payments').delete().eq('id', sbid).eq('house_id', houseId)
+  if (error) throw new Error(error.message)
+}
