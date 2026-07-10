@@ -78,7 +78,9 @@ export function PayrollScreen({ house }: { house: House }) {
       }
       const prevKey = MK(py, pm)
       const payments = await loadPaymentsForMonth(house.id, prevKey)
-      const relevant = emps.filter((e) => monthStatus(e, py, pm) !== 'oculto')
+      // Só entram na contagem funcionários genuinamente ativos naquele mês — quem foi
+      // desligado no próprio mês de referência é pago via Rescisão, não pela folha normal.
+      const relevant = emps.filter((e) => monthStatus(e, py, pm) === 'ativo')
       const missing = relevant.filter((e) => !payments[e.id])
       setLateWarning(missing.length > 0 ? { y: py, m: pm, missing: missing.length, total: relevant.length } : null)
     } catch {
