@@ -85,11 +85,19 @@ export function AuthScreen() {
       const { data: authData, error: authErr } = await supabase.auth.signUp({
         email,
         password: signupPass,
+        options: { emailRedirectTo: window.location.origin + import.meta.env.BASE_URL },
       })
       if (authErr) throw new Error('Erro no cadastro: ' + authErr.message)
 
+      // Cadastro repetido de um e-mail já confirmado: o Supabase responde "sucesso" sem
+      // criar nada nem mandar e-mail (evita que alguém descubra quais e-mails já têm conta).
+      // `identities` vem vazio nesse caso — é o único jeito de diferenciar no client.
+      if (authData.user && authData.user.identities?.length === 0) {
+        throw new Error('Este e-mail já tem uma conta. Tente entrar, ou use "Esqueci minha senha" se não lembra a senha.')
+      }
+
       if (!authData.session) {
-        setInfo('Conta criada! Verifique seu e-mail para confirmar antes de entrar.')
+        setInfo('Conta criada! Verifique seu e-mail para confirmar o cadastro. Depois de confirmar, você poderá criar ou entrar em uma Casa.')
         setBusy(false)
         return
       }
