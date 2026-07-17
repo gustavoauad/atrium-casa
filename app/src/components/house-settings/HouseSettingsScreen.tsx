@@ -31,6 +31,11 @@ const ROLE_OPTS: { v: HouseRole; l: string }[] = [
   { v: 'admin', l: 'Admin' },
 ]
 
+const PLAN_PRICES = {
+  basico: { monthly: 19.9, annual: 199 },
+  premium: { monthly: 39.9, annual: 399 },
+}
+
 interface Props {
   house: House
   subscription: Subscription | null
@@ -61,6 +66,7 @@ export function HouseSettingsScreen({
   const [accentColor, setAccentColor] = useState(DEFAULT_ACCENT)
   const [savingTheme, setSavingTheme] = useState(false)
   const [billingBusy, setBillingBusy] = useState(false)
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly')
 
   const canManage = isAdminOrOwner(house.role)
   const owner = isOwner(house.role)
@@ -69,7 +75,7 @@ export function HouseSettingsScreen({
     setBillingBusy(true)
     setError('')
     try {
-      const url = await startCheckout(house.id, tier)
+      const url = await startCheckout(house.id, tier, billingPeriod)
       window.location.href = url
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -249,6 +255,25 @@ export function HouseSettingsScreen({
                 </span>
               </div>
 
+              {subscription.tier !== 'basico' && subscription.tier !== 'premium' && (
+                <div className="flex gap-1 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setBillingPeriod('monthly')}
+                    className={`px-3 py-1.5 rounded-lg text-xs border ${billingPeriod === 'monthly' ? 'bg-accent text-white border-accent' : 'border-border text-muted'}`}
+                  >
+                    Mensal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBillingPeriod('annual')}
+                    className={`px-3 py-1.5 rounded-lg text-xs border ${billingPeriod === 'annual' ? 'bg-accent text-white border-accent' : 'border-border text-muted'}`}
+                  >
+                    Anual (2 meses grátis)
+                  </button>
+                </div>
+              )}
+
               <div className="flex gap-2 flex-wrap">
                 {subscription.tier !== 'premium' && (
                   <button
@@ -257,7 +282,8 @@ export function HouseSettingsScreen({
                     onClick={() => handleSubscribe('premium')}
                     className="btn-primary px-4"
                   >
-                    Assinar Premium
+                    Assinar Premium — R$ {PLAN_PRICES.premium[billingPeriod].toFixed(2)}
+                    {billingPeriod === 'monthly' ? '/mês' : '/ano'}
                   </button>
                 )}
                 {subscription.tier !== 'basico' && subscription.tier !== 'premium' && (
@@ -267,7 +293,8 @@ export function HouseSettingsScreen({
                     onClick={() => handleSubscribe('basico')}
                     className="px-4 py-2.5 rounded-lg border border-border text-sm"
                   >
-                    Assinar Básico
+                    Assinar Básico — R$ {PLAN_PRICES.basico[billingPeriod].toFixed(2)}
+                    {billingPeriod === 'monthly' ? '/mês' : '/ano'}
                   </button>
                 )}
                 {(subscription.tier === 'basico' || subscription.tier === 'premium') && (
