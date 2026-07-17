@@ -57,6 +57,15 @@ export function EmployeeMonthCard({
     })
   }
 
+  function handleFalta() {
+    setAdjModal({
+      adj: null,
+      defaultType: 'falta',
+      defaultValue: c.dailyRate,
+      defaultDesc: 'Falta não justificada',
+    })
+  }
+
   async function handleConfirmPayEvent(paidDate: string, method: string, notes: string) {
     const ev = payEventModal!
     await onSaveEvent({ ...ev, paidDate, paidMethod: method, paidNotes: notes })
@@ -231,9 +240,21 @@ export function EmployeeMonthCard({
             total={c.bons - c.deds}
             action={
               canWrite && (
-                <button type="button" className="text-xs text-accent underline" onClick={() => setAdjModal({ adj: null })}>
-                  + Novo
-                </button>
+                <>
+                  {c.dailyRate > 0 && (
+                    <button
+                      type="button"
+                      className="text-xs text-danger underline"
+                      onClick={handleFalta}
+                      title={`Diária calculada pela jornada: R$ ${fm(c.dailyRate)}`}
+                    >
+                      − Falta
+                    </button>
+                  )}
+                  <button type="button" className="text-xs text-accent underline" onClick={() => setAdjModal({ adj: null })}>
+                    + Novo
+                  </button>
+                </>
               )
             }
           >

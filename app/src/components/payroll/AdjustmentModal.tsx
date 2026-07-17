@@ -15,7 +15,7 @@ interface Props {
   onDelete?: () => Promise<void>
 }
 
-const USER_TYPES: AdjustmentType[] = ['advance', 'discount', 'bonus', 'loan', 'other']
+const USER_TYPES: AdjustmentType[] = ['advance', 'discount', 'falta', 'bonus', 'loan', 'other']
 
 export function AdjustmentModal({ emp, adjustment, defaultType, defaultValue, defaultDesc, onClose, onSave, onDelete }: Props) {
   const [type, setType] = useState<AdjustmentType>(adjustment?.type || defaultType || 'advance')

@@ -29,6 +29,8 @@ export interface PayrollCalc {
   contract: Contract
   role: string
   vtDaily: number
+  /** Valor de 1 dia de trabalho (salário ÷ dias úteis do mês, pela jornada do contrato) — usado para descontar faltas. 0 se não aplicável (diarista ou sem dias úteis no mês). */
+  dailyRate: number
   ry: number
   rm: number
   key: string
@@ -85,6 +87,15 @@ export function calc(input: CalcInput): PayrollCalc {
   const key = MK(ry, rm)
 
   const salBase = contract.salary || 0
+
+  // Valor do dia de trabalho, pela jornada (dias da semana) do contrato — usado para
+  // descontar faltas de mensalistas. Diaristas já são pagos por diária lançada, então
+  // não há "falta" a descontar do salário-base (fica 0).
+  const workDaysInMonth = contract.contract === 'mensalista'
+    ? days.filter((d) => (contract.workDays || []).includes(d.dow) && !h[d.iso]).length
+    : 0
+  const dailyRate = workDaysInMonth > 0 ? r2(salBase / workDaysInMonth) : 0
+
   const recs: RecurringOccurrence[] = []
   const holWarns: { iso: string; hn: string; desc: string; val: number }[] = []
 
@@ -175,7 +186,7 @@ export function calc(input: CalcInput): PayrollCalc {
   const irrf = irrfCalc(irrfBase)
 
   return {
-    emp, contract, role: contract.role, vtDaily: contract.vtDaily || 0, ry, rm, key, payment, salBase, recs, recTot,
+    emp, contract, role: contract.role, vtDaily: contract.vtDaily || 0, dailyRate, ry, rm, key, payment, salBase, recs, recTot,
     avs, avTot, avPaid, holWarns, gross, adjs: sortedAdjustments,
     deds, bons, inssAmt, netSal, vtY, vtM, vtWd, vtWdAuto, vtManualDays, vtGross, vtDisc, vtNet,
     pay1: bday1(pyY, pyM, regionalHolidays), pay5: bday5(pyY, pyM, regionalHolidays), pyY, pyM,

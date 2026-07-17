@@ -1,6 +1,7 @@
 export type AdjustmentType =
   | 'advance'
   | 'discount'
+  | 'falta'
   | 'bonus'
   | 'loan'
   | 'other'
@@ -24,6 +25,7 @@ export interface Adjustment {
 export const ADJUSTMENT_LABELS: Record<AdjustmentType, string> = {
   advance: 'Adiantamento',
   discount: 'Desconto/Falta',
+  falta: 'Falta (dia não trabalhado)',
   bonus: 'Bônus',
   loan: 'Parcela empréstimo',
   other: 'Outro desconto',
@@ -35,4 +37,4 @@ export const ADJUSTMENT_LABELS: Record<AdjustmentType, string> = {
   irrf: 'IRRF Retido',
 }
 
-export const DEDUCTION_TYPES: AdjustmentType[] = ['advance', 'discount', 'loan', 'other', 'antecipacao']
+export const DEDUCTION_TYPES: AdjustmentType[] = ['advance', 'discount', 'falta', 'loan', 'other', 'antecipacao']
