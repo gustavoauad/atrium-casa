@@ -234,8 +234,13 @@ export function HouseSettingsScreen({
             <p className="text-sm text-muted">Carregando…</p>
           ) : (
             <>
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
                 <span className="text-sm font-medium">{TIER_LABELS[subscription.tier]}</span>
+                {subscription.tier === 'grandfathered' && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent/15 text-accent font-medium">
+                    ⭐ Vitalício
+                  </span>
+                )}
                 <span
                   className={`text-[10px] px-2 py-0.5 rounded-full ${
                     subscription.status === 'active' || subscription.tier === 'grandfathered'
@@ -255,63 +260,72 @@ export function HouseSettingsScreen({
                 </span>
               </div>
 
-              {subscription.tier !== 'basico' && subscription.tier !== 'premium' && (
-                <div className="flex gap-1 mb-3">
-                  <button
-                    type="button"
-                    onClick={() => setBillingPeriod('monthly')}
-                    className={`px-3 py-1.5 rounded-lg text-xs border ${billingPeriod === 'monthly' ? 'bg-accent text-white border-accent' : 'border-border text-muted'}`}
-                  >
-                    Mensal
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setBillingPeriod('annual')}
-                    className={`px-3 py-1.5 rounded-lg text-xs border ${billingPeriod === 'annual' ? 'bg-accent text-white border-accent' : 'border-border text-muted'}`}
-                  >
-                    Anual (2 meses grátis)
-                  </button>
-                </div>
+              {subscription.tier === 'grandfathered' ? (
+                <p className="text-[11px] text-muted">
+                  Acesso Premium vitalício e gratuito, concedido por ser uma Casa dos primeiros tempos do Atrium Casa.
+                  Obrigado por confiar no app desde o início! 💛
+                </p>
+              ) : (
+                <>
+                  {subscription.tier !== 'basico' && subscription.tier !== 'premium' && (
+                    <div className="flex gap-1 mb-3">
+                      <button
+                        type="button"
+                        onClick={() => setBillingPeriod('monthly')}
+                        className={`px-3 py-1.5 rounded-lg text-xs border ${billingPeriod === 'monthly' ? 'bg-accent text-white border-accent' : 'border-border text-muted'}`}
+                      >
+                        Mensal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBillingPeriod('annual')}
+                        className={`px-3 py-1.5 rounded-lg text-xs border ${billingPeriod === 'annual' ? 'bg-accent text-white border-accent' : 'border-border text-muted'}`}
+                      >
+                        Anual (2 meses grátis)
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 flex-wrap">
+                    {subscription.tier !== 'premium' && (
+                      <button
+                        type="button"
+                        disabled={billingBusy}
+                        onClick={() => handleSubscribe('premium')}
+                        className="btn-primary px-4"
+                      >
+                        Assinar Premium — R$ {PLAN_PRICES.premium[billingPeriod].toFixed(2)}
+                        {billingPeriod === 'monthly' ? '/mês' : '/ano'}
+                      </button>
+                    )}
+                    {subscription.tier !== 'basico' && subscription.tier !== 'premium' && (
+                      <button
+                        type="button"
+                        disabled={billingBusy}
+                        onClick={() => handleSubscribe('basico')}
+                        className="px-4 py-2.5 rounded-lg border border-border text-sm"
+                      >
+                        Assinar Básico — R$ {PLAN_PRICES.basico[billingPeriod].toFixed(2)}
+                        {billingPeriod === 'monthly' ? '/mês' : '/ano'}
+                      </button>
+                    )}
+                    {(subscription.tier === 'basico' || subscription.tier === 'premium') && (
+                      <button
+                        type="button"
+                        disabled={billingBusy}
+                        onClick={handleManageBilling}
+                        className="px-4 py-2.5 rounded-lg border border-border text-sm"
+                      >
+                        Gerenciar assinatura
+                      </button>
+                    )}
+                  </div>
+
+                  <p className="text-[11px] text-muted mt-2">
+                    Básico: até 5 funcionários ativos, 1 Casa. Premium: funcionários e Casas ilimitados.
+                  </p>
+                </>
               )}
-
-              <div className="flex gap-2 flex-wrap">
-                {subscription.tier !== 'premium' && (
-                  <button
-                    type="button"
-                    disabled={billingBusy}
-                    onClick={() => handleSubscribe('premium')}
-                    className="btn-primary px-4"
-                  >
-                    Assinar Premium — R$ {PLAN_PRICES.premium[billingPeriod].toFixed(2)}
-                    {billingPeriod === 'monthly' ? '/mês' : '/ano'}
-                  </button>
-                )}
-                {subscription.tier !== 'basico' && subscription.tier !== 'premium' && (
-                  <button
-                    type="button"
-                    disabled={billingBusy}
-                    onClick={() => handleSubscribe('basico')}
-                    className="px-4 py-2.5 rounded-lg border border-border text-sm"
-                  >
-                    Assinar Básico — R$ {PLAN_PRICES.basico[billingPeriod].toFixed(2)}
-                    {billingPeriod === 'monthly' ? '/mês' : '/ano'}
-                  </button>
-                )}
-                {(subscription.tier === 'basico' || subscription.tier === 'premium') && (
-                  <button
-                    type="button"
-                    disabled={billingBusy}
-                    onClick={handleManageBilling}
-                    className="px-4 py-2.5 rounded-lg border border-border text-sm"
-                  >
-                    Gerenciar assinatura
-                  </button>
-                )}
-              </div>
-
-              <p className="text-[11px] text-muted mt-2">
-                Básico: até 5 funcionários ativos, 1 Casa. Premium: funcionários e Casas ilimitados.
-              </p>
             </>
           )}
         </div>
