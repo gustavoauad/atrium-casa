@@ -31,8 +31,18 @@ const ReportsScreen = lazy(() => import('./components/reports/ReportsScreen').th
 const HouseSettingsScreen = lazy(() =>
   import('./components/house-settings/HouseSettingsScreen').then((m) => ({ default: m.HouseSettingsScreen })),
 )
+const ProfileScreen = lazy(() => import('./components/profile/ProfileScreen').then((m) => ({ default: m.ProfileScreen })))
 
-type Tab = 'dashboard' | 'folha' | 'funcionarios' | 'relatorios' | 'rescisao' | 'templates' | 'feriados' | 'casa'
+type Tab =
+  | 'dashboard'
+  | 'folha'
+  | 'funcionarios'
+  | 'relatorios'
+  | 'rescisao'
+  | 'templates'
+  | 'feriados'
+  | 'casa'
+  | 'perfil'
 
 function AppShell() {
   const { user, loading, isPasswordRecovery, clearPasswordRecovery } = useAuth()
@@ -194,6 +204,9 @@ function AppShell() {
         <TabButton active={tab === 'feriados'} onClick={() => setTab('feriados')}>
           Feriados Regionais
         </TabButton>
+        <TabButton active={tab === 'perfil'} onClick={() => setTab('perfil')}>
+          Perfil
+        </TabButton>
         {managesHouse && (
           <TabButton active={tab === 'casa'} onClick={() => setTab('casa')}>
             Casa
@@ -208,15 +221,13 @@ function AppShell() {
             seus dados estão salvos e seguros, só ficam ocultos até a assinatura ser reativada.
             {!managesHouse && ' Peça ao Proprietário/Admin para regularizar.'}
           </span>
-          {managesHouse && (
-            <button
-              type="button"
-              onClick={() => setTab('casa')}
-              className="px-2.5 py-1 rounded-md border border-danger/40 text-danger text-[11px] shrink-0 whitespace-nowrap"
-            >
-              Ver assinatura
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setTab(managesHouse ? 'casa' : 'perfil')}
+            className="px-2.5 py-1 rounded-md border border-danger/40 text-danger text-[11px] shrink-0 whitespace-nowrap"
+          >
+            Ver assinatura
+          </button>
         </div>
       )}
 
@@ -226,20 +237,18 @@ function AppShell() {
             ⏳ Seu teste grátis termina em {daysLeft} {daysLeft === 1 ? 'dia' : 'dias'}.
             {!managesHouse && ' Avise o Proprietário/Admin pra assinar um plano.'}
           </span>
-          {managesHouse && (
-            <button
-              type="button"
-              onClick={() => setTab('casa')}
-              className="px-2.5 py-1 rounded-md border border-warn/40 text-warn text-[11px] shrink-0 whitespace-nowrap"
-            >
-              Assinar agora
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setTab(managesHouse ? 'casa' : 'perfil')}
+            className="px-2.5 py-1 rounded-md border border-warn/40 text-warn text-[11px] shrink-0 whitespace-nowrap"
+          >
+            {managesHouse ? 'Assinar agora' : 'Ver detalhes'}
+          </button>
         </div>
       )}
 
       <Suspense fallback={<div className="p-8 text-center text-sm text-muted">Carregando…</div>}>
-        {tab !== 'casa' && showLockedBanner && (
+        {tab !== 'casa' && tab !== 'perfil' && showLockedBanner && (
           <LockedScreen
             managesHouse={managesHouse}
             isPastDue={subscription?.status === 'past_due'}
@@ -253,6 +262,7 @@ function AppShell() {
         {tab === 'rescisao' && !showLockedBanner && <RescisaoCalculatorScreen house={house} />}
         {tab === 'templates' && !showLockedBanner && <DocumentTemplatesScreen house={house} />}
         {tab === 'feriados' && !showLockedBanner && <RegionalHolidaysScreen house={house} />}
+        {tab === 'perfil' && <ProfileScreen house={house} subscription={subscription} />}
         {tab === 'casa' && managesHouse && (
           <HouseSettingsScreen
             house={house}
