@@ -8,9 +8,13 @@ export async function loadSubscription(houseId: string): Promise<Subscription | 
 }
 
 /** Abre o Checkout do Stripe pra assinar um plano pago; retorna a URL pra redirecionar. */
-export async function startCheckout(houseId: string, tier: 'basico' | 'premium'): Promise<string> {
+export async function startCheckout(
+  houseId: string,
+  tier: 'basico' | 'premium',
+  period: 'monthly' | 'annual',
+): Promise<string> {
   const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-    body: { house_id: houseId, tier, return_url: window.location.origin + window.location.pathname },
+    body: { house_id: houseId, tier, period, return_url: window.location.origin + window.location.pathname },
   })
   if (error) throw new Error(error.message)
   if (data?.error) throw new Error(data.error)

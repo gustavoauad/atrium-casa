@@ -29,9 +29,13 @@ function mapStatus(stripeStatus: string): 'active' | 'past_due' | 'canceled' {
 
 function priceIdToTier(priceId: string | undefined): 'basico' | 'premium' | null {
   if (!priceId) return null
-  if (priceId === Deno.env.get('STRIPE_PRICE_ID_BASICO')) return 'basico'
-  if (priceId === Deno.env.get('STRIPE_PRICE_ID_PREMIUM')) return 'premium'
-  return null
+  const known: Record<string, 'basico' | 'premium'> = {
+    [Deno.env.get('STRIPE_PRICE_ID_BASICO_MONTHLY') ?? '']: 'basico',
+    [Deno.env.get('STRIPE_PRICE_ID_BASICO_ANNUAL') ?? '']: 'basico',
+    [Deno.env.get('STRIPE_PRICE_ID_PREMIUM_MONTHLY') ?? '']: 'premium',
+    [Deno.env.get('STRIPE_PRICE_ID_PREMIUM_ANNUAL') ?? '']: 'premium',
+  }
+  return known[priceId] ?? null
 }
 
 Deno.serve(async (req) => {

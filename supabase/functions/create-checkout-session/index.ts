@@ -13,16 +13,18 @@ Deno.serve(async (req) => {
   if (opt) return opt
 
   try {
-    const { house_id, tier, return_url } = await req.json()
-    if (!house_id || (tier !== 'basico' && tier !== 'premium')) {
-      throw new Error('Parâmetros inválidos: house_id e tier (basico|premium) são obrigatórios.')
+    const { house_id, tier, period, return_url } = await req.json()
+    if (!house_id || (tier !== 'basico' && tier !== 'premium') || (period !== 'monthly' && period !== 'annual')) {
+      throw new Error(
+        'Parâmetros inválidos: house_id, tier (basico|premium) e period (monthly|annual) são obrigatórios.',
+      )
     }
 
     await assertManagesHouse(req, house_id)
 
-    const priceId =
-      tier === 'basico' ? Deno.env.get('STRIPE_PRICE_ID_BASICO') : Deno.env.get('STRIPE_PRICE_ID_PREMIUM')
-    if (!priceId) throw new Error(`Price do Stripe para o plano '${tier}' não configurado.`)
+    const envKey = `STRIPE_PRICE_ID_${tier.toUpperCase()}_${period.toUpperCase()}`
+    const priceId = Deno.env.get(envKey)
+    if (!priceId) throw new Error(`Price do Stripe para '${tier}/${period}' não configurado (${envKey}).`)
 
     const admin = supabaseAdmin()
     const { data: sub } = await admin
@@ -38,8 +40,8 @@ Deno.serve(async (req) => {
       line_items: [{ price: priceId, quantity: 1 }],
       client_reference_id: house_id,
       customer: sub?.provider_customer_id || undefined,
-      metadata: { house_id, tier },
-      subscription_data: { metadata: { house_id, tier } },
+      metadata: { house_id, tier, period },
+      subscription_data: { metadata: { house_id, tier, period } },
       success_url: `${base}?checkout=success`,
       cancel_url: `${base}?checkout=canceled`,
       allow_promotion_codes: true,

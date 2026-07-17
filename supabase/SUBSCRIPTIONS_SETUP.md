@@ -18,11 +18,14 @@ depois dos outros scripts já aplicados anteriormente). Ele:
 ## 2. Criar os produtos no Stripe
 
 No [Dashboard do Stripe](https://dashboard.stripe.com/test/products) (comece em **modo
-de teste**):
+de teste/sandbox**), cada plano é **1 produto com 2 Prices** (mensal e anual):
 
-1. Crie um produto **"Atrium Casa — Básico"** com um Price recorrente mensal.
-2. Crie um produto **"Atrium Casa — Premium"** com um Price recorrente mensal.
-3. Anote os dois **Price IDs** (`price_...`).
+| Produto | Price mensal | Price anual |
+|---|---|---|
+| Atrium Casa — Básico | R$ 19,90/mês | R$ 199,00/ano |
+| Atrium Casa — Premium | R$ 39,90/mês | R$ 399,00/ano |
+
+Anote os **4 Price IDs** (`price_...`) — um pra cada combinação plano × período.
 
 ## 3. Configurar os segredos das Edge Functions
 
@@ -32,8 +35,10 @@ automaticamente pelo Supabase — não precisa configurar. Defina só estes:
 ```bash
 npx supabase secrets set \
   STRIPE_SECRET_KEY=sk_test_... \
-  STRIPE_PRICE_ID_BASICO=price_... \
-  STRIPE_PRICE_ID_PREMIUM=price_... \
+  STRIPE_PRICE_ID_BASICO_MONTHLY=price_... \
+  STRIPE_PRICE_ID_BASICO_ANNUAL=price_... \
+  STRIPE_PRICE_ID_PREMIUM_MONTHLY=price_... \
+  STRIPE_PRICE_ID_PREMIUM_ANNUAL=price_... \
   APP_URL=https://gustavoauad.github.io/atrium-casa \
   --project-ref SEU_PROJECT_REF
 ```
