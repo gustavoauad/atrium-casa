@@ -17,13 +17,6 @@ import { isValidHexColor } from '../../lib/color'
 import type { Subscription } from '../../types/subscription'
 import { TIER_LABELS, trialDaysLeft } from '../../types/subscription'
 import { useAuth } from '../../contexts/AuthContext'
-import { useTheme, type Theme } from '../../contexts/ThemeContext'
-
-const THEME_OPTS: { v: Theme; l: string }[] = [
-  { v: 'light', l: '☀ Claro' },
-  { v: 'dark', l: '☾ Escuro' },
-  { v: 'system', l: '⚙ Sistema' },
-]
 
 const ROLE_OPTS: { v: HouseRole; l: string }[] = [
   { v: 'viewer', l: 'Visitante' },
@@ -54,7 +47,6 @@ export function HouseSettingsScreen({
   onSubscriptionRefresh,
 }: Props) {
   const { user } = useAuth()
-  const { theme, setTheme } = useTheme()
   const [members, setMembers] = useState<HouseMember[] | null>(null)
   const [qrDataUrl, setQrDataUrl] = useState('')
   const [error, setError] = useState('')
@@ -330,24 +322,6 @@ export function HouseSettingsScreen({
           )}
         </div>
       )}
-
-      <div className="border border-border rounded-xl p-4">
-        <p className="text-[11px] uppercase tracking-wider text-muted font-medium mb-3">◐ Tema</p>
-        <div className="flex gap-2">
-          {THEME_OPTS.map((opt) => (
-            <button
-              key={opt.v}
-              type="button"
-              onClick={() => setTheme(opt.v)}
-              className={`flex-1 px-3 py-2 rounded-lg border text-xs ${
-                theme === opt.v ? 'border-accent text-accent bg-accent/10' : 'border-border text-muted'
-              }`}
-            >
-              {opt.l}
-            </button>
-          ))}
-        </div>
-      </div>
 
       {canManage && (
         <div className="border border-border rounded-xl p-4">

@@ -13,7 +13,7 @@ export const TIER_LABELS: Record<SubscriptionTier, string> = {
   trial: 'Teste grátis',
   basico: 'Básico',
   premium: 'Premium',
-  grandfathered: 'Premium',
+  grandfathered: 'Premium Vitalício',
 }
 
 /** A Casa tem acesso de escrita válido agora? (mesma regra usada na RLS — house_can_write). */
