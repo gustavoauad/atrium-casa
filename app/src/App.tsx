@@ -4,6 +4,7 @@ import { ThemeProvider, useTheme } from './contexts/ThemeContext'
 import { AuthScreen } from './components/auth/AuthScreen'
 import { ResetPasswordScreen } from './components/auth/ResetPasswordScreen'
 import { HousePickerScreen } from './components/house/HousePickerScreen'
+import { LockedScreen } from './components/subscription/LockedScreen'
 import { Logo } from './components/ui/Logo'
 import { supabase } from './lib/supabase'
 import type { House, HouseRole } from './types/house'
@@ -204,7 +205,7 @@ function AppShell() {
         <div className="print:hidden bg-danger/10 border-b border-danger/30 px-3 sm:px-4 py-2.5 text-xs sm:text-sm text-danger flex items-center justify-between gap-2 flex-wrap">
           <span>
             🔒 A assinatura desta Casa está {subscription?.status === 'past_due' ? 'com pagamento pendente' : 'inativa'} —
-            os dados continuam salvos, mas edições estão bloqueadas.
+            seus dados estão salvos e seguros, só ficam ocultos até a assinatura ser reativada.
             {!managesHouse && ' Peça ao Proprietário/Admin para regularizar.'}
           </span>
           {managesHouse && (
@@ -238,13 +239,20 @@ function AppShell() {
       )}
 
       <Suspense fallback={<div className="p-8 text-center text-sm text-muted">Carregando…</div>}>
-        {tab === 'dashboard' && <DashboardScreen house={house} />}
-        {tab === 'folha' && <PayrollScreen house={house} />}
-        {tab === 'funcionarios' && <EmployeesScreen house={house} employeeLimit={employeeLimit} />}
-        {tab === 'relatorios' && <ReportsScreen house={house} />}
-        {tab === 'rescisao' && <RescisaoCalculatorScreen house={house} />}
-        {tab === 'templates' && <DocumentTemplatesScreen house={house} />}
-        {tab === 'feriados' && <RegionalHolidaysScreen house={house} />}
+        {tab !== 'casa' && showLockedBanner && (
+          <LockedScreen
+            managesHouse={managesHouse}
+            isPastDue={subscription?.status === 'past_due'}
+            onGoToSubscription={() => setTab('casa')}
+          />
+        )}
+        {tab === 'dashboard' && !showLockedBanner && <DashboardScreen house={house} />}
+        {tab === 'folha' && !showLockedBanner && <PayrollScreen house={house} />}
+        {tab === 'funcionarios' && !showLockedBanner && <EmployeesScreen house={house} employeeLimit={employeeLimit} />}
+        {tab === 'relatorios' && !showLockedBanner && <ReportsScreen house={house} />}
+        {tab === 'rescisao' && !showLockedBanner && <RescisaoCalculatorScreen house={house} />}
+        {tab === 'templates' && !showLockedBanner && <DocumentTemplatesScreen house={house} />}
+        {tab === 'feriados' && !showLockedBanner && <RegionalHolidaysScreen house={house} />}
         {tab === 'casa' && managesHouse && (
           <HouseSettingsScreen
             house={house}
