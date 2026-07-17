@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ThemeProvider, useTheme } from './contexts/ThemeContext'
 import { AuthScreen } from './components/auth/AuthScreen'
+import { ResetPasswordScreen } from './components/auth/ResetPasswordScreen'
 import { HousePickerScreen } from './components/house/HousePickerScreen'
 import { Logo } from './components/ui/Logo'
 import { supabase } from './lib/supabase'
@@ -33,7 +34,7 @@ const HouseSettingsScreen = lazy(() =>
 type Tab = 'dashboard' | 'folha' | 'funcionarios' | 'relatorios' | 'rescisao' | 'templates' | 'feriados' | 'casa'
 
 function AppShell() {
-  const { user, loading } = useAuth()
+  const { user, loading, isPasswordRecovery, clearPasswordRecovery } = useAuth()
   const { resolved, cycleTheme } = useTheme()
   const [house, setHouse] = useState<House | null>(null)
   const [tab, setTab] = useState<Tab>('dashboard')
@@ -94,6 +95,8 @@ function AppShell() {
       </div>
     )
   }
+
+  if (isPasswordRecovery) return <ResetPasswordScreen onDone={clearPasswordRecovery} />
 
   if (!user) return <AuthScreen />
 

@@ -50,7 +50,9 @@ export function AuthScreen() {
       setError('Informe seu e-mail para redefinir a senha.')
       return
     }
-    const { error: err } = await supabase.auth.resetPasswordForEmail(loginEmail.trim())
+    const { error: err } = await supabase.auth.resetPasswordForEmail(loginEmail.trim(), {
+      redirectTo: window.location.origin,
+    })
     if (err) setError(err.message)
     else setInfo('E-mail de redefinição enviado! Verifique sua caixa de entrada.')
   }
