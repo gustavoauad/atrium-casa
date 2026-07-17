@@ -9,6 +9,9 @@ import type { House, HouseRole } from './types/house'
 import { ROLE_LABELS, isAdminOrOwner } from './types/house'
 import { loadHouseThemeColors } from './hooks/useSettings'
 import { applyHouseTheme, type HouseThemeColors } from './lib/houseTheme'
+import { loadSubscription } from './hooks/useSubscription'
+import type { Subscription } from './types/subscription'
+import { canWriteForSubscription, employeeLimitForSubscription, trialDaysLeft } from './types/subscription'
 
 const DashboardScreen = lazy(() => import('./components/dashboard/DashboardScreen').then((m) => ({ default: m.DashboardScreen })))
 const EmployeesScreen = lazy(() => import('./components/employees/EmployeesScreen').then((m) => ({ default: m.EmployeesScreen })))
@@ -35,10 +38,31 @@ function AppShell() {
   const [house, setHouse] = useState<House | null>(null)
   const [tab, setTab] = useState<Tab>('dashboard')
   const [houseThemeColors, setHouseThemeColors] = useState<HouseThemeColors | null>(null)
+  const [subscription, setSubscription] = useState<Subscription | null>(null)
+  const [subRefreshKey, setSubRefreshKey] = useState(0)
 
   useEffect(() => {
     if (!user) setHouse(null)
   }, [user])
+
+  useEffect(() => {
+    if (!house) {
+      setSubscription(null)
+      return
+    }
+    let cancelled = false
+    loadSubscription(house.id)
+      .then((sub) => {
+        if (!cancelled) setSubscription(sub)
+      })
+      .catch(() => {
+        if (!cancelled) setSubscription(null)
+      })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [house?.id, subRefreshKey])
 
   useEffect(() => {
     if (!house) {
@@ -85,6 +109,15 @@ function AppShell() {
   }
 
   const managesHouse = isAdminOrOwner(house.role)
+  const canWriteHouse = canWriteForSubscription(subscription)
+  const employeeLimit = employeeLimitForSubscription(subscription)
+  const daysLeft = trialDaysLeft(subscription)
+  const showLockedBanner = subscription !== null && !canWriteHouse
+  const showTrialBanner = subscription?.tier === 'trial' && canWriteHouse && daysLeft !== null && daysLeft <= 5
+
+  function refreshSubscription() {
+    setSubRefreshKey((k) => k + 1)
+  }
 
   function updateHouseRole(role: HouseRole) {
     setHouse((h) => (h ? { ...h, role } : h))
@@ -164,10 +197,47 @@ function AppShell() {
         )}
       </nav>
 
+      {showLockedBanner && (
+        <div className="print:hidden bg-danger/10 border-b border-danger/30 px-3 sm:px-4 py-2.5 text-xs sm:text-sm text-danger flex items-center justify-between gap-2 flex-wrap">
+          <span>
+            🔒 A assinatura desta Casa está {subscription?.status === 'past_due' ? 'com pagamento pendente' : 'inativa'} —
+            os dados continuam salvos, mas edições estão bloqueadas.
+            {!managesHouse && ' Peça ao Proprietário/Admin para regularizar.'}
+          </span>
+          {managesHouse && (
+            <button
+              type="button"
+              onClick={() => setTab('casa')}
+              className="px-2.5 py-1 rounded-md border border-danger/40 text-danger text-[11px] shrink-0 whitespace-nowrap"
+            >
+              Ver assinatura
+            </button>
+          )}
+        </div>
+      )}
+
+      {!showLockedBanner && showTrialBanner && (
+        <div className="print:hidden bg-warn/10 border-b border-warn/30 px-3 sm:px-4 py-2.5 text-xs sm:text-sm text-warn flex items-center justify-between gap-2 flex-wrap">
+          <span>
+            ⏳ Seu teste grátis termina em {daysLeft} {daysLeft === 1 ? 'dia' : 'dias'}.
+            {!managesHouse && ' Avise o Proprietário/Admin pra assinar um plano.'}
+          </span>
+          {managesHouse && (
+            <button
+              type="button"
+              onClick={() => setTab('casa')}
+              className="px-2.5 py-1 rounded-md border border-warn/40 text-warn text-[11px] shrink-0 whitespace-nowrap"
+            >
+              Assinar agora
+            </button>
+          )}
+        </div>
+      )}
+
       <Suspense fallback={<div className="p-8 text-center text-sm text-muted">Carregando…</div>}>
         {tab === 'dashboard' && <DashboardScreen house={house} />}
         {tab === 'folha' && <PayrollScreen house={house} />}
-        {tab === 'funcionarios' && <EmployeesScreen house={house} />}
+        {tab === 'funcionarios' && <EmployeesScreen house={house} employeeLimit={employeeLimit} />}
         {tab === 'relatorios' && <ReportsScreen house={house} />}
         {tab === 'rescisao' && <RescisaoCalculatorScreen house={house} />}
         {tab === 'templates' && <DocumentTemplatesScreen house={house} />}
@@ -175,9 +245,11 @@ function AppShell() {
         {tab === 'casa' && managesHouse && (
           <HouseSettingsScreen
             house={house}
+            subscription={subscription}
             onRoleChanged={updateHouseRole}
             onHouseDeleted={backToHousePicker}
             onThemeChanged={setHouseThemeColors}
+            onSubscriptionRefresh={refreshSubscription}
           />
         )}
       </Suspense>

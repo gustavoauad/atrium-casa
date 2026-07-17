@@ -11,8 +11,11 @@ import {
 } from '../../hooks/useHouseMembers'
 import { deleteHouse } from '../../hooks/useHouses'
 import { loadHouseThemeColors, saveHouseThemeColors } from '../../hooks/useSettings'
+import { startCheckout, openBillingPortal } from '../../hooks/useSubscription'
 import { DEFAULT_ACCENT, type HouseThemeColors } from '../../lib/houseTheme'
 import { isValidHexColor } from '../../lib/color'
+import type { Subscription } from '../../types/subscription'
+import { TIER_LABELS, trialDaysLeft } from '../../types/subscription'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTheme, type Theme } from '../../contexts/ThemeContext'
 
@@ -30,12 +33,21 @@ const ROLE_OPTS: { v: HouseRole; l: string }[] = [
 
 interface Props {
   house: House
+  subscription: Subscription | null
   onRoleChanged: (role: HouseRole) => void
   onHouseDeleted: () => void
   onThemeChanged: (colors: HouseThemeColors | null) => void
+  onSubscriptionRefresh: () => void
 }
 
-export function HouseSettingsScreen({ house, onRoleChanged, onHouseDeleted, onThemeChanged }: Props) {
+export function HouseSettingsScreen({
+  house,
+  subscription,
+  onRoleChanged,
+  onHouseDeleted,
+  onThemeChanged,
+  onSubscriptionRefresh,
+}: Props) {
   const { user } = useAuth()
   const { theme, setTheme } = useTheme()
   const [members, setMembers] = useState<HouseMember[] | null>(null)
@@ -48,9 +60,34 @@ export function HouseSettingsScreen({ house, onRoleChanged, onHouseDeleted, onTh
   const [deleting, setDeleting] = useState(false)
   const [accentColor, setAccentColor] = useState(DEFAULT_ACCENT)
   const [savingTheme, setSavingTheme] = useState(false)
+  const [billingBusy, setBillingBusy] = useState(false)
 
   const canManage = isAdminOrOwner(house.role)
   const owner = isOwner(house.role)
+
+  async function handleSubscribe(tier: 'basico' | 'premium') {
+    setBillingBusy(true)
+    setError('')
+    try {
+      const url = await startCheckout(house.id, tier)
+      window.location.href = url
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+      setBillingBusy(false)
+    }
+  }
+
+  async function handleManageBilling() {
+    setBillingBusy(true)
+    setError('')
+    try {
+      const url = await openBillingPortal(house.id)
+      window.location.href = url
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+      setBillingBusy(false)
+    }
+  }
 
   useEffect(() => {
     refresh()
@@ -177,6 +214,81 @@ export function HouseSettingsScreen({ house, onRoleChanged, onHouseDeleted, onTh
       <h2 className="text-lg font-medium">Casa: {house.name}</h2>
 
       {error && <p className="text-xs text-danger bg-danger/10 border border-danger/30 rounded-lg px-3 py-2">{error}</p>}
+
+      {canManage && (
+        <div className="border border-border rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[11px] uppercase tracking-wider text-muted font-medium">💳 Assinatura</p>
+            <button type="button" onClick={onSubscriptionRefresh} className="text-[11px] text-muted underline">
+              Atualizar status
+            </button>
+          </div>
+
+          {subscription === null ? (
+            <p className="text-sm text-muted">Carregando…</p>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-sm font-medium">{TIER_LABELS[subscription.tier]}</span>
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-full ${
+                    subscription.status === 'active' || subscription.tier === 'grandfathered'
+                      ? 'bg-sage/15 text-sage'
+                      : subscription.status === 'trialing'
+                        ? 'bg-blue/15 text-blue'
+                        : 'bg-danger/15 text-danger'
+                  }`}
+                >
+                  {subscription.status === 'trialing'
+                    ? `${trialDaysLeft(subscription) ?? 0} dia(s) restante(s)`
+                    : subscription.status === 'active'
+                      ? 'Ativa'
+                      : subscription.status === 'past_due'
+                        ? 'Pagamento pendente'
+                        : 'Cancelada'}
+                </span>
+              </div>
+
+              <div className="flex gap-2 flex-wrap">
+                {subscription.tier !== 'premium' && (
+                  <button
+                    type="button"
+                    disabled={billingBusy}
+                    onClick={() => handleSubscribe('premium')}
+                    className="btn-primary px-4"
+                  >
+                    Assinar Premium
+                  </button>
+                )}
+                {subscription.tier !== 'basico' && subscription.tier !== 'premium' && (
+                  <button
+                    type="button"
+                    disabled={billingBusy}
+                    onClick={() => handleSubscribe('basico')}
+                    className="px-4 py-2.5 rounded-lg border border-border text-sm"
+                  >
+                    Assinar Básico
+                  </button>
+                )}
+                {(subscription.tier === 'basico' || subscription.tier === 'premium') && (
+                  <button
+                    type="button"
+                    disabled={billingBusy}
+                    onClick={handleManageBilling}
+                    className="px-4 py-2.5 rounded-lg border border-border text-sm"
+                  >
+                    Gerenciar assinatura
+                  </button>
+                )}
+              </div>
+
+              <p className="text-[11px] text-muted mt-2">
+                Básico: até 5 funcionários ativos, 1 Casa. Premium: funcionários e Casas ilimitados.
+              </p>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="border border-border rounded-xl p-4">
         <p className="text-[11px] uppercase tracking-wider text-muted font-medium mb-3">◐ Tema</p>

@@ -7,7 +7,13 @@ import { getCurrentContract } from '../../lib/payroll/contracts'
 import { EmployeeModal } from './EmployeeModal'
 import { BaixaModal } from './BaixaModal'
 
-export function EmployeesScreen({ house }: { house: House }) {
+interface Props {
+  house: House
+  /** Limite de funcionários ativos do plano atual; null = ilimitado. */
+  employeeLimit: number | null
+}
+
+export function EmployeesScreen({ house, employeeLimit }: Props) {
   const [employees, setEmployees] = useState<Employee[] | null>(null)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState<Employee | null | undefined>(undefined)
@@ -15,6 +21,8 @@ export function EmployeesScreen({ house }: { house: House }) {
 
   const canWrite = canWriteRole(house.role)
   const canDelete = isAdminOrOwner(house.role)
+  const activeCount = employees?.filter((e) => e.status !== 'desligado').length ?? 0
+  const atLimit = employeeLimit !== null && activeCount >= employeeLimit
 
   useEffect(() => {
     refresh()
@@ -60,12 +68,19 @@ export function EmployeesScreen({ house }: { house: House }) {
     <div className="w-full max-w-3xl mx-auto p-4">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-medium">Funcionários</h2>
-        {canWrite && (
+        {canWrite && !atLimit && (
           <button type="button" onClick={() => setEditing(null)} className="btn-primary px-4">
             + Novo Funcionário
           </button>
         )}
       </div>
+
+      {canWrite && atLimit && (
+        <p className="text-xs text-warn bg-warn/10 border border-warn/30 rounded-lg px-3 py-2 mb-3">
+          Seu plano atual permite até {employeeLimit} funcionário{employeeLimit === 1 ? '' : 's'} ativo{employeeLimit === 1 ? '' : 's'}.
+          Assine o Premium (aba Casa) para cadastrar mais.
+        </p>
+      )}
 
       {error && <p className="text-xs text-danger bg-danger/10 border border-danger/30 rounded-lg px-3 py-2 mb-3">{error}</p>}
 
