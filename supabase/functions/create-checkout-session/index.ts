@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
       .eq('house_id', house_id)
       .maybeSingle()
 
-    const base = return_url || Deno.env.get('APP_URL') || 'https://gustavoauad.github.io/atrium-casa'
+    const base = return_url || Deno.env.get('APP_URL') || 'https://atrium-casa.com'
 
     const session = await stripePost<CheckoutSession>('checkout/sessions', {
       mode: 'subscription',

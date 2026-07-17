@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
       throw new Error('Esta Casa ainda não tem uma assinatura paga — assine um plano primeiro.')
     }
 
-    const base = return_url || Deno.env.get('APP_URL') || 'https://gustavoauad.github.io/atrium-casa'
+    const base = return_url || Deno.env.get('APP_URL') || 'https://atrium-casa.com'
 
     const session = await stripePost<PortalSession>('billing_portal/sessions', {
       customer: sub.provider_customer_id,

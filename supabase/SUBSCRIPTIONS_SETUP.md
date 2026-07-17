@@ -39,7 +39,7 @@ npx supabase secrets set \
   STRIPE_PRICE_ID_BASICO_ANNUAL=price_... \
   STRIPE_PRICE_ID_PREMIUM_MONTHLY=price_... \
   STRIPE_PRICE_ID_PREMIUM_ANNUAL=price_... \
-  APP_URL=https://gustavoauad.github.io/atrium-casa \
+  APP_URL=https://atrium-casa.com \
   --project-ref SEU_PROJECT_REF
 ```
 
