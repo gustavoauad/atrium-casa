@@ -6,8 +6,12 @@ import { Logo } from '../ui/Logo'
 type Tab = 'login' | 'signup'
 type CasaMode = 'new' | 'join'
 
+function initialTab(): Tab {
+  return new URLSearchParams(window.location.search).get('tab') === 'signup' ? 'signup' : 'login'
+}
+
 export function AuthScreen() {
-  const [tab, setTab] = useState<Tab>('login')
+  const [tab, setTab] = useState<Tab>(initialTab)
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [busy, setBusy] = useState(false)
