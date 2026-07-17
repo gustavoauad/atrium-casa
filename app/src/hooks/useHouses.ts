@@ -33,7 +33,14 @@ export async function createHouse(userId: string, name: string): Promise<House> 
     .insert({ name, created_by: userId })
     .select('id, name, invite_code')
     .single()
-  if (hErr) throw new Error('Erro ao criar Casa: ' + hErr.message)
+  if (hErr) {
+    if (hErr.message.toLowerCase().includes('row-level security')) {
+      throw new Error(
+        'Você já tem uma Casa gratuita. Para gerenciar mais de uma Casa, assine o plano Premium em alguma delas (aba Casa → Assinatura).',
+      )
+    }
+    throw new Error('Erro ao criar Casa: ' + hErr.message)
+  }
 
   const { error: mErr } = await supabase
     .from('house_members')
