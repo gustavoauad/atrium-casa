@@ -68,7 +68,9 @@ export interface PayrollCalc {
   proRataActive: boolean
   finalNetSal: number
   fgts: number
+  fgtsIndenizatorio: number
   inssPatronal: number
+  sat: number
   prov13: number
   provFerias: number
   custoTotal: number
@@ -174,13 +176,17 @@ export function calc(input: CalcInput): PayrollCalc {
   const finalNetSal = proRataActive ? proRataSal : netSal
   const finalTotal = proRataActive ? r2(proRataSal + vtNet) : r2(netSal + vtNet)
 
-  // Encargos patronais e provisões (LC 150/2015)
+  // Encargos patronais e provisões — Simples Doméstico (LC 150/2015, art. 34):
+  // FGTS mensal 8% + FGTS indenizatório 3,2% (substitui a multa rescisória de 40%) +
+  // INSS Patronal (CPP) 8% + Seguro contra Acidente de Trabalho 0,8%.
   const baseEnc = gross
   const fgts = r2(baseEnc * 0.08)
-  const inssPatronal = r2(baseEnc * 0.2)
+  const fgtsIndenizatorio = r2(baseEnc * 0.032)
+  const inssPatronal = r2(baseEnc * 0.08)
+  const sat = r2(baseEnc * 0.008)
   const prov13 = r2(baseEnc / 12)
   const provFerias = r2((baseEnc / 12) * (4 / 3))
-  const custoTotal = r2(finalTotal + fgts + inssPatronal + prov13 + provFerias)
+  const custoTotal = r2(finalTotal + fgts + fgtsIndenizatorio + inssPatronal + sat + prov13 + provFerias)
 
   const irrfBase = Math.max(0, gross - inssAmt)
   const irrf = irrfCalc(irrfBase)
@@ -191,6 +197,6 @@ export function calc(input: CalcInput): PayrollCalc {
     deds, bons, inssAmt, netSal, vtY, vtM, vtWd, vtWdAuto, vtManualDays, vtGross, vtDisc, vtNet,
     pay1: bday1(pyY, pyM, regionalHolidays), pay5: bday5(pyY, pyM, regionalHolidays), pyY, pyM,
     total: finalTotal, isFirstMonth, proRataDias, proRataSal, proRataSalBase, proRataActive, finalNetSal,
-    fgts, inssPatronal, prov13, provFerias, custoTotal, irrf,
+    fgts, fgtsIndenizatorio, inssPatronal, sat, prov13, provFerias, custoTotal, irrf,
   }
 }

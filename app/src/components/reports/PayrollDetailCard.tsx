@@ -87,7 +87,9 @@ export function PayrollDetailCard({ c }: { c: PayrollCalc }) {
       <div className="bg-cream rounded-lg p-2.5 space-y-0.5">
         <p className="text-[10px] uppercase tracking-wider text-muted font-medium mb-1">Encargos patronais e provisões</p>
         <EncRow label="FGTS (8%)" value={c.fgts} />
-        <EncRow label="INSS Patronal (20%)" value={c.inssPatronal} />
+        <EncRow label="FGTS Indenizatório (3,2%)" value={c.fgtsIndenizatorio} />
+        <EncRow label="INSS Patronal (8%)" value={c.inssPatronal} />
+        <EncRow label="Seguro Acidente Trabalho (0,8%)" value={c.sat} />
         <EncRow label="Provisão 13º" value={c.prov13} />
         <EncRow label="Provisão Férias+1/3" value={c.provFerias} />
         {c.irrf > 0 && <EncRow label="IRRF estimado" value={c.irrf} />}

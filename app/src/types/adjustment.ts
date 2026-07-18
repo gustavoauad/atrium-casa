@@ -7,7 +7,9 @@ export type AdjustmentType =
   | 'other'
   | 'antecipacao'
   | 'fgts'
+  | 'fgtsIndenizatorio'
   | 'inssPatronal'
+  | 'sat'
   | 'prov13'
   | 'provFerias'
   | 'irrf'
@@ -31,7 +33,9 @@ export const ADJUSTMENT_LABELS: Record<AdjustmentType, string> = {
   other: 'Outro desconto',
   antecipacao: 'Antecipação (diária avulsa)',
   fgts: 'FGTS (8%)',
-  inssPatronal: 'INSS Patronal (20%)',
+  fgtsIndenizatorio: 'FGTS Indenizatório (3,2%)',
+  inssPatronal: 'INSS Patronal (8%)',
+  sat: 'Seguro Acidente de Trabalho (0,8%)',
   prov13: 'Provisão 13º',
   provFerias: 'Provisão Férias+1/3',
   irrf: 'IRRF Retido',

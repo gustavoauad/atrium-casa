@@ -27,7 +27,7 @@ interface Props {
   onCancelPayment: () => Promise<void>
 }
 
-type EncargoField = 'fgts' | 'inssPatronal' | 'prov13' | 'provFerias' | 'irrf'
+type EncargoField = 'fgts' | 'fgtsIndenizatorio' | 'inssPatronal' | 'sat' | 'prov13' | 'provFerias' | 'irrf'
 
 export function EmployeeMonthCard({
   c, canWrite, regionalHolidays, onSaveEvent, onDeleteEvent, onSaveAdjustment, onDeleteAdjustment,
@@ -308,7 +308,9 @@ export function EmployeeMonthCard({
           <div className="rounded-lg bg-cream p-3 space-y-1">
             <p className="text-xs font-medium uppercase tracking-wider text-muted mb-1">Encargos patronais e provisões</p>
             <EncargoRow label="FGTS (8%)" value={c.fgts} onAdjust={canWrite ? () => openEncargoAdjust('fgts', c.fgts) : undefined} />
-            <EncargoRow label="INSS Patronal (20%)" value={c.inssPatronal} onAdjust={canWrite ? () => openEncargoAdjust('inssPatronal', c.inssPatronal) : undefined} />
+            <EncargoRow label="FGTS Indenizatório (3,2%)" value={c.fgtsIndenizatorio} onAdjust={canWrite ? () => openEncargoAdjust('fgtsIndenizatorio', c.fgtsIndenizatorio) : undefined} />
+            <EncargoRow label="INSS Patronal (8%)" value={c.inssPatronal} onAdjust={canWrite ? () => openEncargoAdjust('inssPatronal', c.inssPatronal) : undefined} />
+            <EncargoRow label="Seguro Acidente Trabalho (0,8%)" value={c.sat} onAdjust={canWrite ? () => openEncargoAdjust('sat', c.sat) : undefined} />
             <EncargoRow label="Provisão 13º" value={c.prov13} onAdjust={canWrite ? () => openEncargoAdjust('prov13', c.prov13) : undefined} />
             <EncargoRow label="Provisão Férias+1/3" value={c.provFerias} onAdjust={canWrite ? () => openEncargoAdjust('provFerias', c.provFerias) : undefined} />
             {c.irrf > 0 && <EncargoRow label="IRRF estimado" value={c.irrf} onAdjust={canWrite ? () => openEncargoAdjust('irrf', c.irrf) : undefined} />}
