@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { ensureTermsAgreementRecorded } from '../hooks/useTermsAgreement'
 
 interface AuthContextValue {
   user: User | null
@@ -32,6 +33,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => listener.subscription.unsubscribe()
   }, [])
+
+  useEffect(() => {
+    if (session?.user) ensureTermsAgreementRecorded(session.user).catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id])
 
   return (
     <AuthContext.Provider
