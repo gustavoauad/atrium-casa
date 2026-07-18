@@ -28,10 +28,9 @@ const DocumentTemplatesScreen = lazy(() =>
   import('./components/documents/DocumentTemplatesScreen').then((m) => ({ default: m.DocumentTemplatesScreen })),
 )
 const ReportsScreen = lazy(() => import('./components/reports/ReportsScreen').then((m) => ({ default: m.ReportsScreen })))
-const HouseSettingsScreen = lazy(() =>
-  import('./components/house-settings/HouseSettingsScreen').then((m) => ({ default: m.HouseSettingsScreen })),
+const ConfiguracoesScreen = lazy(() =>
+  import('./components/configuracoes/ConfiguracoesScreen').then((m) => ({ default: m.ConfiguracoesScreen })),
 )
-const ProfileScreen = lazy(() => import('./components/profile/ProfileScreen').then((m) => ({ default: m.ProfileScreen })))
 
 type Tab =
   | 'dashboard'
@@ -41,8 +40,7 @@ type Tab =
   | 'rescisao'
   | 'templates'
   | 'feriados'
-  | 'casa'
-  | 'perfil'
+  | 'config'
 
 function AppShell() {
   const { user, loading, isPasswordRecovery, clearPasswordRecovery } = useAuth()
@@ -52,6 +50,7 @@ function AppShell() {
   const [houseThemeColors, setHouseThemeColors] = useState<HouseThemeColors | null>(null)
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [subRefreshKey, setSubRefreshKey] = useState(0)
+  const [casaFocusToken, setCasaFocusToken] = useState(0)
 
   useEffect(() => {
     if (!user) setHouse(null)
@@ -133,6 +132,11 @@ function AppShell() {
     setSubRefreshKey((k) => k + 1)
   }
 
+  function goToSubscription() {
+    setTab('config')
+    setCasaFocusToken((t) => t + 1)
+  }
+
   function updateHouseRole(role: HouseRole) {
     setHouse((h) => (h ? { ...h, role } : h))
   }
@@ -204,14 +208,9 @@ function AppShell() {
         <TabButton active={tab === 'feriados'} onClick={() => setTab('feriados')}>
           Feriados Regionais
         </TabButton>
-        <TabButton active={tab === 'perfil'} onClick={() => setTab('perfil')}>
-          Perfil
+        <TabButton active={tab === 'config'} onClick={() => setTab('config')}>
+          ⚙ Configurações
         </TabButton>
-        {managesHouse && (
-          <TabButton active={tab === 'casa'} onClick={() => setTab('casa')}>
-            Casa
-          </TabButton>
-        )}
       </nav>
 
       {showLockedBanner && (
@@ -221,13 +220,15 @@ function AppShell() {
             seus dados estão salvos e seguros, só ficam ocultos até a assinatura ser reativada.
             {!managesHouse && ' Peça ao Proprietário/Admin para regularizar.'}
           </span>
-          <button
-            type="button"
-            onClick={() => setTab('perfil')}
-            className="px-2.5 py-1 rounded-md border border-danger/40 text-danger text-[11px] shrink-0 whitespace-nowrap"
-          >
-            Ver assinatura
-          </button>
+          {managesHouse && (
+            <button
+              type="button"
+              onClick={goToSubscription}
+              className="px-2.5 py-1 rounded-md border border-danger/40 text-danger text-[11px] shrink-0 whitespace-nowrap"
+            >
+              Ver assinatura
+            </button>
+          )}
         </div>
       )}
 
@@ -237,23 +238,21 @@ function AppShell() {
             ⏳ Seu teste grátis termina em {daysLeft} {daysLeft === 1 ? 'dia' : 'dias'}.
             {!managesHouse && ' Avise o Proprietário/Admin pra assinar um plano.'}
           </span>
-          <button
-            type="button"
-            onClick={() => setTab('perfil')}
-            className="px-2.5 py-1 rounded-md border border-warn/40 text-warn text-[11px] shrink-0 whitespace-nowrap"
-          >
-            {managesHouse ? 'Assinar agora' : 'Ver detalhes'}
-          </button>
+          {managesHouse && (
+            <button
+              type="button"
+              onClick={goToSubscription}
+              className="px-2.5 py-1 rounded-md border border-warn/40 text-warn text-[11px] shrink-0 whitespace-nowrap"
+            >
+              Assinar agora
+            </button>
+          )}
         </div>
       )}
 
       <Suspense fallback={<div className="p-8 text-center text-sm text-muted">Carregando…</div>}>
-        {tab !== 'casa' && tab !== 'perfil' && showLockedBanner && (
-          <LockedScreen
-            managesHouse={managesHouse}
-            isPastDue={subscription?.status === 'past_due'}
-            onGoToSubscription={() => setTab('perfil')}
-          />
+        {tab !== 'config' && showLockedBanner && (
+          <LockedScreen managesHouse={managesHouse} isPastDue={subscription?.status === 'past_due'} onGoToSubscription={goToSubscription} />
         )}
         {tab === 'dashboard' && !showLockedBanner && <DashboardScreen house={house} />}
         {tab === 'folha' && !showLockedBanner && <PayrollScreen house={house} />}
@@ -262,12 +261,13 @@ function AppShell() {
         {tab === 'rescisao' && !showLockedBanner && <RescisaoCalculatorScreen house={house} />}
         {tab === 'templates' && !showLockedBanner && <DocumentTemplatesScreen house={house} />}
         {tab === 'feriados' && !showLockedBanner && <RegionalHolidaysScreen house={house} />}
-        {tab === 'perfil' && (
-          <ProfileScreen house={house} subscription={subscription} onSubscriptionRefresh={refreshSubscription} />
-        )}
-        {tab === 'casa' && managesHouse && (
-          <HouseSettingsScreen
+        {tab === 'config' && (
+          <ConfiguracoesScreen
             house={house}
+            subscription={subscription}
+            onSubscriptionRefresh={refreshSubscription}
+            managesHouse={managesHouse}
+            casaFocusToken={casaFocusToken}
             onRoleChanged={updateHouseRole}
             onHouseDeleted={backToHousePicker}
             onThemeChanged={setHouseThemeColors}
