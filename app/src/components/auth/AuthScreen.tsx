@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { createHouse, findHouseByInviteCode, joinHouseByInviteCode } from '../../hooks/useHouses'
 import { Logo } from '../ui/Logo'
+import { TERMS_VERSION } from '../../lib/termsVersion'
+
+const LEGAL_ORIGIN = typeof window !== 'undefined' ? window.location.origin : ''
 
 type Tab = 'login' | 'signup'
 type CasaMode = 'new' | 'join'
@@ -24,6 +27,7 @@ export function AuthScreen() {
   const [casaMode, setCasaMode] = useState<CasaMode>('new')
   const [casaName, setCasaName] = useState('')
   const [inviteCode, setInviteCode] = useState('')
+  const [termsAccepted, setTermsAccepted] = useState(false)
 
   function switchTab(next: Tab) {
     setTab(next)
@@ -71,6 +75,7 @@ export function AuthScreen() {
     if (signupPass.length < 6) return setError('Senha deve ter ao menos 6 caracteres.')
     if (casaMode === 'new' && !casaName.trim()) return setError('Informe o nome da sua Casa.')
     if (casaMode === 'join' && !inviteCode.trim()) return setError('Informe o código de convite.')
+    if (!termsAccepted) return setError('É preciso aceitar os Termos de Uso e a Política de Privacidade para criar a conta.')
 
     setBusy(true)
     try {
@@ -82,10 +87,14 @@ export function AuthScreen() {
         }
       }
 
+      const termsAcceptedAt = new Date().toISOString()
       const { data: authData, error: authErr } = await supabase.auth.signUp({
         email,
         password: signupPass,
-        options: { emailRedirectTo: window.location.origin + import.meta.env.BASE_URL },
+        options: {
+          emailRedirectTo: window.location.origin + import.meta.env.BASE_URL,
+          data: { terms_version: TERMS_VERSION, terms_accepted_at: termsAcceptedAt },
+        },
       })
       if (authErr) throw new Error('Erro no cadastro: ' + authErr.message)
 
@@ -103,6 +112,16 @@ export function AuthScreen() {
       }
 
       const userId = authData.session.user.id
+      // Best-effort: grava o aceite no log de auditoria agora que já há sessão. Se a conta
+      // exigir confirmação por e-mail, o AuthContext faz esse registro no primeiro login.
+      try {
+        await supabase
+          .from('user_agreements')
+          .insert({ user_id: userId, terms_version: TERMS_VERSION, accepted_at: termsAcceptedAt })
+      } catch {
+        // não bloqueia o cadastro — o AuthContext tenta de novo no próximo login
+      }
+
       if (casaMode === 'new') {
         await createHouse(userId, casaName.trim())
       } else {
@@ -216,7 +235,26 @@ export function AuthScreen() {
                 />
               </Field>
             )}
-            <button type="submit" disabled={busy} className="btn-primary w-full">
+            <label className="flex items-start gap-2 text-xs text-muted">
+              <input
+                type="checkbox"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                className="mt-0.5 shrink-0"
+              />
+              <span>
+                Li e concordo com os{' '}
+                <a href={`${LEGAL_ORIGIN}/termos.html`} target="_blank" rel="noopener noreferrer" className="text-accent underline">
+                  Termos de Uso
+                </a>{' '}
+                e a{' '}
+                <a href={`${LEGAL_ORIGIN}/privacidade.html`} target="_blank" rel="noopener noreferrer" className="text-accent underline">
+                  Política de Privacidade
+                </a>
+                . Sei que os cálculos são estimativas e que devo conferi-los antes de usar.
+              </span>
+            </label>
+            <button type="submit" disabled={busy || !termsAccepted} className="btn-primary w-full">
               {busy ? 'Criando conta…' : 'Criar conta'}
             </button>
           </form>
