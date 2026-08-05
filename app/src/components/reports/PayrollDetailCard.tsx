@@ -1,10 +1,11 @@
 import { fd, fm } from '../../lib/payroll/format'
 import { ADJUSTMENT_LABELS, DEDUCTION_TYPES } from '../../types/adjustment'
-import type { PayrollCalc } from '../../lib/payroll/calc'
+import { paidAmountOf, paymentStatus, remainingBalance, type PayrollCalc } from '../../lib/payroll/calc'
 
 /** Detalhamento completo (somente leitura) de um funcionário/mês — mesmo nível de detalhe da Folha de Pagamento. */
 export function PayrollDetailCard({ c }: { c: PayrollCalc }) {
   const recGroups = groupRecurring(c.recs)
+  const status = paymentStatus(c)
 
   return (
     <div className="border border-border rounded-xl bg-card p-4 space-y-3 break-inside-avoid">
@@ -16,11 +17,10 @@ export function PayrollDetailCard({ c }: { c: PayrollCalc }) {
         <div className="text-right">
           <div className="font-medium text-accent">R$ {fm(c.total)}</div>
           <div className="text-[10px]">
-            {c.payment ? (
-              <span className="text-sage">✓ Pago em {fd(c.payment.paidDate)}</span>
-            ) : (
-              <span className="text-warn">○ Pendente</span>
-            )}
+            {status === 'pago' && <span className="text-sage">✓ Pago em {fd(c.payment!.paidDate)}</span>}
+            {status === 'parcial' && <span className="text-warn">◐ Parcial — falta R$ {fm(remainingBalance(c.payment!))}</span>}
+            {status === 'nada_a_pagar' && <span className="text-muted">— Nada a pagar</span>}
+            {status === 'pendente' && <span className="text-warn">○ Pendente</span>}
           </div>
         </div>
       </div>
@@ -107,6 +107,7 @@ export function PayrollDetailCard({ c }: { c: PayrollCalc }) {
       {c.payment && (
         <p className="text-[11px] text-muted">
           Pago via {c.payment.method}
+          {status === 'parcial' && ` · Pago: R$ ${fm(paidAmountOf(c.payment))} · Saldo: R$ ${fm(remainingBalance(c.payment))}`}
           {c.payment.notes ? ` · ${c.payment.notes}` : ''}
         </p>
       )}

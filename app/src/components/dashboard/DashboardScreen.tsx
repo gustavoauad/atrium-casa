@@ -6,7 +6,7 @@ import type { Adjustment } from '../../types/adjustment'
 import type { Payment } from '../../types/payment'
 import type { RegionalHoliday } from '../../lib/payroll/holidays'
 import { bday5 } from '../../lib/payroll/holidays'
-import { calc, MK, type PayrollCalc } from '../../lib/payroll/calc'
+import { calc, MK, paidAmountOf, paymentStatus, type PayrollCalc } from '../../lib/payroll/calc'
 import { MP } from '../../lib/payroll/constants'
 import { fm, fd } from '../../lib/payroll/format'
 import { activeMonthsFor, type MonthRef } from '../../lib/payroll/activeMonths'
@@ -140,9 +140,9 @@ export function DashboardScreen({ house }: { house: House }) {
     const totSal = calcs.reduce((a, c) => a + c.finalNetSal, 0)
     const totVT = calcs.reduce((a, c) => a + c.vtNet, 0)
     const totAll = calcs.reduce((a, c) => a + c.total, 0)
-    const totPago = calcs.reduce((a, c) => a + (c.payment?.total ?? 0), 0)
+    const totPago = calcs.reduce((a, c) => a + (c.payment ? paidAmountOf(c.payment) : 0), 0)
     const totAPagar = totAll - totPago
-    const paidCount = calcs.filter((c) => c.payment).length
+    const paidCount = calcs.filter((c) => paymentStatus(c) === 'pago').length
     const monthLabel = `${MP[selMonth.m]} ${selMonth.y}`
     const pyY = selMonth.m === 11 ? selMonth.y + 1 : selMonth.y
     const pyM = selMonth.m === 11 ? 0 : selMonth.m + 1
@@ -222,9 +222,9 @@ export function DashboardScreen({ house }: { house: House }) {
   const totSal = flatCalcs.reduce((a, c) => a + c.finalNetSal, 0)
   const totVT = flatCalcs.reduce((a, c) => a + c.vtNet, 0)
   const totAll = flatCalcs.reduce((a, c) => a + c.total, 0)
-  const totPago = flatCalcs.reduce((a, c) => a + (c.payment?.total ?? 0), 0)
+  const totPago = flatCalcs.reduce((a, c) => a + (c.payment ? paidAmountOf(c.payment) : 0), 0)
   const totAPagar = totAll - totPago
-  const paidCount = flatCalcs.filter((c) => c.payment).length
+  const paidCount = flatCalcs.filter((c) => paymentStatus(c) === 'pago').length
   const rangeLabel = `${MP[rangeFrom.m]} ${rangeFrom.y} → ${MP[rangeTo.m]} ${rangeTo.y}`
 
   const barData = inRange.map((mr, i) => ({

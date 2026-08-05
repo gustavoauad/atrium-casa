@@ -6,7 +6,7 @@ import type { WorkEvent } from '../../types/event'
 import type { Adjustment } from '../../types/adjustment'
 import type { Payment } from '../../types/payment'
 import type { RegionalHoliday } from '../../lib/payroll/holidays'
-import { calc, MK } from '../../lib/payroll/calc'
+import { calc, MK, paymentStatus } from '../../lib/payroll/calc'
 import { MP } from '../../lib/payroll/constants'
 import { bday5 } from '../../lib/payroll/holidays'
 import { calendarState, defaultReferenceMonth } from '../../lib/payroll/referenceMonth'
@@ -77,11 +77,32 @@ export function PayrollScreen({ house }: { house: House }) {
         return
       }
       const prevKey = MK(py, pm)
-      const payments = await loadPaymentsForMonth(house.id, prevKey)
+      const [payments, events, adjs] = await Promise.all([
+        loadPaymentsForMonth(house.id, prevKey),
+        loadEventsForMonth(house.id, prevKey),
+        loadAdjustmentsForMonth(house.id, prevKey),
+      ])
       // Só entram na contagem funcionários genuinamente ativos naquele mês — quem foi
       // desligado no próprio mês de referência é pago via Rescisão, não pela folha normal.
       const relevant = emps.filter((e) => monthStatus(e, py, pm) === 'ativo')
-      const missing = relevant.filter((e) => !payments[e.id])
+      // Roda o cálculo do mês anterior pra cada um: sem isso não dá pra distinguir
+      // "sem pagamento porque não tem nada lançado" (nada_a_pagar, não é atraso) de
+      // "sem pagamento e devendo" (pendente/parcial, é atraso de verdade).
+      const missing = relevant.filter((e) => {
+        const status = paymentStatus(
+          calc({
+            emp: e,
+            ry: py,
+            rm: pm,
+            events: events[e.id] || [],
+            adjustments: adjs[e.id] || [],
+            payment: payments[e.id] || null,
+            regionalHolidays: reg,
+            vtManualDays: null,
+          }),
+        )
+        return status !== 'pago' && status !== 'nada_a_pagar'
+      })
       setLateWarning(missing.length > 0 ? { y: py, m: pm, missing: missing.length, total: relevant.length } : null)
     } catch {
       // aviso é best-effort — não deve quebrar a tela em caso de falha

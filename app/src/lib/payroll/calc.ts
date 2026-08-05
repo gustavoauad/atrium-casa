@@ -5,9 +5,10 @@ import type { WorkEvent } from '../../types/event'
 import type { Payment, RecurringOccurrence } from '../../types/payment'
 import { getContractForMonth } from './contracts'
 import { parseLocalDate, r2 } from './format'
-import { allHolidays, bday1, bday5, mdays, type RegionalHoliday } from './holidays'
+import { allHolidays, bday1, bday5, dim, mdays, type RegionalHoliday } from './holidays'
 import { inssCalc, irrfCalc } from './inss'
 import { DP } from './constants'
+import { localISO } from './referenceMonth'
 
 export interface CalcInput {
   emp: Employee
@@ -79,6 +80,40 @@ export interface PayrollCalc {
 
 export function MK(y: number, m: number): string {
   return `${y}-${String(m + 1).padStart(2, '0')}`
+}
+
+/** Primeiro/último dia (ISO) do mês de referência — usado para travar lançamentos ao período do mês. */
+export function monthDateRange(y: number, m: number): { min: string; max: string } {
+  const last = dim(y, m)
+  return { min: `${MK(y, m)}-01`, max: `${MK(y, m)}-${String(last).padStart(2, '0')}` }
+}
+
+/** Valor efetivamente pago — registros anteriores ao pagamento parcial não têm `paidAmount`, então caem no total. */
+export function paidAmountOf(p: Payment): number {
+  return p.paidAmount ?? p.total
+}
+
+export function isPartialPayment(p: Payment): boolean {
+  return paidAmountOf(p) < p.total - 0.01
+}
+
+export function remainingBalance(p: Payment): number {
+  return Math.max(0, r2(p.total - paidAmountOf(p)))
+}
+
+export type PaymentStatus = 'pago' | 'parcial' | 'nada_a_pagar' | 'pendente'
+
+/**
+ * Status único usado em todas as telas (Folha, Dashboard, Relatórios) para evitar
+ * cada uma checar `c.payment` de um jeito diferente. `nada_a_pagar`: mês de
+ * referência já encerrado, nada foi lançado (total 0) e não há pagamento — evita
+ * cobrar confirmação de um pagamento que não existe. Assume que o chamador só
+ * invoca para funcionários já filtrados como "ativos" naquele mês.
+ */
+export function paymentStatus(c: PayrollCalc): PaymentStatus {
+  if (c.payment) return isPartialPayment(c.payment) ? 'parcial' : 'pago'
+  if (c.total <= 0.01 && localISO(new Date()) > monthDateRange(c.ry, c.rm).max) return 'nada_a_pagar'
+  return 'pendente'
 }
 
 export function calc(input: CalcInput): PayrollCalc {

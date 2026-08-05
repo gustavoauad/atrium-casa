@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { Employee } from '../../types/employee'
 import type { Adjustment, AdjustmentType } from '../../types/adjustment'
 import { ADJUSTMENT_LABELS } from '../../types/adjustment'
-import { tod, uid } from '../../lib/payroll/format'
+import { fd, tod, uid } from '../../lib/payroll/format'
 
 interface Props {
   emp: Employee
@@ -10,6 +10,9 @@ interface Props {
   defaultType?: AdjustmentType
   defaultValue?: number
   defaultDesc?: string
+  defaultDate?: string
+  minDate: string
+  maxDate: string
   onClose: () => void
   onSave: (adj: Adjustment) => Promise<void>
   onDelete?: () => Promise<void>
@@ -17,16 +20,23 @@ interface Props {
 
 const USER_TYPES: AdjustmentType[] = ['advance', 'discount', 'falta', 'bonus', 'loan', 'other']
 
-export function AdjustmentModal({ emp, adjustment, defaultType, defaultValue, defaultDesc, onClose, onSave, onDelete }: Props) {
+export function AdjustmentModal({
+  emp, adjustment, defaultType, defaultValue, defaultDesc, defaultDate, minDate, maxDate, onClose, onSave, onDelete,
+}: Props) {
   const [type, setType] = useState<AdjustmentType>(adjustment?.type || defaultType || 'advance')
   const [value, setValue] = useState(adjustment?.value ?? defaultValue ?? 0)
-  const [date, setDate] = useState(adjustment?.date || tod())
+  const originalDate = adjustment?.date
+  const [date, setDate] = useState(adjustment?.date || defaultDate || tod())
   const [desc, setDesc] = useState(adjustment?.desc || defaultDesc || '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   async function handleSave() {
     setError('')
+    if (date !== originalDate && (date < minDate || date > maxDate)) {
+      setError(`A data deve estar entre ${fd(minDate)} e ${fd(maxDate)} (dentro do mês de referência selecionado).`)
+      return
+    }
     setSaving(true)
     try {
       await onSave({
@@ -70,7 +80,7 @@ export function AdjustmentModal({ emp, adjustment, defaultType, defaultValue, de
               <input className="input" type="number" step="0.01" value={value || ''} onChange={(e) => setValue(+e.target.value || 0)} />
             </Field>
             <Field label="Data">
-              <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              <input className="input" type="date" min={minDate} max={maxDate} value={date} onChange={(e) => setDate(e.target.value)} />
             </Field>
           </div>
 

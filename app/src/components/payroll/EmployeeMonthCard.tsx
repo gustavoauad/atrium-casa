@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { PayrollCalc } from '../../lib/payroll/calc'
+import { monthDateRange, paidAmountOf, paymentStatus, remainingBalance, type PayrollCalc } from '../../lib/payroll/calc'
 import { fd, fm, tod } from '../../lib/payroll/format'
 import { MP } from '../../lib/payroll/constants'
 import type { WorkEvent } from '../../types/event'
@@ -40,6 +40,7 @@ export function EmployeeMonthCard({
     defaultType?: AdjustmentType
     defaultValue?: number
     defaultDesc?: string
+    defaultDate?: string
   } | null>(null)
   const [showPayment, setShowPayment] = useState(false)
   const [showReceipt, setShowReceipt] = useState(false)
@@ -47,6 +48,9 @@ export function EmployeeMonthCard({
   const [vtInput, setVtInput] = useState<string>(c.vtManualDays !== null ? String(c.vtManualDays) : '')
 
   const recGroups = groupRecurring(c.recs)
+  const status = paymentStatus(c)
+  const { min: minDate, max: maxDate } = monthDateRange(c.ry, c.rm)
+  const clampToMonth = (iso: string) => (iso < minDate ? minDate : iso > maxDate ? maxDate : iso)
 
   function openEncargoAdjust(field: EncargoField, val: number) {
     setAdjModal({
@@ -54,6 +58,7 @@ export function EmployeeMonthCard({
       defaultType: field,
       defaultValue: val,
       defaultDesc: `${ADJUSTMENT_LABELS[field]} — ${MP[c.rm]} ${c.ry}`,
+      defaultDate: clampToMonth(tod()),
     })
   }
 
@@ -63,6 +68,7 @@ export function EmployeeMonthCard({
       defaultType: 'falta',
       defaultValue: c.dailyRate,
       defaultDesc: 'Falta não justificada',
+      defaultDate: clampToMonth(tod()),
     })
   }
 
@@ -90,7 +96,11 @@ export function EmployeeMonthCard({
   }
 
   async function handleCancelPayment() {
-    if (!confirm('Cancelar este pagamento? O mês volta para "não pago" e o recibo deixa de existir.')) return
+    const msg =
+      status === 'parcial'
+        ? `Cancelar este pagamento parcial? O valor já registrado como pago (R$ ${fm(paidAmountOf(c.payment!))}) some do histórico e o mês volta para "não pago".`
+        : 'Cancelar este pagamento? O mês volta para "não pago" e o recibo deixa de existir.'
+    if (!confirm(msg)) return
     await onCancelPayment()
   }
 
@@ -105,7 +115,11 @@ export function EmployeeMonthCard({
           <div className="font-medium text-sm">{c.emp.name}</div>
           <div className="text-xs text-muted mt-0.5">
             {c.role}
-            {c.payment && <span className="ml-2 text-sage">✓ Pago em {fd(c.payment.paidDate)}</span>}
+            {status === 'pago' && <span className="ml-2 text-sage">✓ Pago em {fd(c.payment!.paidDate)}</span>}
+            {status === 'parcial' && (
+              <span className="ml-2 text-warn">◐ Parcial — falta R$ {fm(remainingBalance(c.payment!))}</span>
+            )}
+            {status === 'nada_a_pagar' && <span className="ml-2 text-muted">— Nada a pagar</span>}
           </div>
         </div>
         <div className="text-right">
@@ -193,7 +207,7 @@ export function EmployeeMonthCard({
             total={c.avTot}
             action={
               canWrite && (
-                <button type="button" className="text-xs text-accent underline" onClick={() => setEventModal({ ev: null, date: tod() })}>
+                <button type="button" className="text-xs text-accent underline" onClick={() => setEventModal({ ev: null, date: clampToMonth(tod()) })}>
                   + Nova
                 </button>
               )
@@ -251,7 +265,7 @@ export function EmployeeMonthCard({
                       − Falta
                     </button>
                   )}
-                  <button type="button" className="text-xs text-accent underline" onClick={() => setAdjModal({ adj: null })}>
+                  <button type="button" className="text-xs text-accent underline" onClick={() => setAdjModal({ adj: null, defaultDate: clampToMonth(tod()) })}>
                     + Novo
                   </button>
                 </>
@@ -325,15 +339,28 @@ export function EmployeeMonthCard({
             <span className="font-medium text-lg text-accent">R$ {fm(c.total)}</span>
           </div>
 
+          {status === 'parcial' && (
+            <div className="text-xs space-y-0.5 bg-warn/10 border border-warn/30 rounded-lg px-3 py-2">
+              <div className="flex justify-between">
+                <span className="text-muted">Pago</span>
+                <span>R$ {fm(paidAmountOf(c.payment!))}</span>
+              </div>
+              <div className="flex justify-between font-medium text-warn">
+                <span>Saldo restante</span>
+                <span>R$ {fm(remainingBalance(c.payment!))}</span>
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-2">
             {c.payment && (
               <button type="button" onClick={() => setShowReceipt(true)} className="flex-1 px-4 py-2.5 rounded-lg border border-border text-sm">
                 📄 Recibo
               </button>
             )}
-            {canWrite && (
+            {canWrite && status !== 'nada_a_pagar' && (
               <button type="button" onClick={() => setShowPayment(true)} className="btn-primary flex-1">
-                {c.payment ? 'Editar pagamento' : 'Confirmar pagamento'}
+                {status === 'parcial' ? 'Completar pagamento' : c.payment ? 'Editar pagamento' : 'Confirmar pagamento'}
               </button>
             )}
             {canWrite && c.payment && (
@@ -355,6 +382,8 @@ export function EmployeeMonthCard({
           emp={c.emp}
           event={eventModal.ev}
           defaultDate={eventModal.date}
+          minDate={minDate}
+          maxDate={maxDate}
           regionalHolidays={regionalHolidays}
           onClose={() => setEventModal(null)}
           onSave={async (ev) => {
@@ -379,6 +408,9 @@ export function EmployeeMonthCard({
           defaultType={adjModal.defaultType}
           defaultValue={adjModal.defaultValue}
           defaultDesc={adjModal.defaultDesc}
+          defaultDate={adjModal.defaultDate}
+          minDate={minDate}
+          maxDate={maxDate}
           onClose={() => setAdjModal(null)}
           onSave={async (adj) => {
             await onSaveAdjustment(adj)
@@ -416,7 +448,13 @@ export function EmployeeMonthCard({
       )}
 
       {payEventModal && (
-        <PayEventModal ev={payEventModal} onClose={() => setPayEventModal(null)} onConfirm={handleConfirmPayEvent} />
+        <PayEventModal
+          ev={payEventModal}
+          minDate={minDate}
+          maxDate={maxDate}
+          onClose={() => setPayEventModal(null)}
+          onConfirm={handleConfirmPayEvent}
+        />
       )}
     </div>
   )

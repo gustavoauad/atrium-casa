@@ -6,12 +6,14 @@ const METHODS = ['PIX', 'Dinheiro', 'TED', 'Cartão']
 
 interface Props {
   ev: WorkEvent
+  minDate: string
+  maxDate: string
   onClose: () => void
   onConfirm: (paidDate: string, method: string, notes: string) => Promise<void>
 }
 
-export function PayEventModal({ ev, onClose, onConfirm }: Props) {
-  const [paidDate, setPaidDate] = useState(tod())
+export function PayEventModal({ ev, minDate, maxDate, onClose, onConfirm }: Props) {
+  const [paidDate, setPaidDate] = useState(() => (tod() < minDate ? minDate : tod() > maxDate ? maxDate : tod()))
   const [method, setMethod] = useState(METHODS[0])
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
@@ -19,6 +21,10 @@ export function PayEventModal({ ev, onClose, onConfirm }: Props) {
 
   async function handleConfirm() {
     setError('')
+    if (paidDate < minDate || paidDate > maxDate) {
+      setError(`A data deve estar entre ${fd(minDate)} e ${fd(maxDate)} (dentro do mês de referência selecionado).`)
+      return
+    }
     setSaving(true)
     try {
       await onConfirm(paidDate, method, notes.trim())
@@ -43,7 +49,7 @@ export function PayEventModal({ ev, onClose, onConfirm }: Props) {
           </p>
 
           <Field label="Data do pagamento">
-            <input className="input" type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} />
+            <input className="input" type="date" min={minDate} max={maxDate} value={paidDate} onChange={(e) => setPaidDate(e.target.value)} />
           </Field>
 
           <Field label="Forma">

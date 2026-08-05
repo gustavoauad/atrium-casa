@@ -1,10 +1,12 @@
 import { fd, fm } from '../../lib/payroll/format'
 import { MP } from '../../lib/payroll/constants'
+import { isPartialPayment, paidAmountOf, remainingBalance } from '../../lib/payroll/calc'
 import type { Payment } from '../../types/payment'
 import { PrintableView } from '../ui/PrintableView'
 
 export function PaymentReceipt({ payment, onClose }: { payment: Payment; onClose: () => void }) {
   const p = payment
+  const partial = isPartialPayment(p)
   const vtLabel = `${MP[p.vtM]} ${p.vtY}`
   // Deriva o valor diário do próprio pagamento (não do cadastro atual do funcionário),
   // para o recibo permanecer correto mesmo que o VT diário mude depois.
@@ -68,12 +70,36 @@ export function PaymentReceipt({ payment, onClose }: { payment: Payment; onClose
 
       <table className="w-full border-collapse mb-4">
         <tbody>
-          <tr>
-            <td className="pt-1 text-lg font-medium">Total do pagamento</td>
-            <td className="pt-1 text-right text-lg font-medium">R$ {fm(p.total)}</td>
-          </tr>
+          {partial ? (
+            <>
+              <tr className="border-b border-border">
+                <td className="py-1 text-sm">Total do mês</td>
+                <td className="py-1 text-right text-sm">R$ {fm(p.total)}</td>
+              </tr>
+              <tr>
+                <td className="pt-1 text-lg font-medium">Valor pago nesta data</td>
+                <td className="pt-1 text-right text-lg font-medium">R$ {fm(paidAmountOf(p))}</td>
+              </tr>
+              <tr>
+                <td className="pt-1 text-sm text-warn font-medium">Saldo pendente</td>
+                <td className="pt-1 text-right text-sm text-warn font-medium">R$ {fm(remainingBalance(p))}</td>
+              </tr>
+            </>
+          ) : (
+            <tr>
+              <td className="pt-1 text-lg font-medium">Total do pagamento</td>
+              <td className="pt-1 text-right text-lg font-medium">R$ {fm(p.total)}</td>
+            </tr>
+          )}
         </tbody>
       </table>
+
+      {partial && (
+        <div className="bg-warn/10 border border-warn/30 rounded-lg px-4 py-3 text-xs text-warn mb-4">
+          ⚠️ Pagamento parcial — este recibo não quita o mês integralmente. Saldo de R$ {fm(remainingBalance(p))} ainda
+          em aberto.
+        </div>
+      )}
 
       <div className="bg-cream rounded-lg px-4 py-3 text-xs text-muted mb-4">
         Pago em {fd(p.paidDate)} via {p.method}
