@@ -56,7 +56,7 @@ export function EmployeeModal({ employee, onClose, onSave }: Props) {
 
   /** id do contrato → data em que ele deixou de valer (início do contrato seguinte). O vigente atual não entra aqui. */
   const contractEndDates = new Map<string, string>()
-  const chronological = [...historyContracts, originalContract].sort((a, b) =>
+  const chronological = [...historyContracts, contract].sort((a, b) =>
     a.startDate < b.startDate ? -1 : a.startDate > b.startDate ? 1 : 0,
   )
   for (let i = 0; i < chronological.length - 1; i++) {
@@ -191,25 +191,43 @@ export function EmployeeModal({ employee, onClose, onSave }: Props) {
           </div>
 
           <div className="border-t border-border pt-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-[11px] font-medium uppercase tracking-wider text-muted">
-                {isNew ? 'Condições contratuais' : 'Condições atuais'}
-              </p>
-              {!isNew && (
-                <span className="text-[10px] text-muted">Vigente desde {fd(originalContract.startDate)}</span>
-              )}
-            </div>
+            <p className="text-[11px] font-medium uppercase tracking-wider text-muted mb-3">
+              {isNew ? 'Condições contratuais' : 'Condições atuais'}
+            </p>
 
             <div className="space-y-3">
-              <Field label="Função">
-                <select className="input" value={contract.role} onChange={(e) => updateContract('role', e.target.value)}>
-                  {EMPLOYEE_ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+              {!isNew && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Field label="Vigente desde">
+                    <input
+                      className="input"
+                      type="date"
+                      value={contract.startDate}
+                      onChange={(e) => updateContract('startDate', e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Função">
+                    <select className="input" value={contract.role} onChange={(e) => updateContract('role', e.target.value)}>
+                      {EMPLOYEE_ROLES.map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
+              )}
+              {isNew && (
+                <Field label="Função">
+                  <select className="input" value={contract.role} onChange={(e) => updateContract('role', e.target.value)}>
+                    {EMPLOYEE_ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Salário base (R$)">
@@ -352,7 +370,7 @@ export function EmployeeModal({ employee, onClose, onSave }: Props) {
                 <ul className="space-y-1.5">
                   <li className="text-xs bg-cream/50 border border-accent/30 rounded-lg px-3 py-2">
                     <div className="font-medium">
-                      Vigente desde {fd(originalContract.startDate)} <span className="text-accent">(atual)</span>
+                      Vigente desde {fd(contract.startDate)} <span className="text-accent">(atual)</span>
                     </div>
                     <div className="text-muted">
                       {contract.role} · R$ {contract.salary.toFixed(2)} · {contract.contract === 'mensalista' ? 'Mensalista' : 'Diarista'} · VT R$ {contract.vtDaily.toFixed(2)}
