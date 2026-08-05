@@ -470,12 +470,15 @@ function Row({ label, value, negative }: { label: string; value: number; negativ
 }
 
 function Section({ title, total, action, children }: { title: string; total: number; action?: React.ReactNode; children: React.ReactNode }) {
+  const negative = total < 0
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
         <span className="text-xs font-medium uppercase tracking-wider text-muted">{title}</span>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-sage">+ R$ {fm(total)}</span>
+          <span className={`text-xs ${negative ? 'text-danger' : 'text-sage'}`}>
+            {negative ? '− ' : '+ '}R$ {fm(Math.abs(total))}
+          </span>
           {action}
         </div>
       </div>

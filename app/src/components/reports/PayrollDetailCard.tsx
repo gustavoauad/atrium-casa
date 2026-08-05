@@ -125,11 +125,14 @@ function Row({ label, value, negative }: { label: string; value: number; negativ
 }
 
 function DetailSection({ title, total, children }: { title: string; total: number; children: React.ReactNode }) {
+  const negative = total < 0
   return (
     <div>
       <div className="flex items-center justify-between mb-0.5">
         <span className="text-[10px] uppercase tracking-wider text-muted font-medium">{title}</span>
-        <span className="text-xs text-sage">+ R$ {fm(total)}</span>
+        <span className={`text-xs ${negative ? 'text-danger' : 'text-sage'}`}>
+          {negative ? '− ' : '+ '}R$ {fm(Math.abs(total))}
+        </span>
       </div>
       {children}
     </div>
