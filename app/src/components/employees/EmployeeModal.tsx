@@ -54,6 +54,15 @@ export function EmployeeModal({ employee, onClose, onSave }: Props) {
 
   const contractChanged = !isNew && !contractFieldsEqual(contract, originalContract)
 
+  /** id do contrato → data em que ele deixou de valer (início do contrato seguinte). O vigente atual não entra aqui. */
+  const contractEndDates = new Map<string, string>()
+  const chronological = [...historyContracts, originalContract].sort((a, b) =>
+    a.startDate < b.startDate ? -1 : a.startDate > b.startDate ? 1 : 0,
+  )
+  for (let i = 0; i < chronological.length - 1; i++) {
+    contractEndDates.set(chronological[i].id, chronological[i + 1].startDate)
+  }
+
   function removeHistoryContract(id: string) {
     if (!confirm('Excluir este contrato do histórico? Isso pode afetar o cálculo de meses passados que usavam essas condições.')) return
     setHistoryContracts((prev) => prev.filter((c) => c.id !== id))
@@ -370,7 +379,11 @@ export function EmployeeModal({ employee, onClose, onSave }: Props) {
                       ) : (
                         <li key={c.id} className="text-xs bg-cream rounded-lg px-3 py-2 flex items-center justify-between gap-2">
                           <div>
-                            <div className="font-medium">Vigente desde {fd(c.startDate)}</div>
+                            <div className="font-medium">
+                              Vigente de {fd(c.startDate)}
+                              {contractEndDates.has(c.id) && <> até {fd(contractEndDates.get(c.id)!)}</>}
+                              <span className="text-muted font-normal"> (encerrado)</span>
+                            </div>
                             <div className="text-muted">
                               {c.role} · R$ {c.salary.toFixed(2)} · {c.contract === 'mensalista' ? 'Mensalista' : 'Diarista'} · VT R$ {c.vtDaily.toFixed(2)}
                             </div>
