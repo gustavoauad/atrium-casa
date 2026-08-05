@@ -33,6 +33,8 @@ export interface Payment {
   vtY: number
   vtM: number
   total: number
+  /** Valor efetivamente pago — pode ser menor que `total` (pagamento parcial). Registros antigos não têm essa chave; use `paidAmountOf()`. */
+  paidAmount: number
   paidDate: string
   method: string
   isRescisao: boolean

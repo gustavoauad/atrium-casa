@@ -5,7 +5,7 @@ import type { WorkEvent } from '../../types/event'
 import type { Adjustment } from '../../types/adjustment'
 import type { Payment } from '../../types/payment'
 import type { RegionalHoliday } from '../../lib/payroll/holidays'
-import { calc, MK, type PayrollCalc } from '../../lib/payroll/calc'
+import { calc, MK, paidAmountOf, paymentStatus, remainingBalance, type PayrollCalc, type PaymentStatus } from '../../lib/payroll/calc'
 import { MP } from '../../lib/payroll/constants'
 import { fm } from '../../lib/payroll/format'
 import { activeMonthsFor, type MonthRef } from '../../lib/payroll/activeMonths'
@@ -146,6 +146,21 @@ export function ReportsScreen({ house }: { house: House }) {
   )
 }
 
+const STATUS_LABEL: Record<PaymentStatus, string> = {
+  pago: 'Pago',
+  parcial: 'Parcial',
+  nada_a_pagar: 'Nada a pagar',
+  pendente: 'Pendente',
+}
+
+function StatusBadge({ c }: { c: PayrollCalc }) {
+  const status = paymentStatus(c)
+  if (status === 'pago') return <span className="text-sage">✓ Pago</span>
+  if (status === 'parcial') return <span className="text-warn">◐ Parcial</span>
+  if (status === 'nada_a_pagar') return <span className="text-muted">— Nada a pagar</span>
+  return <span className="text-warn">○ Pendente</span>
+}
+
 function downloadCSV(filename: string, rows: (string | number)[][]) {
   const csv = rows.map((r) => r.map((v) => `"${String(v).split('"').join('""')}"`).join(',')).join('\r\n')
   const a = document.createElement('a')
@@ -175,7 +190,7 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
   const totVT = calcs.reduce((a, c) => a + c.vtNet, 0)
   const totAll = calcs.reduce((a, c) => a + c.total, 0)
   const totInss = calcs.reduce((a, c) => a + c.inssAmt, 0)
-  const paidCount = calcs.filter((c) => c.payment).length
+  const paidCount = calcs.filter((c) => paymentStatus(c) === 'pago').length
   const refLabel = `${MP[month.m]} ${month.y}`
   const pyY = month.m === 11 ? month.y + 1 : month.y
   const pyM = month.m === 11 ? 0 : month.m + 1
@@ -183,13 +198,14 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
 
   function exportCSV() {
     const rows: (string | number)[][] = [
-      ['Funcionário', 'Função', 'Sal. Base', 'Diárias Rec.', 'Diárias Avulsas', 'Bônus', 'Descontos', 'INSS', 'Sal. Líquido', 'VT Dias', 'VT', 'Total Envelope', 'Pago em', 'Forma', 'Status'],
+      ['Funcionário', 'Função', 'Sal. Base', 'Diárias Rec.', 'Diárias Avulsas', 'Bônus', 'Descontos', 'INSS', 'Sal. Líquido', 'VT Dias', 'VT', 'Total Envelope', 'Pago em', 'Forma', 'Status', 'Valor pago', 'Saldo restante'],
     ]
     calcs.forEach((c) =>
       rows.push([
         c.emp.name, c.role, c.salBase.toFixed(2), c.recTot.toFixed(2), c.avTot.toFixed(2), c.bons.toFixed(2),
         c.deds.toFixed(2), c.inssAmt.toFixed(2), c.netSal.toFixed(2), c.vtWd, c.vtNet.toFixed(2), c.total.toFixed(2),
-        c.payment?.paidDate || '', c.payment?.method || '', c.payment ? 'Pago' : 'Pendente',
+        c.payment?.paidDate || '', c.payment?.method || '', STATUS_LABEL[paymentStatus(c)],
+        c.payment ? paidAmountOf(c.payment).toFixed(2) : '', c.payment ? remainingBalance(c.payment).toFixed(2) : '',
       ]),
     )
     downloadCSV(`atrium_relatorio_${MP[month.m]}_${month.y}.csv`, rows)
@@ -296,7 +312,7 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
                       <td className="text-right px-2 py-2 text-blue">R$ {fm(c.vtNet)}</td>
                       <td className="text-right px-2 py-2 font-medium text-accent">R$ {fm(c.total)}</td>
                       <td className="text-center px-2 py-2">
-                        {c.payment ? <span className="text-sage">✓ Pago</span> : <span className="text-warn">○ Pendente</span>}
+                        <StatusBadge c={c} />
                       </td>
                     </tr>
                   ))}
@@ -356,7 +372,7 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
                     <td className="text-right px-3 py-2.5 text-blue">R$ {fm(c.vtNet)}</td>
                     <td className="text-right px-3 py-2.5 text-base text-accent font-medium">R$ {fm(c.total)}</td>
                     <td className="text-center px-3 py-2.5 text-[11px]">
-                      {c.payment ? <span className="text-sage">✓ Pago</span> : <span className="text-warn">⏳ Pendente</span>}
+                      <StatusBadge c={c} />
                     </td>
                   </tr>
                 ))}
@@ -405,7 +421,7 @@ function AccumulatedReport({ employees, activeMonths, calcFor }: AccProps) {
         totVT += c.vtNet
         totInss += c.inssAmt
         total += c.total
-        if (c.payment) paid++
+        if (['pago', 'nada_a_pagar'].includes(paymentStatus(c))) paid++
         role = c.role
       }
       return { emp, role, months: inRange.length, totSal, totVT, totInss, total, paid }

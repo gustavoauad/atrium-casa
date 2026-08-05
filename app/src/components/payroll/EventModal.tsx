@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Employee } from '../../types/employee'
 import type { WorkEvent } from '../../types/event'
-import { tod, uid } from '../../lib/payroll/format'
+import { fd, tod, uid } from '../../lib/payroll/format'
 import { holName } from '../../lib/payroll/holidays'
 import type { RegionalHoliday } from '../../lib/payroll/holidays'
 
@@ -9,14 +9,17 @@ interface Props {
   emp: Employee
   event: WorkEvent | null
   defaultDate: string
+  minDate: string
+  maxDate: string
   regionalHolidays: RegionalHoliday[]
   onClose: () => void
   onSave: (ev: WorkEvent) => Promise<void>
   onDelete?: () => Promise<void>
 }
 
-export function EventModal({ emp, event, defaultDate, regionalHolidays, onClose, onSave, onDelete }: Props) {
+export function EventModal({ emp, event, defaultDate, minDate, maxDate, regionalHolidays, onClose, onSave, onDelete }: Props) {
   const firstType = emp.extraTypes[0]
+  const originalDate = event?.date
   const [date, setDate] = useState(event?.date || defaultDate)
   const [value, setValue] = useState(event?.value ?? firstType?.value ?? 0)
   const [duration, setDuration] = useState(event?.duration || firstType?.name || '')
@@ -34,6 +37,10 @@ export function EventModal({ emp, event, defaultDate, regionalHolidays, onClose,
 
   async function handleSave() {
     setError('')
+    if (date !== originalDate && (date < minDate || date > maxDate)) {
+      setError(`A data deve estar entre ${fd(minDate)} e ${fd(maxDate)} (dentro do mês de referência selecionado).`)
+      return
+    }
     setSaving(true)
     try {
       await onSave({
@@ -69,7 +76,7 @@ export function EventModal({ emp, event, defaultDate, regionalHolidays, onClose,
           )}
 
           <Field label="Data">
-            <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <input className="input" type="date" min={minDate} max={maxDate} value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
 
           <Field label="Tipo">
