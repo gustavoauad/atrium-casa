@@ -127,6 +127,20 @@ export function EmployeeModal({ employee, onClose, onSave }: Props) {
       setError('Todo contrato no histórico precisa de uma data de início.')
       return
     }
+    if (!isNew) {
+      // O contrato vigente precisa continuar sendo o de data de início mais recente — senão
+      // getContractForMonth() passa a escolher um contrato do histórico no lugar dele para o
+      // mês atual e os seguintes, porque ele passaria a ter a data mais recente entre os dois.
+      const otherStarts = contractChanged ? [...historyContracts, originalContract] : historyContracts
+      const maxOtherStart = otherStarts.reduce((max, c) => (c.startDate > max ? c.startDate : max), '')
+      const currentStartDate = contractChanged ? changeDate : contract.startDate
+      if (maxOtherStart && currentStartDate <= maxOtherStart) {
+        setError(
+          `A data de início do contrato vigente (${fd(currentStartDate)}) precisa ser posterior a todos os contratos do histórico — o mais recente começa em ${fd(maxOtherStart)}. Do contrário, o histórico passaria a valer no lugar do contrato atual a partir dali.`,
+        )
+        return
+      }
+    }
     setSaving(true)
     try {
       const cleanedContract: Contract = {
