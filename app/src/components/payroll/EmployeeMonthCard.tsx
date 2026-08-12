@@ -150,6 +150,16 @@ export function EmployeeMonthCard({
             </div>
           )}
 
+          {(c.feriasDiasNoMes > 0 || c.licencaMedicaDiasNoMes > 0 || c.licencaMaternidadeDiasNoMes > 0) && (
+            <div className="text-xs text-accent bg-accent/10 border border-accent/30 rounded-lg px-3 py-2 space-y-0.5">
+              {c.feriasDiasNoMes > 0 && <p>🏖️ {c.feriasDiasNoMes} dia(s) de férias este mês</p>}
+              {c.licencaMedicaDiasNoMes > 0 && <p>🏥 {c.licencaMedicaDiasNoMes} dia(s) de licença médica este mês</p>}
+              {c.licencaMaternidadeDiasNoMes > 0 && (
+                <p>🤱 {c.licencaMaternidadeDiasNoMes} dia(s) de licença maternidade este mês</p>
+              )}
+            </div>
+          )}
+
           {c.isFirstMonth ? (
             <div className={`rounded-lg border p-3 ${c.proRataActive ? 'border-warn/40 bg-warn/5' : 'border-border'}`}>
               <div className="flex items-center justify-between mb-2">
@@ -288,6 +298,25 @@ export function EmployeeMonthCard({
               )
             })}
           </Section>
+
+          {c.feriasAdicional > 0 && (
+            <div className="flex justify-between text-sm">
+              <span>Adicional de férias (1/3)</span>
+              <span className="text-sage">+ R$ {fm(c.feriasAdicional)}</span>
+            </div>
+          )}
+          {c.licencaMedicaDeducao > 0 && (
+            <div className="flex justify-between text-sm">
+              <span>Desconto licença médica</span>
+              <span className="text-danger">− R$ {fm(c.licencaMedicaDeducao)}</span>
+            </div>
+          )}
+          {c.licencaMaternidadeDeducao > 0 && (
+            <div className="flex justify-between text-sm">
+              <span>Desconto licença maternidade</span>
+              <span className="text-danger">− R$ {fm(c.licencaMaternidadeDeducao)}</span>
+            </div>
+          )}
 
           <Row label="INSS empregado" value={-c.inssAmt} negative />
 
