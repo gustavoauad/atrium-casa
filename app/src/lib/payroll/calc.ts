@@ -1,6 +1,6 @@
 import type { Adjustment } from '../../types/adjustment'
 import { DEDUCTION_TYPES } from '../../types/adjustment'
-import type { Contract, Employee } from '../../types/employee'
+import type { Contract, Employee, LeavePeriod, LeaveType } from '../../types/employee'
 import type { WorkEvent } from '../../types/event'
 import type { Payment, RecurringOccurrence } from '../../types/payment'
 import { getContractForMonth } from './contracts'
@@ -17,6 +17,7 @@ export interface CalcInput {
   events: WorkEvent[]
   adjustments: Adjustment[]
   payment: Payment | null
+  leavePeriods: LeavePeriod[]
   regionalHolidays: RegionalHoliday[]
   /** Dias de VT informados manualmente para este mês; null = calcular automaticamente pelos dias fixos. */
   vtManualDays: number | null
@@ -47,6 +48,16 @@ export interface PayrollCalc {
   adjs: Adjustment[]
   deds: number
   bons: number
+  /** Dias do mês cobertos por cada tipo de afastamento (LC 150/2015). */
+  feriasDiasNoMes: number
+  licencaMedicaDiasNoMes: number
+  licencaMaternidadeDiasNoMes: number
+  /** Adicional de 1/3 constitucional sobre os dias de férias no mês — sujeito a FGTS/INSS. */
+  feriasAdicional: number
+  /** Descontado do salário — INSS paga direto, contrato suspenso, sai da base de FGTS/encargos. */
+  licencaMedicaDeducao: number
+  /** Descontado do salário — INSS paga direto, mas FGTS/encargos continuam sobre o valor cheio. */
+  licencaMaternidadeDeducao: number
   inssAmt: number
   netSal: number
   vtY: number
@@ -117,11 +128,23 @@ export function paymentStatus(c: PayrollCalc): PaymentStatus {
 }
 
 export function calc(input: CalcInput): PayrollCalc {
-  const { emp, ry, rm, events, adjustments, payment, regionalHolidays, vtManualDays } = input
+  const { emp, ry, rm, events, adjustments, payment, leavePeriods, regionalHolidays, vtManualDays } = input
   const contract = getContractForMonth(emp, ry, rm)
   const h = allHolidays(regionalHolidays)
   const days = mdays(ry, rm)
   const key = MK(ry, rm)
+
+  // Data ISO → tipo de afastamento, para todos os dias de todos os períodos (não só os do
+  // mês de referência: o VT é calculado sobre o mês seguinte, então um período pode afetar
+  // o VT de um mês sem "cair" no mês de referência do salário em si).
+  const leaveDateType: Partial<Record<string, LeaveType>> = {}
+  for (const lp of leavePeriods) {
+    if (!lp.startDate || !lp.endDate || lp.startDate > lp.endDate) continue
+    const end = parseLocalDate(lp.endDate)
+    for (const d = parseLocalDate(lp.startDate); d <= end; d.setDate(d.getDate() + 1)) {
+      leaveDateType[localISO(d)] = lp.type
+    }
+  }
 
   const salBase = contract.salary || 0
 
@@ -137,7 +160,7 @@ export function calc(input: CalcInput): PayrollCalc {
   const holWarns: { iso: string; hn: string; desc: string; val: number }[] = []
 
   for (const rec of contract.recurring || []) {
-    for (const d of days.filter((d) => d.dow === rec.dow)) {
+    for (const d of days.filter((d) => d.dow === rec.dow && !leaveDateType[d.iso])) {
       const hn = h[d.iso] || null
       const hasEv = events.some((e) => e.date === d.iso)
       if (hn && !hasEv) {
@@ -160,6 +183,28 @@ export function calc(input: CalcInput): PayrollCalc {
   const avTot = avs.reduce((a, e) => a + e.value, 0)
   const gross = salBase + recTot + avTot
 
+  // Dias de cada tipo de afastamento dentro do mês de referência (não do período todo,
+  // que pode se estender por vários meses — ex.: licença-maternidade de 120 dias).
+  let feriasDiasNoMes = 0
+  let licencaMedicaDiasNoMes = 0
+  let licencaMaternidadeDiasNoMes = 0
+  for (const d of days) {
+    const t = leaveDateType[d.iso]
+    if (t === 'ferias') feriasDiasNoMes++
+    else if (t === 'licenca_medica') licencaMedicaDiasNoMes++
+    else if (t === 'licenca_maternidade') licencaMaternidadeDiasNoMes++
+  }
+  // Adicional de 1/3 constitucional (férias) — remuneração habitual, sujeita a FGTS/INSS.
+  const feriasAdicional = r2((dailyRate * feriasDiasNoMes) / 3)
+  // Licença médica: INSS paga desde o 1º dia, contrato suspenso — desconta do que o
+  // empregador paga neste mês.
+  const licencaMedicaDeducao = r2(dailyRate * licencaMedicaDiasNoMes)
+  // Licença maternidade: INSS paga os 120 dias, mas o empregador não paga o salário desse
+  // período — também desconta do valor pago ao empregado (FGTS/encargos continuam à parte).
+  const licencaMaternidadeDeducao = r2(dailyRate * licencaMaternidadeDiasNoMes)
+  // Valor efetivamente pago pelo empregador neste mês, já refletindo férias/licenças.
+  const grossForPay = gross - licencaMedicaDeducao - licencaMaternidadeDeducao + feriasAdicional
+
   const sortedAdjustments = [...adjustments].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
 
   let deds = 0
@@ -168,18 +213,18 @@ export function calc(input: CalcInput): PayrollCalc {
     if (DEDUCTION_TYPES.includes(a.type)) deds += a.value
     else if (a.type === 'bonus') bons += a.value
   }
-  const inssAmt = contract.inss === 'yes' ? inssCalc(gross) : 0
-  const netSal = gross + bons - deds - inssAmt
+  const inssAmt = contract.inss === 'yes' ? inssCalc(grossForPay) : 0
+  const netSal = grossForPay + bons - deds - inssAmt
 
   const vtY = rm === 11 ? ry + 1 : ry
   const vtM = rm === 11 ? 0 : rm + 1
   const vtDays = mdays(vtY, vtM)
   const vtSet: Record<string, 1> = {}
   for (const d of vtDays) {
-    if ((contract.workDays || []).includes(d.dow) && !h[d.iso]) vtSet[d.iso] = 1
+    if ((contract.workDays || []).includes(d.dow) && !h[d.iso] && !leaveDateType[d.iso]) vtSet[d.iso] = 1
   }
   for (const rec of contract.recurring || []) {
-    for (const d of vtDays.filter((d) => d.dow === rec.dow && !h[d.iso])) vtSet[d.iso] = 1
+    for (const d of vtDays.filter((d) => d.dow === rec.dow && !h[d.iso] && !leaveDateType[d.iso])) vtSet[d.iso] = 1
   }
   const vtWdAuto = Object.keys(vtSet).length
   const vtWd = vtManualDays !== null ? vtManualDays : vtWdAuto
@@ -200,6 +245,8 @@ export function calc(input: CalcInput): PayrollCalc {
 
   if (isFirstMonth && admissao) {
     // CLT Art.64: base 30 dias fixo; dias = 31 - diaAdmissao
+    // Limitação conhecida: não combina pro-rata do 1º mês com férias/licença no mesmo mês
+    // (proRataSal não reflete feriasAdicional/licencaXDeducao) — caso raro, ajuste manual.
     proRataDias = 31 - admissao.getDate()
     const fator = proRataDias / 30
     proRataSalBase = Math.round(salBase * fator * 100) / 100
@@ -214,7 +261,10 @@ export function calc(input: CalcInput): PayrollCalc {
   // Encargos patronais e provisões — Simples Doméstico (LC 150/2015, art. 34):
   // FGTS mensal 8% + FGTS indenizatório 3,2% (substitui a multa rescisória de 40%) +
   // INSS Patronal (CPP) 8% + Seguro contra Acidente de Trabalho 0,8%.
-  const baseEnc = gross
+  // Base exclui a dedução de licença médica (contrato suspenso, FGTS não devido — LC 150/2015)
+  // mas NÃO exclui a de licença-maternidade (FGTS continua normalmente) e inclui o adicional
+  // de férias (1/3 constitucional é remuneração habitual, sujeito a FGTS/INSS — Súmula 200 TST).
+  const baseEnc = gross - licencaMedicaDeducao + feriasAdicional
   const fgts = r2(baseEnc * 0.08)
   const fgtsIndenizatorio = r2(baseEnc * 0.032)
   const inssPatronal = r2(baseEnc * 0.08)
@@ -223,12 +273,14 @@ export function calc(input: CalcInput): PayrollCalc {
   const provFerias = r2((baseEnc / 12) * (4 / 3))
   const custoTotal = r2(finalTotal + fgts + fgtsIndenizatorio + inssPatronal + sat + prov13 + provFerias)
 
-  const irrfBase = Math.max(0, gross - inssAmt)
+  const irrfBase = Math.max(0, grossForPay - inssAmt)
   const irrf = irrfCalc(irrfBase)
 
   return {
     emp, contract, role: contract.role, vtDaily: contract.vtDaily || 0, dailyRate, ry, rm, key, payment, salBase, recs, recTot,
     avs, avTot, avPaid, holWarns, gross, adjs: sortedAdjustments,
+    feriasDiasNoMes, licencaMedicaDiasNoMes, licencaMaternidadeDiasNoMes,
+    feriasAdicional, licencaMedicaDeducao, licencaMaternidadeDeducao,
     deds, bons, inssAmt, netSal, vtY, vtM, vtWd, vtWdAuto, vtManualDays, vtGross, vtDisc, vtNet,
     pay1: bday1(pyY, pyM, regionalHolidays), pay5: bday5(pyY, pyM, regionalHolidays), pyY, pyM,
     total: finalTotal, isFirstMonth, proRataDias, proRataSal, proRataSalBase, proRataActive, finalNetSal,

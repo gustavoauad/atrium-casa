@@ -84,6 +84,7 @@ export function DashboardScreen({ house }: { house: House }) {
       events: eventsByEmp[emp.id]?.[mk] || [],
       adjustments: adjByEmp[emp.id]?.[mk] || [],
       payment: paymentsByEmp[emp.id]?.[mk] || null,
+      leavePeriods: emp.leavePeriods || [],
       regionalHolidays: regional,
       vtManualDays: typeof vtOverride === 'number' ? vtOverride : null,
       proRataOverride: prOverride === 0 ? false : undefined,

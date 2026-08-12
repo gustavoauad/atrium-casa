@@ -31,6 +31,14 @@ export function PayrollDetailCard({ c }: { c: PayrollCalc }) {
         </div>
       )}
 
+      {(c.feriasDiasNoMes > 0 || c.licencaMedicaDiasNoMes > 0 || c.licencaMaternidadeDiasNoMes > 0) && (
+        <div className="text-[11px] text-accent bg-accent/10 border border-accent/30 rounded-lg px-2 py-1.5 space-y-0.5">
+          {c.feriasDiasNoMes > 0 && <p>🏖️ {c.feriasDiasNoMes} dia(s) de férias</p>}
+          {c.licencaMedicaDiasNoMes > 0 && <p>🏥 {c.licencaMedicaDiasNoMes} dia(s) de licença médica</p>}
+          {c.licencaMaternidadeDiasNoMes > 0 && <p>🤱 {c.licencaMaternidadeDiasNoMes} dia(s) de licença maternidade</p>}
+        </div>
+      )}
+
       <Row label={c.isFirstMonth ? 'Salário base (pro rata)' : 'Salário base'} value={c.isFirstMonth && c.proRataActive ? c.proRataSalBase : c.salBase} />
 
       {recGroups.length > 0 && (
@@ -76,6 +84,25 @@ export function PayrollDetailCard({ c }: { c: PayrollCalc }) {
           )
         })}
       </DetailSection>
+
+      {c.feriasAdicional > 0 && (
+        <div className="flex justify-between text-sm">
+          <span>Adicional de férias (1/3)</span>
+          <span className="text-sage">+ R$ {fm(c.feriasAdicional)}</span>
+        </div>
+      )}
+      {c.licencaMedicaDeducao > 0 && (
+        <div className="flex justify-between text-sm">
+          <span>Desconto licença médica</span>
+          <span className="text-danger">− R$ {fm(c.licencaMedicaDeducao)}</span>
+        </div>
+      )}
+      {c.licencaMaternidadeDeducao > 0 && (
+        <div className="flex justify-between text-sm">
+          <span>Desconto licença maternidade</span>
+          <span className="text-danger">− R$ {fm(c.licencaMaternidadeDeducao)}</span>
+        </div>
+      )}
 
       <Row label="INSS empregado" value={-c.inssAmt} negative />
 

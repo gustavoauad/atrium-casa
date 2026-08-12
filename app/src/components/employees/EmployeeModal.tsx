@@ -1,12 +1,17 @@
 import { useState } from 'react'
 import {
   EMPLOYEE_ROLES,
+  LEAVE_TYPE_LABELS,
+  LEAVE_TYPES,
   WEEKDAYS,
   newContract,
   newEmployee,
+  newLeavePeriod,
   type Contract,
   type Employee,
   type ExtraType,
+  type LeavePeriod,
+  type LeaveType,
   type RecurringDaily,
 } from '../../types/employee'
 import { getCurrentContract, resolveContracts } from '../../lib/payroll/contracts'
@@ -49,6 +54,10 @@ export function EmployeeModal({ employee, onClose, onSave }: Props) {
   )
   const [editingHistoryId, setEditingHistoryId] = useState<string | null>(null)
 
+  const [showLeaves, setShowLeaves] = useState(false)
+  const [leavePeriods, setLeavePeriods] = useState<LeavePeriod[]>(employee?.leavePeriods ?? [])
+  const [editingLeaveId, setEditingLeaveId] = useState<string | null>(null)
+
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -74,6 +83,23 @@ export function EmployeeModal({ employee, onClose, onSave }: Props) {
     setHistoryContracts((prev) => [...prev, c])
     setEditingHistoryId(c.id)
     setShowHistory(true)
+  }
+
+  function addLeavePeriod(type: LeaveType) {
+    const lp = newLeavePeriod(type, tod())
+    setLeavePeriods((prev) => [...prev, lp])
+    setEditingLeaveId(lp.id)
+    setShowLeaves(true)
+  }
+
+  function removeLeavePeriod(id: string) {
+    if (!confirm('Excluir este período? Isso volta o cálculo dos meses afetados ao normal.')) return
+    setLeavePeriods((prev) => prev.filter((lp) => lp.id !== id))
+    setEditingLeaveId((prev) => (prev === id ? null : prev))
+  }
+
+  function updateLeavePeriod(id: string, patch: Partial<LeavePeriod>) {
+    setLeavePeriods((prev) => prev.map((lp) => (lp.id === id ? { ...lp, ...patch } : lp)))
   }
 
   function updateContract<K extends keyof Contract>(key: K, value: Contract[K]) {
@@ -127,6 +153,10 @@ export function EmployeeModal({ employee, onClose, onSave }: Props) {
       setError('Todo contrato no histórico precisa de uma data de início.')
       return
     }
+    if (leavePeriods.some((lp) => !lp.startDate || !lp.endDate || lp.startDate > lp.endDate)) {
+      setError('Todo período de férias/licença precisa de uma data de início e uma data de fim, com o fim não antes do início.')
+      return
+    }
     if (!isNew) {
       // O contrato vigente precisa continuar sendo o de data de início mais recente — senão
       // getContractForMonth() passa a escolher um contrato do histórico no lugar dele para o
@@ -166,6 +196,7 @@ export function EmployeeModal({ employee, onClose, onSave }: Props) {
         notes: notes.trim(),
         extraTypes: cleanedExtraTypes,
         contracts,
+        leavePeriods,
         createdAt: employee?.createdAt ?? new Date().toISOString(),
         status: employee?.status,
         desligamento: employee?.desligamento,
@@ -444,6 +475,78 @@ export function EmployeeModal({ employee, onClose, onSave }: Props) {
             </div>
           )}
 
+          {!isNew && (
+            <div className="border-t border-border pt-4">
+              <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                <button type="button" onClick={() => setShowLeaves((v) => !v)} className="text-xs text-accent underline">
+                  {showLeaves ? '▲ Ocultar' : '▼ Ver'} férias e licenças ({leavePeriods.length})
+                </button>
+                {showLeaves && (
+                  <div className="flex gap-2 flex-wrap">
+                    {LEAVE_TYPES.map((t) => (
+                      <button key={t} type="button" onClick={() => addLeavePeriod(t)} className="text-xs text-accent underline">
+                        + {LEAVE_TYPE_LABELS[t]}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {showLeaves && (
+                <>
+                  <ul className="space-y-1.5">
+                    {leavePeriods.length === 0 && (
+                      <li className="text-xs text-muted px-1 py-1">Nenhum período lançado.</li>
+                    )}
+                    {[...leavePeriods]
+                      .sort((a, b) => (a.startDate < b.startDate ? 1 : -1))
+                      .map((lp) =>
+                        editingLeaveId === lp.id ? (
+                          <li key={lp.id}>
+                            <LeavePeriodEditor
+                              leave={lp}
+                              onChange={(updated) => updateLeavePeriod(lp.id, updated)}
+                              onDelete={() => removeLeavePeriod(lp.id)}
+                              onDone={() => setEditingLeaveId(null)}
+                            />
+                          </li>
+                        ) : (
+                          <li key={lp.id} className="text-xs bg-cream rounded-lg px-3 py-2 flex items-center justify-between gap-2">
+                            <div>
+                              <div className="font-medium">{LEAVE_TYPE_LABELS[lp.type]}</div>
+                              <div className="text-muted">
+                                {fd(lp.startDate)} até {fd(lp.endDate)}
+                                {lp.notes && ` · ${lp.notes}`}
+                              </div>
+                            </div>
+                            <div className="flex gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setEditingLeaveId(lp.id)}
+                                className="px-2 py-1 rounded-md border border-border text-[11px]"
+                              >
+                                Editar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeLeavePeriod(lp.id)}
+                                className="px-2 py-1 rounded-md border border-danger/40 text-danger text-[11px]"
+                              >
+                                Excluir
+                              </button>
+                            </div>
+                          </li>
+                        ),
+                      )}
+                  </ul>
+                  <p className="text-[10px] text-muted mt-2">
+                    Só afeta contrato mensalista. Não rastreamos saldo de dias já usados/adquiridos — lance o
+                    período livremente; confira o direito antes de aprovar.
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+
           <div className="border-t border-border pt-4">
             <p className="text-[11px] font-medium uppercase tracking-wider text-muted mb-2">Tipos de Diária Avulsa</p>
             <div className="space-y-2">
@@ -661,6 +764,58 @@ function HistoryContractEditor({
       <div className="flex justify-between items-center pt-2 border-t border-border">
         <button type="button" onClick={onDelete} className="text-xs text-danger underline">
           Excluir este contrato
+        </button>
+        <button type="button" onClick={onDone} className="px-3 py-1.5 rounded-lg border border-border text-xs">
+          Concluir edição
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function LeavePeriodEditor({
+  leave,
+  onChange,
+  onDelete,
+  onDone,
+}: {
+  leave: LeavePeriod
+  onChange: (lp: LeavePeriod) => void
+  onDelete: () => void
+  onDone: () => void
+}) {
+  function update<K extends keyof LeavePeriod>(key: K, value: LeavePeriod[K]) {
+    onChange({ ...leave, [key]: value })
+  }
+
+  return (
+    <div className="bg-cream rounded-lg p-3 space-y-3">
+      <Field label="Tipo">
+        <select className="input" value={leave.type} onChange={(e) => update('type', e.target.value as LeaveType)}>
+          {LEAVE_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {LEAVE_TYPE_LABELS[t]}
+            </option>
+          ))}
+        </select>
+      </Field>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Field label="Início">
+          <input className="input" type="date" value={leave.startDate} onChange={(e) => update('startDate', e.target.value)} />
+        </Field>
+        <Field label="Fim">
+          <input className="input" type="date" value={leave.endDate} onChange={(e) => update('endDate', e.target.value)} />
+        </Field>
+      </div>
+
+      <Field label="Observações">
+        <input className="input" placeholder="Opcional" value={leave.notes} onChange={(e) => update('notes', e.target.value)} />
+      </Field>
+
+      <div className="flex justify-between items-center pt-2 border-t border-border">
+        <button type="button" onClick={onDelete} className="text-xs text-danger underline">
+          Excluir este período
         </button>
         <button type="button" onClick={onDone} className="px-3 py-1.5 rounded-lg border border-border text-xs">
           Concluir edição

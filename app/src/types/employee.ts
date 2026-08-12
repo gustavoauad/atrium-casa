@@ -43,6 +43,37 @@ export interface Contract {
   recurring: RecurringDaily[]
 }
 
+export const LEAVE_TYPES = ['ferias', 'licenca_medica', 'licenca_maternidade'] as const
+export type LeaveType = (typeof LEAVE_TYPES)[number]
+
+export const LEAVE_TYPE_LABELS: Record<LeaveType, string> = {
+  ferias: 'Férias',
+  licenca_medica: 'Licença médica',
+  licenca_maternidade: 'Licença maternidade',
+}
+
+/**
+ * Período de afastamento (LC 150/2015). O tratamento no cálculo da folha difere por tipo:
+ * - `ferias`: salário integral mantido + adicional de 1/3 constitucional (sujeito a FGTS/INSS).
+ * - `licenca_medica`: INSS paga desde o 1º dia, contrato suspenso — desconta do salário e
+ *   sai da base de FGTS/INSS Patronal/provisões.
+ * - `licenca_maternidade`: INSS paga os 120 dias, mas FGTS/encargos continuam sobre o valor cheio.
+ * Em todos os casos, os dias do período saem do VT e das diárias recorrentes (não há expediente).
+ * Só afeta contrato mensalista (mesma limitação de `dailyRate`).
+ */
+export interface LeavePeriod {
+  id: string
+  type: LeaveType
+  /** Datas ISO, ambas inclusive. */
+  startDate: string
+  endDate: string
+  notes: string
+}
+
+export function newLeavePeriod(type: LeaveType, startDate: string): LeavePeriod {
+  return { id: crypto.randomUUID(), type, startDate, endDate: startDate, notes: '' }
+}
+
 export interface Employee {
   id: string
   name: string
@@ -50,6 +81,7 @@ export interface Employee {
   extraTypes: ExtraType[]
   notes: string
   contracts?: Contract[]
+  leavePeriods?: LeavePeriod[]
   createdAt?: string
   status?: 'ativo' | 'desligado'
   desligamento?: string
