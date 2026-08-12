@@ -3,6 +3,7 @@ import {
   EMPLOYEE_ROLES,
   LEAVE_TYPE_LABELS,
   LEAVE_TYPES,
+  MAX_ABONO_FERIAS_DIAS,
   WEEKDAYS,
   newContract,
   newEmployee,
@@ -155,6 +156,10 @@ export function EmployeeModal({ employee, onClose, onSave }: Props) {
     }
     if (leavePeriods.some((lp) => !lp.startDate || !lp.endDate || lp.startDate > lp.endDate)) {
       setError('Todo período de férias/licença precisa de uma data de início e uma data de fim, com o fim não antes do início.')
+      return
+    }
+    if (leavePeriods.some((lp) => (lp.soldDays || 0) < 0 || (lp.soldDays || 0) > 30)) {
+      setError('Dias vendidos de férias precisa estar entre 0 e 30.')
       return
     }
     if (!isNew) {
@@ -515,6 +520,7 @@ export function EmployeeModal({ employee, onClose, onSave }: Props) {
                               <div className="font-medium">{LEAVE_TYPE_LABELS[lp.type]}</div>
                               <div className="text-muted">
                                 {fd(lp.startDate)} até {fd(lp.endDate)}
+                                {lp.type === 'ferias' && !!lp.soldDays && ` · ${lp.soldDays} dia(s) vendido(s)`}
                                 {lp.notes && ` · ${lp.notes}`}
                               </div>
                             </div>
@@ -808,6 +814,32 @@ function LeavePeriodEditor({
           <input className="input" type="date" value={leave.endDate} onChange={(e) => update('endDate', e.target.value)} />
         </Field>
       </div>
+
+      {leave.type === 'ferias' && (
+        <div>
+          <Field label="Dias vendidos (abono pecuniário)">
+            <input
+              className="input"
+              type="number"
+              min={0}
+              max={30}
+              step={1}
+              value={leave.soldDays || ''}
+              onChange={(e) => update('soldDays', Math.max(0, Math.min(30, +e.target.value || 0)))}
+            />
+          </Field>
+          <p className="text-[10px] text-muted mt-1">
+            Máximo permitido por lei sem acordo explícito: {MAX_ABONO_FERIAS_DIAS} dias (1/3 de 30 — Art. 143 CLT).
+            É possível vender até os 30 dias havendo acordo entre empregador(a) e funcionária.
+          </p>
+          {(leave.soldDays || 0) > MAX_ABONO_FERIAS_DIAS && (
+            <p className="text-xs text-warn bg-warn/10 border border-warn/30 rounded-lg px-3 py-2 mt-2">
+              ⚠️ Você está vendendo {leave.soldDays} dias, acima do limite legal de {MAX_ABONO_FERIAS_DIAS}. Isso só é
+              válido havendo acordo entre as partes — sem esse acordo, é passível de questionamento judicial.
+            </p>
+          )}
+        </div>
+      )}
 
       <Field label="Observações">
         <input className="input" placeholder="Opcional" value={leave.notes} onChange={(e) => update('notes', e.target.value)} />

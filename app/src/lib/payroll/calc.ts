@@ -54,6 +54,10 @@ export interface PayrollCalc {
   licencaMaternidadeDiasNoMes: number
   /** Adicional de 1/3 constitucional sobre os dias de férias no mês — sujeito a FGTS/INSS. */
   feriasAdicional: number
+  /** Dias de férias vendidos (abono pecuniário) atribuídos a este mês de referência. */
+  feriasDiasVendidos: number
+  /** Valor do abono pecuniário (dias vendidos + 1/3) — verba indenizatória, isenta de INSS/IRRF/FGTS. */
+  feriasAbono: number
   /** Descontado do salário — INSS paga direto, contrato suspenso, sai da base de FGTS/encargos. */
   licencaMedicaDeducao: number
   /** Descontado do salário — INSS paga direto, mas FGTS/encargos continuam sobre o valor cheio. */
@@ -156,6 +160,13 @@ export function calc(input: CalcInput): PayrollCalc {
     : 0
   const dailyRate = workDaysInMonth > 0 ? r2(salBase / workDaysInMonth) : 0
 
+  // Divisor fixo de 30 dias corridos — usado para férias/abono/licenças (Art. 130/143 CLT),
+  // igual ao resto do CLT (13º, aviso prévio, pro-rata do 1º mês). Diferente de `dailyRate`
+  // (dias úteis contratados), que só serve para descontar faltas: um contrato com poucos dias
+  // de trabalho por semana (ex.: folguista) infla `dailyRate` e distorceria férias/abono se
+  // fosse reaproveitado aqui.
+  const dailyRate30 = contract.contract === 'mensalista' ? r2(salBase / 30) : 0
+
   const recs: RecurringOccurrence[] = []
   const holWarns: { iso: string; hn: string; desc: string; val: number }[] = []
 
@@ -195,13 +206,25 @@ export function calc(input: CalcInput): PayrollCalc {
     else if (t === 'licenca_maternidade') licencaMaternidadeDiasNoMes++
   }
   // Adicional de 1/3 constitucional (férias) — remuneração habitual, sujeita a FGTS/INSS.
-  const feriasAdicional = r2((dailyRate * feriasDiasNoMes) / 3)
+  const feriasAdicional = r2((dailyRate30 * feriasDiasNoMes) / 3)
+
+  // Abono pecuniário (dias de férias vendidos, Art. 143 CLT) — não são dias de afastamento
+  // (a funcionária segue trabalhando normalmente), por isso não entram em `leaveDateType`
+  // nem descontam VT/diárias. Atribuído ao mês de início do período de férias correspondente.
+  // Verba indenizatória: isenta de INSS/IRRF/FGTS/INSS Patronal.
+  let feriasDiasVendidos = 0
+  for (const lp of leavePeriods) {
+    if (lp.type !== 'ferias' || !lp.soldDays || !lp.startDate) continue
+    const sd = parseLocalDate(lp.startDate)
+    if (sd.getFullYear() === ry && sd.getMonth() === rm) feriasDiasVendidos += lp.soldDays
+  }
+  const feriasAbono = r2(dailyRate30 * feriasDiasVendidos * (4 / 3))
   // Licença médica: INSS paga desde o 1º dia, contrato suspenso — desconta do que o
   // empregador paga neste mês.
-  const licencaMedicaDeducao = r2(dailyRate * licencaMedicaDiasNoMes)
+  const licencaMedicaDeducao = r2(dailyRate30 * licencaMedicaDiasNoMes)
   // Licença maternidade: INSS paga os 120 dias, mas o empregador não paga o salário desse
   // período — também desconta do valor pago ao empregado (FGTS/encargos continuam à parte).
-  const licencaMaternidadeDeducao = r2(dailyRate * licencaMaternidadeDiasNoMes)
+  const licencaMaternidadeDeducao = r2(dailyRate30 * licencaMaternidadeDiasNoMes)
   // Valor efetivamente pago pelo empregador neste mês, já refletindo férias/licenças.
   const grossForPay = gross - licencaMedicaDeducao - licencaMaternidadeDeducao + feriasAdicional
 
@@ -256,7 +279,8 @@ export function calc(input: CalcInput): PayrollCalc {
   }
 
   const finalNetSal = proRataActive ? proRataSal : netSal
-  const finalTotal = proRataActive ? r2(proRataSal + vtNet) : r2(netSal + vtNet)
+  // Abono de férias entra à parte no total — verba indenizatória, não é "salário".
+  const finalTotal = r2((proRataActive ? proRataSal : netSal) + vtNet + feriasAbono)
 
   // Encargos patronais e provisões — Simples Doméstico (LC 150/2015, art. 34):
   // FGTS mensal 8% + FGTS indenizatório 3,2% (substitui a multa rescisória de 40%) +
@@ -280,7 +304,7 @@ export function calc(input: CalcInput): PayrollCalc {
     emp, contract, role: contract.role, vtDaily: contract.vtDaily || 0, dailyRate, ry, rm, key, payment, salBase, recs, recTot,
     avs, avTot, avPaid, holWarns, gross, adjs: sortedAdjustments,
     feriasDiasNoMes, licencaMedicaDiasNoMes, licencaMaternidadeDiasNoMes,
-    feriasAdicional, licencaMedicaDeducao, licencaMaternidadeDeducao,
+    feriasAdicional, licencaMedicaDeducao, licencaMaternidadeDeducao, feriasDiasVendidos, feriasAbono,
     deds, bons, inssAmt, netSal, vtY, vtM, vtWd, vtWdAuto, vtManualDays, vtGross, vtDisc, vtNet,
     pay1: bday1(pyY, pyM, regionalHolidays), pay5: bday5(pyY, pyM, regionalHolidays), pyY, pyM,
     total: finalTotal, isFirstMonth, proRataDias, proRataSal, proRataSalBase, proRataActive, finalNetSal,
