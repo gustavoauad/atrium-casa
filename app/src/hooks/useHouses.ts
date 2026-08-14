@@ -63,13 +63,11 @@ export async function deleteHouse(houseId: string): Promise<void> {
 }
 
 export async function findHouseByInviteCode(code: string) {
-  const { data, error } = await supabase
-    .from('houses')
-    .select('id, name, invite_code')
-    .eq('invite_code', code.toLowerCase().trim())
-    .maybeSingle()
+  const normalized = code.toLowerCase().trim()
+  const { data, error } = await supabase.rpc('find_house_by_invite_code', { p_code: normalized })
   if (error) throw new Error('Erro ao verificar código: ' + error.message)
-  return data
+  const row = data?.[0]
+  return row ? { id: row.id, name: row.name, invite_code: normalized } : null
 }
 
 export async function joinHouseByInviteCode(
