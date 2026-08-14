@@ -141,8 +141,13 @@ export function DashboardScreen({ house }: { house: House }) {
     const totSal = calcs.reduce((a, c) => a + c.finalNetSal, 0)
     const totVT = calcs.reduce((a, c) => a + c.vtNet, 0)
     const totAll = calcs.reduce((a, c) => a + c.total, 0)
-    const totPago = calcs.reduce((a, c) => a + (c.payment ? paidAmountOf(c.payment) : 0), 0)
-    const totAPagar = totAll - totPago
+    // "Pago" = envelope confirmado + diárias avulsas já antecipadas (pagas ao longo do mês,
+    // fora do envelope). `c.total` já desconta as antecipações, então o saldo restante usa
+    // só o envelope — somar `avPaid` de novo ali contaria a antecipação duas vezes.
+    const totPagoEnvelope = calcs.reduce((a, c) => a + (c.payment ? paidAmountOf(c.payment) : 0), 0)
+    const totAvPago = calcs.reduce((a, c) => a + c.avPaid, 0)
+    const totPago = totPagoEnvelope + totAvPago
+    const totAPagar = totAll - totPagoEnvelope
     const paidCount = calcs.filter((c) => paymentStatus(c) === 'pago').length
     const monthLabel = `${MP[selMonth.m]} ${selMonth.y}`
     const pyY = selMonth.m === 11 ? selMonth.y + 1 : selMonth.y
@@ -223,8 +228,10 @@ export function DashboardScreen({ house }: { house: House }) {
   const totSal = flatCalcs.reduce((a, c) => a + c.finalNetSal, 0)
   const totVT = flatCalcs.reduce((a, c) => a + c.vtNet, 0)
   const totAll = flatCalcs.reduce((a, c) => a + c.total, 0)
-  const totPago = flatCalcs.reduce((a, c) => a + (c.payment ? paidAmountOf(c.payment) : 0), 0)
-  const totAPagar = totAll - totPago
+  const totPagoEnvelope = flatCalcs.reduce((a, c) => a + (c.payment ? paidAmountOf(c.payment) : 0), 0)
+  const totAvPago = flatCalcs.reduce((a, c) => a + c.avPaid, 0)
+  const totPago = totPagoEnvelope + totAvPago
+  const totAPagar = totAll - totPagoEnvelope
   const paidCount = flatCalcs.filter((c) => paymentStatus(c) === 'pago').length
   const rangeLabel = `${MP[rangeFrom.m]} ${rangeFrom.y} → ${MP[rangeTo.m]} ${rangeTo.y}`
 

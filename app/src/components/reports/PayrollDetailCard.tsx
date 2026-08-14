@@ -62,10 +62,16 @@ export function PayrollDetailCard({ c }: { c: PayrollCalc }) {
             <span>
               {fd(ev.date)} — {ev.duration}
               {ev.hn && ' 🎉'}
+              {ev.paidDate && <span className="ml-1.5 text-[10px] text-sage">✓ Pago {fd(ev.paidDate)}</span>}
             </span>
-            <span>R$ {fm(ev.value)}</span>
+            <span className={ev.paidDate ? 'text-sage' : ''}>R$ {fm(ev.value)}</span>
           </div>
         ))}
+        {c.avPaid > 0 && (
+          <p className="text-[10px] text-muted mt-0.5">
+            R$ {fm(c.avPaid)} já pago via antecipação (descontado do total abaixo).
+          </p>
+        )}
       </DetailSection>
 
       <DetailSection title="Ajustes" total={c.bons - c.deds}>

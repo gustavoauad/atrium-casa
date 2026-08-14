@@ -206,7 +206,8 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
         c.emp.name, c.role, c.salBase.toFixed(2), c.recTot.toFixed(2), c.avTot.toFixed(2), c.bons.toFixed(2),
         c.deds.toFixed(2), c.inssAmt.toFixed(2), c.netSal.toFixed(2), c.vtWd, c.vtNet.toFixed(2), c.total.toFixed(2),
         c.payment?.paidDate || '', c.payment?.method || '', STATUS_LABEL[paymentStatus(c)],
-        c.payment ? paidAmountOf(c.payment).toFixed(2) : '', c.payment ? remainingBalance(c.payment).toFixed(2) : '',
+        ((c.payment ? paidAmountOf(c.payment) : 0) + c.avPaid).toFixed(2),
+        c.payment ? remainingBalance(c.payment).toFixed(2) : '',
       ]),
     )
     downloadCSV(`atrium_relatorio_${MP[month.m]}_${month.y}.csv`, rows)
