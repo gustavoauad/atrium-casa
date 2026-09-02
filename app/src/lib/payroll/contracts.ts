@@ -20,9 +20,14 @@ export function resolveContracts(emp: Employee): Contract[] {
   ]
 }
 
+/** Contratos do funcionário ordenados do mais antigo pro mais recente (por startDate). */
+export function sortedContracts(emp: Employee): Contract[] {
+  return [...resolveContracts(emp)].sort((a, b) => (a.startDate < b.startDate ? -1 : a.startDate > b.startDate ? 1 : 0))
+}
+
 /** Contrato vigente para o mês de referência (y, m) — o mais recente cuja startDate cai em y/m ou antes. */
 export function getContractForMonth(emp: Employee, y: number, m: number): Contract {
-  const list = [...resolveContracts(emp)].sort((a, b) => (a.startDate < b.startDate ? -1 : a.startDate > b.startDate ? 1 : 0))
+  const list = sortedContracts(emp)
   const refMonthIndex = y * 12 + m
   let chosen = list[0]
   for (const c of list) {
@@ -31,6 +36,27 @@ export function getContractForMonth(emp: Employee, y: number, m: number): Contra
     if (startMonthIndex <= refMonthIndex) chosen = c
   }
   return chosen ?? newContract(emp.admissao || '')
+}
+
+/**
+ * Contrato vigente numa data exata (granularidade de dia, não de mês) — o mais recente cuja
+ * startDate cai nela ou antes. Usado para prorratear diárias recorrentes/salário quando um
+ * contrato muda no meio de um mês de referência (ver `getPreviousContract`).
+ */
+export function getContractForDate(emp: Employee, iso: string): Contract {
+  const list = sortedContracts(emp)
+  let chosen = list[0]
+  for (const c of list) {
+    if (c.startDate && c.startDate <= iso) chosen = c
+  }
+  return chosen ?? newContract(emp.admissao || '')
+}
+
+/** Contrato imediatamente anterior ao informado na linha do tempo — null se for o primeiro (admissão). */
+export function getPreviousContract(emp: Employee, contract: Contract): Contract | null {
+  const list = sortedContracts(emp)
+  const idx = list.findIndex((c) => c.id === contract.id)
+  return idx > 0 ? list[idx - 1] : null
 }
 
 /** Contrato vigente hoje. */

@@ -3,7 +3,7 @@ import { DEDUCTION_TYPES } from '../../types/adjustment'
 import type { Contract, Employee, LeavePeriod, LeaveType } from '../../types/employee'
 import type { WorkEvent } from '../../types/event'
 import type { Payment, RecurringOccurrence } from '../../types/payment'
-import { getContractForMonth } from './contracts'
+import { getContractForDate, getContractForMonth, getPreviousContract } from './contracts'
 import { parseLocalDate, r2 } from './format'
 import { allHolidays, bday1, bday5, dim, mdays, type RegionalHoliday } from './holidays'
 import { inssCalc, irrfCalc } from './inss'
@@ -38,6 +38,13 @@ export interface PayrollCalc {
   key: string
   payment: Payment | null
   salBase: number
+  /**
+   * Se o contrato vigente começou no meio deste mês (não no dia 1º) e não é o 1º mês do
+   * funcionário, os dados usados pra prorratear o salário-base entre o contrato anterior e o
+   * novo — dividido pela convenção de mês comercial de 30 dias (Art.64 CLT). null se o contrato
+   * já valia desde o início do mês (caso comum) ou se é o 1º mês (usa proRataSalBase nesse caso).
+   */
+  midMonthChange: { date: string; prevSalary: number; newSalary: number; oldDays: number; newDays: number } | null
   recs: RecurringOccurrence[]
   recTot: number
   avs: (WorkEvent & { hn: string | null })[]
@@ -138,6 +145,9 @@ export function calc(input: CalcInput): PayrollCalc {
   const days = mdays(ry, rm)
   const key = MK(ry, rm)
 
+  const admissao = emp.admissao ? parseLocalDate(emp.admissao) : null
+  const isFirstMonth = !!admissao && admissao.getFullYear() === ry && admissao.getMonth() === rm
+
   // Data ISO → tipo de afastamento, para todos os dias de todos os períodos (não só os do
   // mês de referência: o VT é calculado sobre o mês seguinte, então um período pode afetar
   // o VT de um mês sem "cair" no mês de referência do salário em si).
@@ -150,7 +160,30 @@ export function calc(input: CalcInput): PayrollCalc {
     }
   }
 
-  const salBase = contract.salary || 0
+  // Se o contrato vigente começou no meio deste mês de referência (não no dia 1º), prorrateia
+  // o salário-base entre o contrato anterior e o novo pelo dia da mudança — mesma convenção de
+  // mês comercial de 30 dias do pro-rata do 1º mês (Art.64 CLT), só que com um "antes" também.
+  // Não combina com o pro-rata do 1º mês (isFirstMonth, abaixo): só é possível ter as duas coisas
+  // se o 1º contrato do funcionário também começar no meio do próprio mês de admissão e um 2º
+  // contrato começar depois, no mesmo mês — caso raríssimo, ajuste manual.
+  const { min: refMonthMin, max: refMonthMax } = monthDateRange(ry, rm)
+  const prevContractForMonth = getPreviousContract(emp, contract)
+  const midMonthChangeDay = contract.startDate > refMonthMin && contract.startDate <= refMonthMax
+    ? parseLocalDate(contract.startDate).getDate()
+    : null
+  const midMonthChange = !isFirstMonth && prevContractForMonth && midMonthChangeDay !== null
+    ? {
+        date: contract.startDate,
+        prevSalary: prevContractForMonth.salary || 0,
+        newSalary: contract.salary || 0,
+        oldDays: midMonthChangeDay - 1,
+        newDays: 31 - midMonthChangeDay,
+      }
+    : null
+
+  const salBase = midMonthChange
+    ? r2((midMonthChange.prevSalary * midMonthChange.oldDays + midMonthChange.newSalary * midMonthChange.newDays) / 30)
+    : contract.salary || 0
 
   // Valor do dia de trabalho, pela jornada (dias da semana) do contrato — usado para
   // descontar faltas de mensalistas. Diaristas já são pagos por diária lançada, então
@@ -170,8 +203,16 @@ export function calc(input: CalcInput): PayrollCalc {
   const recs: RecurringOccurrence[] = []
   const holWarns: { iso: string; hn: string; desc: string; val: number }[] = []
 
-  for (const rec of contract.recurring || []) {
-    for (const d of days.filter((d) => d.dow === rec.dow && !leaveDateType[d.iso])) {
+  // Resolve o contrato dia a dia (não o único `contract` do mês inteiro) para que uma diária
+  // recorrente só conte pelos dias em que o contrato que a cadastrou já estava (ou ainda estava)
+  // vigente — necessário quando o contrato muda no meio do mês. Sem transição no mês, resolve
+  // sempre pro mesmo `contract` (granularidade de dia bate com a de mês nesse caso), então isso
+  // não muda nada no caso comum.
+  for (const d of days) {
+    if (leaveDateType[d.iso]) continue
+    const dayContract = getContractForDate(emp, d.iso)
+    for (const rec of dayContract.recurring || []) {
+      if (rec.dow !== d.dow) continue
       const hn = h[d.iso] || null
       const hasEv = events.some((e) => e.date === d.iso)
       if (hn && !hasEv) {
@@ -258,9 +299,6 @@ export function calc(input: CalcInput): PayrollCalc {
   const pyY = rm === 11 ? ry + 1 : ry
   const pyM = rm === 11 ? 0 : rm + 1
 
-  const admissao = emp.admissao ? parseLocalDate(emp.admissao) : null
-  const isFirstMonth = !!admissao && admissao.getFullYear() === ry && admissao.getMonth() === rm
-
   let proRataDias = 0
   let proRataSal = netSal
   let proRataActive = false
@@ -301,7 +339,7 @@ export function calc(input: CalcInput): PayrollCalc {
   const irrf = irrfCalc(irrfBase)
 
   return {
-    emp, contract, role: contract.role, vtDaily: contract.vtDaily || 0, dailyRate, ry, rm, key, payment, salBase, recs, recTot,
+    emp, contract, role: contract.role, vtDaily: contract.vtDaily || 0, dailyRate, ry, rm, key, payment, salBase, midMonthChange, recs, recTot,
     avs, avTot, avPaid, holWarns, gross, adjs: sortedAdjustments,
     feriasDiasNoMes, licencaMedicaDiasNoMes, licencaMaternidadeDiasNoMes,
     feriasAdicional, licencaMedicaDeducao, licencaMaternidadeDeducao, feriasDiasVendidos, feriasAbono,

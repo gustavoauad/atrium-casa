@@ -196,6 +196,18 @@ export function EmployeeMonthCard({
                 </div>
               )}
             </div>
+          ) : c.midMonthChange ? (
+            <div className="rounded-lg border border-warn/40 bg-warn/5 p-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium uppercase tracking-wider text-muted">Salário base — prorrateado</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-warn/15 text-warn">mudança em {fd(c.midMonthChange.date)}</span>
+              </div>
+              <div className="text-[11px] text-muted mb-1">
+                {c.midMonthChange.oldDays} dia(s) a R$ {fm(c.midMonthChange.prevSalary)}/mês + {c.midMonthChange.newDays} dia(s) a R${' '}
+                {fm(c.midMonthChange.newSalary)}/mês
+              </div>
+              <div className="font-medium">R$ {fm(c.salBase)}</div>
+            </div>
           ) : (
             <Row label="Salário base" value={c.salBase} />
           )}
