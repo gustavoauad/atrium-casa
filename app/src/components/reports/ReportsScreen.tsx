@@ -188,6 +188,7 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
   const [mode, setMode] = useState<ReportMode>('resumido')
   const calcs = filteredEmps.map((e) => calcFor(e, month.y, month.m))
   const totSal = calcs.reduce((a, c) => a + c.finalNetSal, 0)
+  const totRec = calcs.reduce((a, c) => a + c.recTot, 0)
   const totVT = calcs.reduce((a, c) => a + c.vtNet, 0)
   const totAll = calcs.reduce((a, c) => a + c.total, 0)
   const totInss = calcs.reduce((a, c) => a + c.inssAmt, 0)
@@ -285,18 +286,20 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
               <TotalCard label="Total salários" value={totSal} colorClass="text-sage" />
+              <TotalCard label="Total diárias rec." value={totRec} colorClass="text-sage" />
               <TotalCard label="Total VT" value={totVT} colorClass="text-blue" />
               <TotalCard label="Total a pagar" value={totAll} colorClass="text-accent" />
               <TotalCard label="Total INSS" value={totInss} colorClass="text-muted" />
             </div>
 
             <div className="border border-border rounded-xl overflow-x-auto overflow-y-hidden">
-              <table className="w-full text-xs min-w-[480px]">
+              <table className="w-full text-xs min-w-[560px]">
                 <thead>
                   <tr className="border-b-2 border-border text-muted uppercase text-[10px]">
                     <th className="text-left px-2 py-2">Funcionário</th>
+                    <th className="text-right px-2 py-2">Diárias rec.</th>
                     <th className="text-right px-2 py-2">Sal. líq.</th>
                     <th className="text-right px-2 py-2">VT</th>
                     <th className="text-right px-2 py-2">Total</th>
@@ -310,6 +313,7 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
                         <div>{c.emp.name}</div>
                         <div className="text-muted text-[10px]">{c.role}</div>
                       </td>
+                      <td className="text-right px-2 py-2 text-sage">R$ {fm(c.recTot)}</td>
                       <td className="text-right px-2 py-2">R$ {fm(c.finalNetSal)}</td>
                       <td className="text-right px-2 py-2 text-blue">R$ {fm(c.vtNet)}</td>
                       <td className="text-right px-2 py-2 font-medium text-accent">R$ {fm(c.total)}</td>
@@ -320,6 +324,7 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
                   ))}
                   <tr className="bg-cream font-medium">
                     <td className="px-2 py-2">TOTAL ({calcs.length})</td>
+                    <td className="text-right px-2 py-2 text-sage">R$ {fm(totRec)}</td>
                     <td className="text-right px-2 py-2">R$ {fm(totSal)}</td>
                     <td className="text-right px-2 py-2 text-blue">R$ {fm(totVT)}</td>
                     <td className="text-right px-2 py-2 text-accent">R$ {fm(totAll)}</td>
@@ -351,7 +356,8 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
                 <tr className="bg-cream">
                   <th className="text-left px-3 py-2 uppercase text-[10px] text-muted">Funcionário</th>
                   <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Sal. Base</th>
-                  <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Diárias</th>
+                  <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Diárias Rec.</th>
+                  <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Diárias Avulsas</th>
                   <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Descontos</th>
                   <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">Sal. Líq.</th>
                   <th className="text-right px-3 py-2 uppercase text-[10px] text-muted">VT</th>
@@ -368,7 +374,8 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
                       <span className="text-[11px] text-muted">{c.role}</span>
                     </td>
                     <td className="text-right px-3 py-2.5">R$ {fm(c.salBase)}</td>
-                    <td className="text-right px-3 py-2.5 text-sage">R$ {fm(c.recTot + c.avTot)}</td>
+                    <td className="text-right px-3 py-2.5 text-sage">R$ {fm(c.recTot)}</td>
+                    <td className="text-right px-3 py-2.5 text-sage">R$ {fm(c.avTot)}</td>
                     <td className="text-right px-3 py-2.5 text-danger">R$ {fm(c.deds + c.inssAmt)}</td>
                     <td className="text-right px-3 py-2.5 font-medium">R$ {fm(c.netSal)}</td>
                     <td className="text-right px-3 py-2.5 text-blue">R$ {fm(c.vtNet)}</td>
@@ -380,7 +387,7 @@ function MonthlyReport({ employees, filteredEmps, activeMonths, month, setMonth,
                 ))}
                 <tr className="bg-cream font-medium">
                   <td className="px-3 py-3">TOTAL</td>
-                  <td colSpan={3} />
+                  <td colSpan={4} />
                   <td />
                   <td className="text-right px-3 py-3 text-blue">R$ {fm(totVT)}</td>
                   <td className="text-right px-3 py-3 text-lg text-accent">R$ {fm(totAll)}</td>
