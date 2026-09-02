@@ -248,14 +248,16 @@ export function EmployeeModal({ employee, onClose, onSave }: Props) {
             <div className="space-y-3">
               {!isNew && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Field label="Vigente desde">
-                    <input
-                      className="input"
-                      type="date"
-                      value={contract.startDate}
-                      onChange={(e) => updateContract('startDate', e.target.value)}
-                    />
-                  </Field>
+                  {!contractChanged && (
+                    <Field label="Vigente desde">
+                      <input
+                        className="input"
+                        type="date"
+                        value={contract.startDate}
+                        onChange={(e) => updateContract('startDate', e.target.value)}
+                      />
+                    </Field>
+                  )}
                   <Field label="Função">
                     <select className="input" value={contract.role} onChange={(e) => updateContract('role', e.target.value)}>
                       {EMPLOYEE_ROLES.map((r) => (
@@ -391,7 +393,9 @@ export function EmployeeModal({ employee, onClose, onSave }: Props) {
               <div className="mt-4 bg-warn/10 border border-warn/30 rounded-lg p-3">
                 <p className="text-xs text-warn mb-2">
                   As condições acima mudaram. Isso vai criar um <strong>novo contrato</strong> — os meses já calculados com
-                  as condições antigas não serão afetados.
+                  as condições antigas não serão afetados. A data abaixo vale para o mês de referência inteiro (sem
+                  proporcionalidade dentro do mês): se ela cair no meio de um mês, o mês inteiro passa a usar as novas
+                  condições.
                 </p>
                 <Field label="Novas condições vigentes a partir de">
                   <input className="input" type="date" value={changeDate} onChange={(e) => setChangeDate(e.target.value)} />

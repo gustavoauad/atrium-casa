@@ -31,6 +31,13 @@ export function PayrollDetailCard({ c }: { c: PayrollCalc }) {
         </div>
       )}
 
+      {c.midMonthChange && (
+        <div className="text-[11px] text-warn bg-warn/10 border border-warn/30 rounded-lg px-2 py-1.5">
+          Contrato mudou em {fd(c.midMonthChange.date)} — salário-base prorrateado: {c.midMonthChange.oldDays} dia(s) a R${' '}
+          {fm(c.midMonthChange.prevSalary)}/mês + {c.midMonthChange.newDays} dia(s) a R$ {fm(c.midMonthChange.newSalary)}/mês
+        </div>
+      )}
+
       {(c.feriasDiasNoMes > 0 || c.licencaMedicaDiasNoMes > 0 || c.licencaMaternidadeDiasNoMes > 0 || c.feriasDiasVendidos > 0) && (
         <div className="text-[11px] text-accent bg-accent/10 border border-accent/30 rounded-lg px-2 py-1.5 space-y-0.5">
           {c.feriasDiasNoMes > 0 && <p>🏖️ {c.feriasDiasNoMes} dia(s) de férias</p>}
