@@ -1,4 +1,5 @@
 import type { Employee } from '../../types/employee'
+import { parseLocalDate } from './format'
 
 export interface MonthRef {
   y: number
@@ -11,7 +12,12 @@ export function activeMonthsFor(employees: Employee[] | null): MonthRef[] {
   let start = { y: now.getFullYear(), m: now.getMonth() }
   for (const e of employees || []) {
     if (!e.admissao) continue
-    const d = new Date(e.admissao)
+    // Regressão corrigida (Fase 1): usava `new Date(e.admissao)`, que interpreta a data
+    // como meia-noite UTC — sob fuso negativo (ex.: America/Belem, UTC-3), uma admissão
+    // no dia 1 do mês virava dia 31 do mês anterior às 21h locais, deslocando o mês
+    // inteiro para trás. parseLocalDate() lê a data como local, igual ao resto do motor
+    // de folha (calc.ts, contracts.ts) — ver app/src/lib/payroll/format.ts.
+    const d = parseLocalDate(e.admissao)
     if (d.getFullYear() < start.y || (d.getFullYear() === start.y && d.getMonth() < start.m)) {
       start = { y: d.getFullYear(), m: d.getMonth() }
     }
