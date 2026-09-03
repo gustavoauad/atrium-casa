@@ -1,6 +1,7 @@
 import { corsHeaders, handleOptions } from '../_shared/cors.ts'
 import { stripePost } from '../_shared/stripe.ts'
 import { assertManagesHouse, supabaseAdmin } from '../_shared/supabaseClients.ts'
+import { resolveReturnUrl } from '../_shared/appUrl.ts'
 
 interface PortalSession {
   url: string
@@ -27,7 +28,7 @@ Deno.serve(async (req) => {
       throw new Error('Esta Casa ainda não tem uma assinatura paga — assine um plano primeiro.')
     }
 
-    const base = return_url || Deno.env.get('APP_URL') || 'https://atrium-casa.com'
+    const base = resolveReturnUrl(return_url)
 
     const session = await stripePost<PortalSession>('billing_portal/sessions', {
       customer: sub.provider_customer_id,

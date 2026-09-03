@@ -26,7 +26,7 @@ export function HousePickerScreen({ onSelect }: { onSelect: (house: House) => vo
     setBusy(true)
     setError('')
     try {
-      const house = await createHouse(user.id, newCasaName.trim())
+      const house = await createHouse(newCasaName.trim())
       onSelect(house)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))

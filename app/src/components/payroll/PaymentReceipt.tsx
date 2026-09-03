@@ -1,5 +1,5 @@
 import { fd, fm } from '../../lib/payroll/format'
-import { MP } from '../../lib/payroll/constants'
+import { MP, PAYROLL_RULES_VERSION } from '../../lib/payroll/constants'
 import { isPartialPayment, paidAmountOf, remainingBalance } from '../../lib/payroll/calc'
 import type { Payment } from '../../types/payment'
 import { PrintableView } from '../ui/PrintableView'
@@ -110,6 +110,10 @@ export function PaymentReceipt({ payment, onClose }: { payment: Payment; onClose
         <span>Atrium · Gestão Doméstica</span>
         <span>{new Date().toLocaleDateString('pt-BR')}</span>
       </div>
+
+      <p className="text-[10px] text-muted mb-6">
+        Competência: {MP[p.rm]} {p.ry} · {PAYROLL_RULES_VERSION} · Estimativa de cálculo — confirme incidências no eSocial.
+      </p>
 
       <div className="grid grid-cols-2 gap-12">
         <div className="border-t border-text pt-2 text-center text-[11px]">Empregador</div>

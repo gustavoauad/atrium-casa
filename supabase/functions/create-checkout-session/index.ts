@@ -1,6 +1,7 @@
 import { corsHeaders, handleOptions } from '../_shared/cors.ts'
 import { stripePost } from '../_shared/stripe.ts'
 import { assertManagesHouse, supabaseAdmin } from '../_shared/supabaseClients.ts'
+import { resolveReturnUrl } from '../_shared/appUrl.ts'
 
 interface CheckoutSession {
   id: string
@@ -33,7 +34,7 @@ Deno.serve(async (req) => {
       .eq('house_id', house_id)
       .maybeSingle()
 
-    const base = return_url || Deno.env.get('APP_URL') || 'https://atrium-casa.com'
+    const base = resolveReturnUrl(return_url)
 
     const session = await stripePost<CheckoutSession>('checkout/sessions', {
       mode: 'subscription',
