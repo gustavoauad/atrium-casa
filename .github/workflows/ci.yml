@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20.19.0
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck + build
+        run: npm run build
+
+      - name: Test
+        run: npm run test:run
+
+      # Bloqueante por padrão (vulnerabilidade high/critical falha o job — sem
+      # `|| echo` mascarando o resultado). O relatório completo (`npm audit`, texto)
+      # sempre fica no log deste step, tenha passado ou falhado.
+      #
+      # Única exceção: se o comando falhar por não conseguir FALAR com o registry
+      # (rede/DNS/timeout do npm, não uma vulnerabilidade real), isso é reportado como
+      # aviso separado em vez de bloquear — heurística simples (procura por
+      # ENOTFOUND/ECONNREFUSED/ETIMEDOUT/"network"/50x na saída). Qualquer falha que
+      # NÃO bata nesse padrão é tratada como vulnerabilidade real e bloqueia o job.
+      - name: Audit (bloqueante em high/critical; falha de rede do registry é só aviso)
+        run: |
+          set +e
+          npm audit --audit-level=high > audit-output.txt 2>&1
+          status=$?
+          cat audit-output.txt
+          set -e
+
+          if [ "$status" -eq 0 ]; then
+            echo "npm audit: nenhuma vulnerabilidade high/critical encontrada."
+            exit 0
+          fi
+
+          if grep -qEi 'ENOTFOUND|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|network error|getaddrinfo|50[0-9] |registry\.npmjs\.org.*(unreachable|timed? ?out)' audit-output.txt; then
+            echo "::warning::npm audit não conseguiu consultar o registry (falha de rede/DNS) — não bloqueando o job por isso, mas revise manualmente. Ver saída acima."
+            exit 0
+          fi
+
+          echo "::error::npm audit encontrou vulnerabilidade(s) high/critical — bloqueando o job. Ver saída acima."
+          exit "$status"
+
+  # Job separado (não valida app/) — typecheck das Edge Functions (Deno). `deno check
+  # <entrypoint>` segue automaticamente todo import relativo e `npm:` a partir do
+  # entrypoint, então _shared/*.ts e stripe-webhook/logic.ts entram no typecheck sem
+  # precisar ser listados à parte. Falha em qualquer erro de tipo/import (sem `|| true`).
+  #
+  # Versão do Deno: fixada em 2.1.4 — a mesma que `supabase functions serve` reporta
+  # como compatível no momento em que este workflow foi escrito (ver
+  # supabase/AUDIT_FASE1_MIGRATIONS.md). Confirme contra a saída de
+  # `supabase functions serve` do seu projeto antes de assumir que continua válida —
+  # o Edge Runtime do Supabase pode atualizar a versão suportada com o tempo.
+  edge-functions-typecheck:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: supabase/functions
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: '2.1.4'
+
+      - name: Typecheck Edge Functions
+        run: |
+          deno check create-checkout-session/index.ts
+          deno check create-portal-session/index.ts
+          deno check stripe-webhook/index.ts
