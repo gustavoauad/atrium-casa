@@ -27,38 +27,25 @@ export async function loadUserHouses(userId: string): Promise<House[]> {
   })
 }
 
-export async function createHouse(userId: string, name: string): Promise<House> {
-  const { data: houseRow, error: hErr } = await supabase
-    .from('houses')
-    .insert({ name, created_by: userId })
-    .select('id, name, invite_code')
-    .single()
-  if (hErr) {
-    if (hErr.message.toLowerCase().includes('row-level security')) {
-      throw new Error(
-        'Você já tem uma Casa gratuita. Para gerenciar mais de uma Casa, assine o plano Premium em alguma delas (aba Casa → Assinatura).',
-      )
-    }
-    throw new Error('Erro ao criar Casa: ' + hErr.message)
-  }
-
-  const { error: mErr } = await supabase
-    .from('house_members')
-    .insert({ house_id: houseRow.id, user_id: userId, role: 'owner' })
-  if (mErr) throw new Error('Erro ao associar membro: ' + mErr.message)
-
-  return { id: houseRow.id, name: houseRow.name, invite_code: houseRow.invite_code, role: 'owner' }
+/**
+ * Cria a Casa via RPC transacional (houses + house_members(owner) + trial em uma única
+ * transação no banco — auth.uid() resolvido no servidor, não confia em nenhum id vindo
+ * do client). Ver supabase/2026-09-02-atomic-house-lifecycle.sql.
+ */
+export async function createHouse(name: string): Promise<House> {
+  const { data, error } = await supabase.rpc('create_house_atomic', { p_name: name }).single()
+  if (error) throw new Error('Erro ao criar Casa: ' + error.message)
+  const row = data as { id: string; name: string; invite_code: string }
+  return { id: row.id, name: row.name, invite_code: row.invite_code, role: 'owner' }
 }
 
-/** Exclui a Casa e todos os dados vinculados. Irreversível — só o Proprietário pode chamar isso. */
+/**
+ * Exclui a Casa e todos os dados vinculados via RPC transacional — atômico (sem
+ * exclusão parcial em caso de erro no meio) e valida papel de Proprietário no próprio
+ * banco. Irreversível. Ver supabase/2026-09-02-atomic-house-lifecycle.sql.
+ */
 export async function deleteHouse(houseId: string): Promise<void> {
-  await supabase.from('events').delete().eq('house_id', houseId)
-  await supabase.from('adjustments').delete().eq('house_id', houseId)
-  await supabase.from('payments').delete().eq('house_id', houseId)
-  await supabase.from('employees').delete().eq('house_id', houseId)
-  await supabase.from('settings').delete().eq('house_id', houseId)
-  await supabase.from('house_members').delete().eq('house_id', houseId)
-  const { error } = await supabase.from('houses').delete().eq('id', houseId)
+  const { error } = await supabase.rpc('delete_house', { p_house_id: houseId })
   if (error) throw new Error('Erro ao excluir Casa: ' + error.message)
 }
 

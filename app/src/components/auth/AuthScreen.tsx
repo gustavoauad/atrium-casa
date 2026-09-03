@@ -123,7 +123,7 @@ export function AuthScreen() {
       }
 
       if (casaMode === 'new') {
-        await createHouse(userId, casaName.trim())
+        await createHouse(casaName.trim())
       } else {
         await joinHouseByInviteCode(userId, inviteCode, authData.session.user.email)
       }
