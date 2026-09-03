@@ -35,9 +35,10 @@ avulsas), `adjustments` (bônus/descontos/encargos), `payments` (pagamentos lan�
 
 ## Configuração local
 
-Pré-requisitos: Node >=20.19.0 (mesma versão fixada em `.github/workflows/ci.yml`), uma
-conta Supabase (projeto próprio — **nunca** use o projeto de produção para
-desenvolver/testar).
+Pré-requisitos: Node >=24.15.0 (mesma faixa fixada em `.github/workflows/ci.yml` —
+`jsdom@30`, usado pelos testes, exige `^22.22.2 || ^24.15.0 || >=26.0.0`; **Node 20.x
+não funciona**, testado via CI real), uma conta Supabase (projeto próprio — **nunca**
+use o projeto de produção para desenvolver/testar).
 
 ```bash
 cd app

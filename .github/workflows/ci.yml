@@ -18,9 +18,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Node 24.17.0: jsdom@30 (usado pelos testes) declara engines
+      # `^22.22.2 || ^24.15.0 || >=26.0.0` — Node 20.19.0 (a versão fixada
+      # originalmente) NÃO está nessa faixa e falhava de verdade em CI com
+      # `TypeError: webidl.util.markAsUncloneable is not a function` dentro de
+      # undici/jsdom (npm não bloqueia install por engine mismatch, então só
+      # apareceu ao rodar os testes). 24.17.0 é a versão usada em todo o
+      # desenvolvimento/validação local desta fase.
       - uses: actions/setup-node@v6
         with:
-          node-version: 20.19.0
+          node-version: 24.17.0
           cache: npm
           cache-dependency-path: app/package-lock.json
 
